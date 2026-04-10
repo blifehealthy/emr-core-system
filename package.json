@@ -1,0 +1,14 @@
+{
+  "name": "emr-core-system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --loader ts-node/esm --test backend/**/*.test.ts database/migrations/*.test.ts",
+    "db:test": "bash scripts/run-db-integration-tests.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -193,10 +193,13 @@ CREATE TABLE soap_notes (
     plan TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
     CONSTRAINT fk_soap_notes_clinical_note
         FOREIGN KEY (clinical_note_id)
         REFERENCES clinical_notes (id)
         ON DELETE CASCADE,
+    CONSTRAINT chk_soap_notes_deleted_after_created
+        CHECK (deleted_at IS NULL OR deleted_at >= created_at),
     CONSTRAINT chk_soap_notes_has_content
         CHECK (
             COALESCE(NULLIF(BTRIM(subjective), ''), NULL) IS NOT NULL
@@ -240,6 +243,10 @@ CREATE INDEX idx_clinical_notes_encounter_active
 
 CREATE INDEX idx_clinical_notes_type_status
     ON clinical_notes (note_type, status)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_soap_notes_active
+    ON soap_notes (clinical_note_id)
     WHERE deleted_at IS NULL;
 
 CREATE TRIGGER trg_patients_set_updated_at
