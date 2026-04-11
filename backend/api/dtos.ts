@@ -77,6 +77,44 @@ const PRESCRIPTION_KEYS = [
   'deleted_at',
 ] as const;
 
+const USER_KEYS = [
+  'id',
+  'clinic_id',
+  'username',
+  'display_name',
+  'role',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const PRACTITIONER_KEYS = [
+  'id',
+  'clinic_id',
+  'user_id',
+  'practitioner_code',
+  'first_name',
+  'last_name',
+  'license_number',
+  'specialty',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const SOAP_NOTE_KEYS = [
+  'clinical_note_id',
+  'subjective',
+  'objective',
+  'assessment',
+  'plan',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 export function toDiagnosisDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...DIAGNOSIS_KEYS]);
 }
@@ -99,4 +137,24 @@ export function toPrescriptionDto(row: unknown): Record<string, unknown> {
 
 export function toPrescriptionDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPrescriptionDto(row));
+}
+
+export function toUserDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...USER_KEYS]);
+}
+
+export function toUserDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toUserDto(row));
+}
+
+export function toPractitionerDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PRACTITIONER_KEYS]);
+}
+
+export function toPractitionerDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPractitionerDto(row));
+}
+
+export function toSoapNoteDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...SOAP_NOTE_KEYS]);
 }

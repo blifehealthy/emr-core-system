@@ -8,7 +8,15 @@ export function softDeleteSoapNote(db: {
         SET deleted_at = COALESCE(deleted_at, NOW())
         WHERE clinical_note_id = $1
           AND deleted_at IS NULL
-        RETURNING *
+        RETURNING
+          clinical_note_id,
+          subjective,
+          objective,
+          assessment,
+          plan,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       [input.clinicalNoteId]
     );

@@ -4,7 +4,19 @@ export function listPractitioners(db: {
   return async function run(input: { clinicId: string }) {
     const result = await db.query(
       `
-        SELECT *
+        SELECT
+          id,
+          clinic_id,
+          user_id,
+          practitioner_code,
+          first_name,
+          last_name,
+          license_number,
+          specialty,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
         FROM practitioners
         WHERE clinic_id = $1
           AND deleted_at IS NULL

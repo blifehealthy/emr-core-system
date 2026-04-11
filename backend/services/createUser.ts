@@ -11,7 +11,16 @@ export function createUser(db: {
       `
         INSERT INTO users (clinic_id, username, display_name, role)
         VALUES ($1, $2, $3, $4)
-        RETURNING *
+        RETURNING
+          id,
+          clinic_id,
+          username,
+          display_name,
+          role,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       [input.clinicId, input.username, input.displayName, input.role]
     );

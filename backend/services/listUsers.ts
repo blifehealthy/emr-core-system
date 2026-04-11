@@ -4,7 +4,16 @@ export function listUsers(db: {
   return async function run(input: { clinicId: string }) {
     const result = await db.query(
       `
-        SELECT *
+        SELECT
+          id,
+          clinic_id,
+          username,
+          display_name,
+          role,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
         FROM users
         WHERE clinic_id = $1
           AND deleted_at IS NULL

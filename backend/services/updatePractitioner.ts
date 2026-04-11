@@ -49,7 +49,19 @@ export function updatePractitioner(db: {
         SET ${assignments.join(',\n            ')}
         WHERE id = $1
           AND deleted_at IS NULL
-        RETURNING *
+        RETURNING
+          id,
+          clinic_id,
+          user_id,
+          practitioner_code,
+          first_name,
+          last_name,
+          license_number,
+          specialty,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       params
     );

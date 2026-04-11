@@ -15,7 +15,16 @@ export function updateUser(db: {
             is_active = COALESCE($4, is_active)
         WHERE id = $1
           AND deleted_at IS NULL
-        RETURNING *
+        RETURNING
+          id,
+          clinic_id,
+          username,
+          display_name,
+          role,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       [input.userId, input.displayName ?? null, input.role ?? null, input.isActive ?? null]
     );

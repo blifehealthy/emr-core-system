@@ -45,7 +45,15 @@ export function updateSoapNote(db: {
         SET ${assignments.join(',\n            ')}
         WHERE clinical_note_id = $1
           AND deleted_at IS NULL
-        RETURNING *
+        RETURNING
+          clinical_note_id,
+          subjective,
+          objective,
+          assessment,
+          plan,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       params
     );

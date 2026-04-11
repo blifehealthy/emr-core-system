@@ -2,8 +2,13 @@ import { toHttpError } from './postgresError.ts';
 import {
   toDiagnosisDto,
   toDiagnosisDtos,
+  toPractitionerDto,
+  toPractitionerDtos,
   toPrescriptionDto,
   toPrescriptionDtos,
+  toSoapNoteDto,
+  toUserDto,
+  toUserDtos,
   toVitalSignDto,
   toVitalSignDtos,
 } from './dtos.ts';
@@ -156,7 +161,7 @@ export async function handleListUsers(
   }
 
   const users = await dependencies.listUsers({ clinicId });
-  return { status: 200, headers: JSON_HEADERS, body: { data: users } };
+  return { status: 200, headers: JSON_HEADERS, body: { data: toUserDtos(users) } };
 }
 
 export async function handleCreateUser(
@@ -178,7 +183,7 @@ export async function handleCreateUser(
     metadata: { username: validation.value.username },
   });
 
-  return { status: 201, headers: JSON_HEADERS, body: { data: user } };
+  return { status: 201, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
 }
 
 export async function handleUpdateUser(
@@ -205,7 +210,7 @@ export async function handleUpdateUser(
     metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
   });
 
-  return { status: 200, headers: JSON_HEADERS, body: { data: user } };
+  return { status: 200, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
 }
 
 export async function handleListPractitioners(
@@ -219,7 +224,7 @@ export async function handleListPractitioners(
   }
 
   const practitioners = await dependencies.listPractitioners({ clinicId });
-  return { status: 200, headers: JSON_HEADERS, body: { data: practitioners } };
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPractitionerDtos(practitioners) } };
 }
 
 export async function handleCreatePractitioner(
@@ -241,7 +246,7 @@ export async function handleCreatePractitioner(
     metadata: { practitionerCode: validation.value.practitionerCode },
   });
 
-  return { status: 201, headers: JSON_HEADERS, body: { data: practitioner } };
+  return { status: 201, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
 }
 
 export async function handleUpdatePractitioner(
@@ -268,7 +273,7 @@ export async function handleUpdatePractitioner(
     metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
   });
 
-  return { status: 200, headers: JSON_HEADERS, body: { data: practitioner } };
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
 }
 
 export async function handleListPrescriptionsByEncounter(
@@ -500,7 +505,7 @@ export async function handleGetSoapNote(
       return { status: 404, headers: JSON_HEADERS, body: { error: 'SOAP note not found' } };
     }
 
-    return { status: 200, headers: JSON_HEADERS, body: { data: soapNote } };
+    return { status: 200, headers: JSON_HEADERS, body: { data: toSoapNoteDto(soapNote) } };
   } catch (error) {
     return mapError(error);
   }
@@ -593,7 +598,7 @@ export async function handleUpdateSoapNote(
         fields: Object.keys(request.body as Record<string, unknown>),
       },
     });
-    return { status: 200, headers: JSON_HEADERS, body: { data: soapNote } };
+    return { status: 200, headers: JSON_HEADERS, body: { data: toSoapNoteDto(soapNote) } };
   } catch (error) {
     return mapError(error);
   }
@@ -743,7 +748,7 @@ export async function handleDeleteSoapNote(
       actorPractitionerId: actor.practitionerId,
     });
 
-    return { status: 200, headers: JSON_HEADERS, body: { data: soapNote } };
+    return { status: 200, headers: JSON_HEADERS, body: { data: toSoapNoteDto(soapNote) } };
   } catch (error) {
     return mapError(error);
   }

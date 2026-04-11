@@ -22,7 +22,19 @@ export function createPractitioner(db: {
           specialty
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
+        RETURNING
+          id,
+          clinic_id,
+          user_id,
+          practitioner_code,
+          first_name,
+          last_name,
+          license_number,
+          specialty,
+          is_active,
+          created_at,
+          updated_at,
+          deleted_at
       `,
       [
         input.clinicId,
