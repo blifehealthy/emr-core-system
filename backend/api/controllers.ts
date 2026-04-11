@@ -13,6 +13,8 @@ import {
   toPatientAllergyDtos,
   toPatientConditionDto,
   toPatientConditionDtos,
+  toPatientMedicationDto,
+  toPatientMedicationDtos,
   toPractitionerDto,
   toPractitionerDtos,
   toPrescriptionDto,
@@ -30,6 +32,7 @@ import {
   validateCreateDiagnosisBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
+  validateCreatePatientMedicationBody,
   validateCreatePractitionerBody,
   validateCreatePrescriptionBody,
   validateCreateUserBody,
@@ -42,6 +45,7 @@ import {
   validateUpdateConsentRecordBody,
   validateUpdatePatientAllergyBody,
   validateUpdatePatientConditionBody,
+  validateUpdatePatientMedicationBody,
   validateUpdatePractitionerBody,
   validateUpdatePrescriptionBody,
   validateUpdateDiagnosisBody,
@@ -670,6 +674,100 @@ export async function handleUpdatePatientCondition(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
+}
+
+export async function handleListPatientMedications(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  patientId: string
+): Promise<HttpResponse> {
+  const status = readOptionalEnumQuery(request, 'status', [
+    'active',
+    'completed',
+    'stopped',
+    'on_hold',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const medications = await dependencies.listPatientMedications({
+    patientId,
+    status: status.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPatientMedicationDtos(medications) },
+  };
+}
+
+export async function handleGetPatientMedication(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  medicationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getPatientMedicationById) {
+    return mapError(new Error('Patient medication read dependency is not configured'));
+  }
+
+  const medication = await dependencies.getPatientMedicationById({ medicationId });
+  if (!medication) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient medication not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
+}
+
+export async function handleCreatePatientMedication(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreatePatientMedicationBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const medication = await dependencies.createPatientMedication(validation.value);
+  const actor = getActorContext(request);
+
+  await dependencies.createAuditLog({
+    entityType: 'patient_medication',
+    entityId: (medication as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      medicationName: validation.value.medicationName,
+      patientId: validation.value.patientId,
+    },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
+}
+
+export async function handleUpdatePatientMedication(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  medicationId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdatePatientMedicationBody(request.body, medicationId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const medication = await dependencies.updatePatientMedication(validation.value);
+  if (!medication) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient medication not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'patient_medication',
+    entityId: medicationId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
 }
 
 export async function handleListUsers(
@@ -1421,6 +1519,36 @@ export async function handleDeletePatientCondition(
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleDeletePatientMedication(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  medicationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.softDeletePatientMedication) {
+    return mapError(new Error('Patient medication delete dependency is not configured'));
+  }
+
+  try {
+    const medication = await dependencies.softDeletePatientMedication({ medicationId });
+    if (!medication) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient medication not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'patient_medication',
+      entityId: medicationId,
+      action: 'deleted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
   } catch (error) {
     return mapError(error);
   }

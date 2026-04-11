@@ -44,6 +44,8 @@ const permissions: Record<string, UserRole[]> = {
   allergy_write: ['doctor', 'nurse', 'admin'],
   condition_read: ['doctor', 'nurse', 'admin'],
   condition_write: ['doctor', 'nurse', 'admin'],
+  medication_read: ['doctor', 'nurse', 'admin'],
+  medication_write: ['doctor', 'nurse', 'admin'],
   encounter_create: ['doctor', 'nurse', 'admin'],
   user_read: ['admin'],
   user_write: ['admin'],

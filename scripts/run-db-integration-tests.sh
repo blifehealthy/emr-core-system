@@ -49,7 +49,8 @@ for migration in \
   "$MIGRATIONS_DIR/0007_add_appointments.up.sql" \
   "$MIGRATIONS_DIR/0008_add_consent_records.up.sql" \
   "$MIGRATIONS_DIR/0009_add_file_attachments.up.sql" \
-  "$MIGRATIONS_DIR/0010_add_patient_conditions.up.sql"
+  "$MIGRATIONS_DIR/0010_add_patient_conditions.up.sql" \
+  "$MIGRATIONS_DIR/0011_add_patient_medications.up.sql"
 do
   run_psql "$migration"
 done

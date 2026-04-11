@@ -21,6 +21,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientConditionById() {
       return { id: 'condition-1' };
     },
+    async getPatientMedicationById() {
+      return { id: 'medication-1' };
+    },
     async getSoapNoteByClinicalNoteId() {
       return { clinical_note_id: 'clinical-note-1' };
     },
@@ -71,6 +74,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async updatePatientCondition() {
       return { id: 'condition-1' };
+    },
+    async listPatientMedications() {
+      return [];
+    },
+    async createPatientMedication() {
+      return { id: 'medication-1' };
+    },
+    async updatePatientMedication() {
+      return { id: 'medication-1' };
     },
     async updatePatientAllergy() {
       return { id: 'allergy-1' };
@@ -164,6 +176,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async softDeletePatientCondition() {
       return { id: 'condition-1', deleted_at: '2026-01-01T00:00:00.000Z' };
+    },
+    async softDeletePatientMedication() {
+      return { id: 'medication-1', deleted_at: '2026-01-01T00:00:00.000Z' };
     },
     async finalizeClinicalNote() {
       return { id: 'clinical-note-1', status: 'final' };
@@ -696,6 +711,98 @@ test('patient condition APIs validate bad payloads and filters', async () => {
   const invalidPatch = await api({
     method: 'PATCH',
     path: '/api/patient-conditions/condition-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(invalidPatch.status, 400);
+});
+
+test('patient medication APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listPatientMedications(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.status, 'active');
+        return [{ id: 'medication-1' }];
+      },
+      async getPatientMedicationById(input) {
+        assert.equal(input.medicationId, 'medication-1');
+        return { id: 'medication-1' };
+      },
+      async createPatientMedication(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.medicationName, 'Metformin');
+        return { id: 'medication-1' };
+      },
+      async updatePatientMedication(input) {
+        assert.equal(input.medicationId, 'medication-1');
+        assert.equal(input.status, 'completed');
+        return { id: 'medication-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/medications',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'active' },
+  });
+  assert.equal(list.status, 200);
+
+  const getOne = await api({
+    method: 'GET',
+    path: '/api/patient-medications/medication-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getOne.status, 200);
+
+  const create = await api({
+    method: 'POST',
+    path: '/api/patient-medications',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: { patientId: 'patient-1', medicationName: 'Metformin', status: 'active' },
+  });
+  assert.equal(create.status, 201);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/patient-medications/medication-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'completed' },
+  });
+  assert.equal(update.status, 200);
+
+  const remove = await api({
+    method: 'DELETE',
+    path: '/api/patient-medications/medication-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+  });
+  assert.equal(remove.status, 200);
+});
+
+test('patient medication APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const invalidListStatus = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/medications',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'paused' },
+  });
+  assert.equal(invalidListStatus.status, 400);
+
+  const invalidCreate = await api({
+    method: 'POST',
+    path: '/api/patient-medications',
+    headers: { 'x-user-role': 'doctor' },
+    body: { patientId: 'patient-1' },
+  });
+  assert.equal(invalidCreate.status, 400);
+
+  const invalidPatch = await api({
+    method: 'PATCH',
+    path: '/api/patient-medications/medication-1',
     headers: { 'x-user-role': 'doctor' },
     body: {},
   });

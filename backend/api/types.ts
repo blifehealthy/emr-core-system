@@ -18,6 +18,12 @@ export type AttachmentTargetType =
 export type AllergySeverity = 'mild' | 'moderate' | 'severe' | 'unknown';
 export type AllergyStatus = 'active' | 'inactive' | 'entered_in_error';
 export type PatientConditionStatus = 'active' | 'resolved' | 'inactive' | 'entered_in_error';
+export type PatientMedicationStatus =
+  | 'active'
+  | 'completed'
+  | 'stopped'
+  | 'on_hold'
+  | 'entered_in_error';
 export type DiagnosisType = 'working' | 'final' | 'differential' | 'ruled_out';
 export type DiagnosisStatus = 'active' | 'resolved' | 'entered_in_error';
 export type UserRole = 'doctor' | 'nurse' | 'admin';
@@ -208,6 +214,36 @@ export type UpdatePatientConditionInput = {
   notes?: string | null;
 };
 
+export type CreatePatientMedicationInput = {
+  patientId: string;
+  prescribedByPractitionerId?: string | null;
+  medicationName: string;
+  rxnormCode?: string | null;
+  dosage?: string | null;
+  route?: string | null;
+  frequency?: string | null;
+  instructions?: string | null;
+  status?: PatientMedicationStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  notes?: string | null;
+};
+
+export type UpdatePatientMedicationInput = {
+  medicationId: string;
+  prescribedByPractitionerId?: string | null;
+  medicationName?: string;
+  rxnormCode?: string | null;
+  dosage?: string | null;
+  route?: string | null;
+  frequency?: string | null;
+  instructions?: string | null;
+  status?: PatientMedicationStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  notes?: string | null;
+};
+
 export type UpdateConsentRecordInput = {
   consentId: string;
   consentType?: string;
@@ -385,6 +421,7 @@ export type Dependencies = {
   getFileAssetById?: (input: { fileAssetId: string }) => Promise<unknown | null>;
   getPatientAllergyById?: (input: { allergyId: string }) => Promise<unknown | null>;
   getPatientConditionById?: (input: { conditionId: string }) => Promise<unknown | null>;
+  getPatientMedicationById?: (input: { medicationId: string }) => Promise<unknown | null>;
   getSoapNoteByClinicalNoteId?: (input: { clinicalNoteId: string }) => Promise<unknown | null>;
   getAppointmentById?: (input: { appointmentId: string }) => Promise<unknown | null>;
   getDiagnosisById?: (input: { diagnosisId: string }) => Promise<unknown | null>;
@@ -424,6 +461,13 @@ export type Dependencies = {
   createPatientCondition: (input: CreatePatientConditionInput) => Promise<unknown>;
   updatePatientCondition: (input: UpdatePatientConditionInput) => Promise<unknown | null>;
   softDeletePatientCondition?: (input: { conditionId: string }) => Promise<unknown | null>;
+  listPatientMedications: (input: {
+    patientId: string;
+    status?: PatientMedicationStatus;
+  }) => Promise<unknown[]>;
+  createPatientMedication: (input: CreatePatientMedicationInput) => Promise<unknown>;
+  updatePatientMedication: (input: UpdatePatientMedicationInput) => Promise<unknown | null>;
+  softDeletePatientMedication?: (input: { medicationId: string }) => Promise<unknown | null>;
   listDiagnosesByEncounter?: (input: {
     encounterId: string;
     clinicalNoteId?: string;

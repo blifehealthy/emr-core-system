@@ -5,12 +5,14 @@ import type {
   AppointmentStatus,
   ConsentStatus,
   PatientConditionStatus,
+  PatientMedicationStatus,
   CreateAttachmentLinkInput,
   CreateAppointmentInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
   CreatePatientAllergyInput,
   CreatePatientConditionInput,
+  CreatePatientMedicationInput,
   CreateDiagnosisInput,
   CreateEncounterInput,
   CreatePractitionerValidatedInput,
@@ -28,6 +30,7 @@ import type {
   UpdateConsentRecordInput,
   UpdatePatientAllergyInput,
   UpdatePatientConditionInput,
+  UpdatePatientMedicationInput,
   UpdateSoapNoteInput,
   UpdatePractitionerValidatedInput,
   UpdatePrescriptionInput,
@@ -1528,6 +1531,170 @@ export function validateUpdatePatientConditionBody(body: unknown, conditionId: s
       ...(Object.hasOwn(candidate, 'abatementDate')
         ? { abatementDate: abatementDate.value }
         : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreatePatientMedicationBody(body: unknown):
+  | { ok: true; value: CreatePatientMedicationInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const medicationName = readRequiredString(candidate.medicationName, 'medicationName');
+  if (!medicationName.ok) return medicationName;
+
+  const prescribedByPractitionerId = readOptionalNullableStringField(
+    candidate,
+    'prescribedByPractitionerId'
+  );
+  if (!prescribedByPractitionerId.ok) return prescribedByPractitionerId;
+
+  const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
+  if (!rxnormCode.ok) return rxnormCode;
+
+  const dosage = readOptionalNullableStringField(candidate, 'dosage');
+  if (!dosage.ok) return dosage;
+
+  const route = readOptionalNullableStringField(candidate, 'route');
+  if (!route.ok) return route;
+
+  const frequency = readOptionalNullableStringField(candidate, 'frequency');
+  if (!frequency.ok) return frequency;
+
+  const instructions = readOptionalNullableStringField(candidate, 'instructions');
+  if (!instructions.ok) return instructions;
+
+  const status = readEnumValue<PatientMedicationStatus>(candidate.status, 'status', [
+    'active',
+    'completed',
+    'stopped',
+    'on_hold',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const startDate = readOptionalNullableStringField(candidate, 'startDate');
+  if (!startDate.ok) return startDate;
+
+  const endDate = readOptionalNullableStringField(candidate, 'endDate');
+  if (!endDate.ok) return endDate;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      patientId: patientId.value,
+      prescribedByPractitionerId: prescribedByPractitionerId.value,
+      medicationName: medicationName.value,
+      rxnormCode: rxnormCode.value,
+      dosage: dosage.value,
+      route: route.value,
+      frequency: frequency.value,
+      instructions: instructions.value,
+      status: status.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdatePatientMedicationBody(body: unknown, medicationId: string):
+  | { ok: true; value: UpdatePatientMedicationInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'prescribedByPractitionerId',
+    'medicationName',
+    'rxnormCode',
+    'dosage',
+    'route',
+    'frequency',
+    'instructions',
+    'status',
+    'startDate',
+    'endDate',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one medication field must be provided for update' };
+  }
+
+  const prescribedByPractitionerId = readOptionalNullableStringField(
+    candidate,
+    'prescribedByPractitionerId'
+  );
+  if (!prescribedByPractitionerId.ok) return prescribedByPractitionerId;
+
+  const medicationName = readOptionalTrimmedStringField(candidate, 'medicationName');
+  if (!medicationName.ok) return medicationName;
+
+  const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
+  if (!rxnormCode.ok) return rxnormCode;
+
+  const dosage = readOptionalNullableStringField(candidate, 'dosage');
+  if (!dosage.ok) return dosage;
+
+  const route = readOptionalNullableStringField(candidate, 'route');
+  if (!route.ok) return route;
+
+  const frequency = readOptionalNullableStringField(candidate, 'frequency');
+  if (!frequency.ok) return frequency;
+
+  const instructions = readOptionalNullableStringField(candidate, 'instructions');
+  if (!instructions.ok) return instructions;
+
+  const status = readEnumValue<PatientMedicationStatus>(candidate.status, 'status', [
+    'active',
+    'completed',
+    'stopped',
+    'on_hold',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const startDate = readOptionalNullableStringField(candidate, 'startDate');
+  if (!startDate.ok) return startDate;
+
+  const endDate = readOptionalNullableStringField(candidate, 'endDate');
+  if (!endDate.ok) return endDate;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      medicationId,
+      ...(Object.hasOwn(candidate, 'prescribedByPractitionerId')
+        ? { prescribedByPractitionerId: prescribedByPractitionerId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'medicationName')
+        ? { medicationName: medicationName.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'rxnormCode') ? { rxnormCode: rxnormCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'dosage') ? { dosage: dosage.value } : {}),
+      ...(Object.hasOwn(candidate, 'route') ? { route: route.value } : {}),
+      ...(Object.hasOwn(candidate, 'frequency') ? { frequency: frequency.value } : {}),
+      ...(Object.hasOwn(candidate, 'instructions')
+        ? { instructions: instructions.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'startDate') ? { startDate: startDate.value } : {}),
+      ...(Object.hasOwn(candidate, 'endDate') ? { endDate: endDate.value } : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };

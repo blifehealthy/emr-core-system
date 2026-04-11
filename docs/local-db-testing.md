@@ -83,6 +83,7 @@ The script applies these migrations in order:
 - `0008_add_consent_records.up.sql`
 - `0009_add_file_attachments.up.sql`
 - `0010_add_patient_conditions.up.sql`
+- `0011_add_patient_medications.up.sql`
 
 Then it runs:
 

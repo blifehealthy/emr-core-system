@@ -7,6 +7,7 @@ import {
   handleCreateDiagnosis,
   handleCreatePatientAllergy,
   handleCreatePatientCondition,
+  handleCreatePatientMedication,
   handleCreatePractitioner,
   handleCreatePrescription,
   handleCreateEncounter,
@@ -15,6 +16,7 @@ import {
   handleDeleteDiagnosis,
   handleDeletePatientAllergy,
   handleDeletePatientCondition,
+  handleDeletePatientMedication,
   handleDeletePrescription,
   handleDeleteSoapNote,
   handleDeleteVitalSign,
@@ -27,6 +29,7 @@ import {
   handleGetPatientDetail,
   handleGetPatientAllergy,
   handleGetPatientCondition,
+  handleGetPatientMedication,
   handleGetPatientTimeline,
   handleGetPrescription,
   handleGetSoapNote,
@@ -38,6 +41,7 @@ import {
   handleListDiagnosesByEncounter,
   handleListPatientAllergies,
   handleListPatientConditions,
+  handleListPatientMedications,
   handleListPractitioners,
   handleListPrescriptionsByEncounter,
   handleListUsers,
@@ -47,6 +51,7 @@ import {
   handleUpdateConsentRecord,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
+  handleUpdatePatientMedication,
   handleUpdatePractitioner,
   handleUpdatePrescription,
   handleUpdateDiagnosis,
@@ -207,6 +212,16 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleListPatientConditions(actorAwareRequest, dependencies, conditionListMatch[1]);
     }
 
+    const medicationListMatch =
+      request.method === 'GET'
+        ? request.path.match(/^\/api\/patients\/([^/]+)\/medications$/)
+        : null;
+    if (medicationListMatch) {
+      const roleError = requireRole(actorAwareRequest, 'medication_read');
+      if (roleError) return roleError;
+      return handleListPatientMedications(actorAwareRequest, dependencies, medicationListMatch[1]);
+    }
+
     const prescriptionListMatch =
       request.method === 'GET'
         ? request.path.match(/^\/api\/encounters\/([^/]+)\/prescriptions$/)
@@ -285,6 +300,14 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleGetPatientCondition(actorAwareRequest, dependencies, conditionReadMatch[1]);
     }
 
+    const medicationReadMatch =
+      request.method === 'GET' ? request.path.match(/^\/api\/patient-medications\/([^/]+)$/) : null;
+    if (medicationReadMatch) {
+      const roleError = requireRole(actorAwareRequest, 'medication_read');
+      if (roleError) return roleError;
+      return handleGetPatientMedication(actorAwareRequest, dependencies, medicationReadMatch[1]);
+    }
+
     if (request.method === 'POST' && request.path === '/api/encounters') {
       const roleError = requireRole(actorAwareRequest, 'encounter_create');
       if (roleError) return roleError;
@@ -351,6 +374,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreatePatientCondition(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/patient-medications') {
+      const roleError = requireRole(actorAwareRequest, 'medication_write');
+      if (roleError) return roleError;
+      return handleCreatePatientMedication(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/vital-signs') {
       const roleError = requireRole(actorAwareRequest, 'vital_sign_update');
       if (roleError) return roleError;
@@ -398,6 +427,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'condition_write');
         if (roleError) return roleError;
         return handleUpdatePatientCondition(actorAwareRequest, dependencies, conditionMatch[1]);
+      }
+
+      const medicationMatch = request.path.match(/^\/api\/patient-medications\/([^/]+)$/);
+      if (medicationMatch) {
+        const roleError = requireRole(actorAwareRequest, 'medication_write');
+        if (roleError) return roleError;
+        return handleUpdatePatientMedication(actorAwareRequest, dependencies, medicationMatch[1]);
       }
 
       const soapMatch = request.path.match(/^\/api\/clinical-notes\/([^/]+)\/soap$/);
@@ -456,6 +492,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'condition_write');
         if (roleError) return roleError;
         return handleDeletePatientCondition(actorAwareRequest, dependencies, conditionMatch[1]);
+      }
+
+      const medicationMatch = request.path.match(/^\/api\/patient-medications\/([^/]+)$/);
+      if (medicationMatch) {
+        const roleError = requireRole(actorAwareRequest, 'medication_write');
+        if (roleError) return roleError;
+        return handleDeletePatientMedication(actorAwareRequest, dependencies, medicationMatch[1]);
       }
 
       const soapMatch = request.path.match(/^\/api\/clinical-notes\/([^/]+)\/soap$/);
