@@ -9,6 +9,15 @@ export type AppointmentStatus =
   | 'completed'
   | 'cancelled'
   | 'no_show';
+export type ConsentStatus = 'granted' | 'revoked' | 'expired' | 'declined';
+export type AttachmentTargetType =
+  | 'patient'
+  | 'encounter'
+  | 'clinical_note'
+  | 'consent_record';
+export type AllergySeverity = 'mild' | 'moderate' | 'severe' | 'unknown';
+export type AllergyStatus = 'active' | 'inactive' | 'entered_in_error';
+export type PatientConditionStatus = 'active' | 'resolved' | 'inactive' | 'entered_in_error';
 export type DiagnosisType = 'working' | 'final' | 'differential' | 'ruled_out';
 export type DiagnosisStatus = 'active' | 'resolved' | 'entered_in_error';
 export type UserRole = 'doctor' | 'nurse' | 'admin';
@@ -118,6 +127,96 @@ export type UpdateAppointmentInput = {
   scheduledStartAt?: string;
   scheduledEndAt?: string | null;
   reason?: string | null;
+  notes?: string | null;
+};
+
+export type CreateConsentRecordInput = {
+  clinicId: string;
+  patientId: string;
+  consentType: string;
+  status?: ConsentStatus;
+  grantedAt?: string | null;
+  revokedAt?: string | null;
+  expiresAt?: string | null;
+  capturedByUserId?: string | null;
+  documentReference?: string | null;
+  notes?: string | null;
+};
+
+export type CreateFileAssetInput = {
+  clinicId: string;
+  storageKey: string;
+  originalFilename: string;
+  mimeType?: string | null;
+  byteSize: number;
+  checksumSha256?: string | null;
+  uploadedByUserId?: string | null;
+};
+
+export type CreateAttachmentLinkInput = {
+  fileAssetId: string;
+  targetType: AttachmentTargetType;
+  targetId: string;
+  label?: string | null;
+};
+
+export type CreatePatientAllergyInput = {
+  patientId: string;
+  allergenName: string;
+  allergenCategory?: string | null;
+  reaction?: string | null;
+  severity?: AllergySeverity;
+  status?: AllergyStatus;
+  criticality?: string | null;
+  recordedAt?: string | null;
+  lastOccurrenceAt?: string | null;
+  notes?: string | null;
+};
+
+export type UpdatePatientAllergyInput = {
+  allergyId: string;
+  allergenName?: string;
+  allergenCategory?: string | null;
+  reaction?: string | null;
+  severity?: AllergySeverity;
+  status?: AllergyStatus;
+  criticality?: string | null;
+  recordedAt?: string | null;
+  lastOccurrenceAt?: string | null;
+  notes?: string | null;
+};
+
+export type CreatePatientConditionInput = {
+  patientId: string;
+  conditionCode?: string | null;
+  codingSystem?: string | null;
+  conditionName: string;
+  clinicalStatus?: PatientConditionStatus;
+  onsetDate?: string | null;
+  abatementDate?: string | null;
+  notes?: string | null;
+};
+
+export type UpdatePatientConditionInput = {
+  conditionId: string;
+  conditionCode?: string | null;
+  codingSystem?: string | null;
+  conditionName?: string;
+  clinicalStatus?: PatientConditionStatus;
+  onsetDate?: string | null;
+  abatementDate?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateConsentRecordInput = {
+  consentId: string;
+  consentType?: string;
+  status?: ConsentStatus;
+  grantedAt?: string | null;
+  revokedAt?: string | null;
+  expiresAt?: string | null;
+  capturedByUserId?: string | null;
+  documentReference?: string | null;
   notes?: string | null;
 };
 
@@ -282,6 +381,10 @@ export type Dependencies = {
     clinicId: string;
     medicalRecordNumber: string;
   }) => Promise<PatientWithEncountersAndSOAP | null>;
+  getConsentRecordById?: (input: { consentId: string }) => Promise<unknown | null>;
+  getFileAssetById?: (input: { fileAssetId: string }) => Promise<unknown | null>;
+  getPatientAllergyById?: (input: { allergyId: string }) => Promise<unknown | null>;
+  getPatientConditionById?: (input: { conditionId: string }) => Promise<unknown | null>;
   getSoapNoteByClinicalNoteId?: (input: { clinicalNoteId: string }) => Promise<unknown | null>;
   getAppointmentById?: (input: { appointmentId: string }) => Promise<unknown | null>;
   getDiagnosisById?: (input: { diagnosisId: string }) => Promise<unknown | null>;
@@ -295,6 +398,32 @@ export type Dependencies = {
   }) => Promise<unknown[]>;
   createAppointment: (input: CreateAppointmentInput) => Promise<unknown>;
   updateAppointment: (input: UpdateAppointmentInput) => Promise<unknown | null>;
+  listConsentRecordsByPatient: (input: {
+    patientId: string;
+    status?: ConsentStatus;
+  }) => Promise<unknown[]>;
+  createConsentRecord: (input: CreateConsentRecordInput) => Promise<unknown>;
+  updateConsentRecord: (input: UpdateConsentRecordInput) => Promise<unknown | null>;
+  listAttachmentsByTarget: (input: {
+    targetType: AttachmentTargetType;
+    targetId: string;
+  }) => Promise<unknown[]>;
+  createFileAsset: (input: CreateFileAssetInput) => Promise<unknown>;
+  createAttachmentLink: (input: CreateAttachmentLinkInput) => Promise<unknown>;
+  listPatientAllergies: (input: {
+    patientId: string;
+    status?: AllergyStatus;
+  }) => Promise<unknown[]>;
+  createPatientAllergy: (input: CreatePatientAllergyInput) => Promise<unknown>;
+  updatePatientAllergy: (input: UpdatePatientAllergyInput) => Promise<unknown | null>;
+  softDeletePatientAllergy?: (input: { allergyId: string }) => Promise<unknown | null>;
+  listPatientConditions: (input: {
+    patientId: string;
+    clinicalStatus?: PatientConditionStatus;
+  }) => Promise<unknown[]>;
+  createPatientCondition: (input: CreatePatientConditionInput) => Promise<unknown>;
+  updatePatientCondition: (input: UpdatePatientConditionInput) => Promise<unknown | null>;
+  softDeletePatientCondition?: (input: { conditionId: string }) => Promise<unknown | null>;
   listDiagnosesByEncounter?: (input: {
     encounterId: string;
     clinicalNoteId?: string;

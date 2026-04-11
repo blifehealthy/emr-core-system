@@ -1,9 +1,18 @@
 import { toHttpError } from './postgresError.ts';
 import {
+  toAttachmentLinkDto,
+  toAttachmentLinkDtos,
   toAppointmentDto,
   toAppointmentDtos,
+  toConsentRecordDto,
+  toConsentRecordDtos,
   toDiagnosisDto,
   toDiagnosisDtos,
+  toFileAssetDto,
+  toPatientAllergyDto,
+  toPatientAllergyDtos,
+  toPatientConditionDto,
+  toPatientConditionDtos,
   toPractitionerDto,
   toPractitionerDtos,
   toPrescriptionDto,
@@ -15,16 +24,24 @@ import {
   toVitalSignDtos,
 } from './dtos.ts';
 import {
+  validateCreateAttachmentLinkBody,
   validateCreateAppointmentBody,
+  validateCreateConsentRecordBody,
   validateCreateDiagnosisBody,
+  validateCreatePatientAllergyBody,
+  validateCreatePatientConditionBody,
   validateCreatePractitionerBody,
   validateCreatePrescriptionBody,
   validateCreateUserBody,
   validateCreateVitalSignBody,
   validateCreateEncounterBody,
+  validateCreateFileAssetBody,
   validateFinalizeClinicalNoteBody,
   validateSignClinicalNoteBody,
   validateUpdateAppointmentBody,
+  validateUpdateConsentRecordBody,
+  validateUpdatePatientAllergyBody,
+  validateUpdatePatientConditionBody,
   validateUpdatePractitionerBody,
   validateUpdatePrescriptionBody,
   validateUpdateDiagnosisBody,
@@ -273,6 +290,386 @@ export async function handleUpdateAppointment(
     headers: JSON_HEADERS,
     body: { data: toAppointmentDto(appointment) },
   };
+}
+
+export async function handleListConsentRecordsByPatient(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  patientId: string
+): Promise<HttpResponse> {
+  const status = readOptionalEnumQuery(request, 'status', [
+    'granted',
+    'revoked',
+    'expired',
+    'declined',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const records = await dependencies.listConsentRecordsByPatient({
+    patientId,
+    status: status.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toConsentRecordDtos(records) },
+  };
+}
+
+export async function handleGetConsentRecord(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  consentId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getConsentRecordById) {
+    return mapError(new Error('Consent read dependency is not configured'));
+  }
+
+  try {
+    const record = await dependencies.getConsentRecordById({ consentId });
+    if (!record) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Consent record not found' } };
+    }
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toConsentRecordDto(record) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCreateConsentRecord(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreateConsentRecordBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const record = await dependencies.createConsentRecord({
+    ...validation.value,
+    capturedByUserId: validation.value.capturedByUserId ?? actor.userId ?? null,
+  });
+
+  await dependencies.createAuditLog({
+    entityType: 'consent_record',
+    entityId: (record as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { consentType: validation.value.consentType, status: validation.value.status },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toConsentRecordDto(record) } };
+}
+
+export async function handleUpdateConsentRecord(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  consentId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdateConsentRecordBody(request.body, consentId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const record = await dependencies.updateConsentRecord(validation.value);
+  if (!record) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Consent record not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'consent_record',
+    entityId: consentId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toConsentRecordDto(record) } };
+}
+
+export async function handleListAttachments(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const targetType = readRequiredEnumQuery(request, 'targetType', [
+    'patient',
+    'encounter',
+    'clinical_note',
+    'consent_record',
+  ]);
+  if (!targetType.ok) return validationError(targetType.error);
+
+  const targetId = request.query?.targetId?.trim();
+  if (!targetId) {
+    return validationError('targetId is required query parameter');
+  }
+
+  const attachments = await dependencies.listAttachmentsByTarget({
+    targetType: targetType.value,
+    targetId,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toAttachmentLinkDtos(attachments) },
+  };
+}
+
+export async function handleGetFileAsset(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  fileAssetId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getFileAssetById) {
+    return mapError(new Error('File asset read dependency is not configured'));
+  }
+
+  const fileAsset = await dependencies.getFileAssetById({ fileAssetId });
+  if (!fileAsset) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'File asset not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toFileAssetDto(fileAsset) } };
+}
+
+export async function handleCreateFileAsset(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreateFileAssetBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const fileAsset = await dependencies.createFileAsset({
+    ...validation.value,
+    uploadedByUserId: validation.value.uploadedByUserId ?? actor.userId ?? null,
+  });
+
+  await dependencies.createAuditLog({
+    entityType: 'file_asset',
+    entityId: (fileAsset as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      storageKey: validation.value.storageKey,
+      originalFilename: validation.value.originalFilename,
+    },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toFileAssetDto(fileAsset) } };
+}
+
+export async function handleCreateAttachmentLink(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreateAttachmentLinkBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const attachment = await dependencies.createAttachmentLink(validation.value);
+
+  await dependencies.createAuditLog({
+    entityType: 'attachment_link',
+    entityId: (attachment as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      fileAssetId: validation.value.fileAssetId,
+      targetType: validation.value.targetType,
+      targetId: validation.value.targetId,
+    },
+  });
+
+  return {
+    status: 201,
+    headers: JSON_HEADERS,
+    body: { data: toAttachmentLinkDto(attachment) },
+  };
+}
+
+export async function handleListPatientAllergies(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  patientId: string
+): Promise<HttpResponse> {
+  const status = readOptionalEnumQuery(request, 'status', [
+    'active',
+    'inactive',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const allergies = await dependencies.listPatientAllergies({
+    patientId,
+    status: status.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPatientAllergyDtos(allergies) },
+  };
+}
+
+export async function handleGetPatientAllergy(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  allergyId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getPatientAllergyById) {
+    return mapError(new Error('Patient allergy read dependency is not configured'));
+  }
+
+  const allergy = await dependencies.getPatientAllergyById({ allergyId });
+  if (!allergy) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient allergy not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientAllergyDto(allergy) } };
+}
+
+export async function handleCreatePatientAllergy(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreatePatientAllergyBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const allergy = await dependencies.createPatientAllergy(validation.value);
+  const actor = getActorContext(request);
+
+  await dependencies.createAuditLog({
+    entityType: 'patient_allergy',
+    entityId: (allergy as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { allergenName: validation.value.allergenName, patientId: validation.value.patientId },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toPatientAllergyDto(allergy) } };
+}
+
+export async function handleUpdatePatientAllergy(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  allergyId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdatePatientAllergyBody(request.body, allergyId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const allergy = await dependencies.updatePatientAllergy(validation.value);
+  if (!allergy) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient allergy not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'patient_allergy',
+    entityId: allergyId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientAllergyDto(allergy) } };
+}
+
+export async function handleListPatientConditions(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  patientId: string
+): Promise<HttpResponse> {
+  const clinicalStatus = readOptionalEnumQuery(request, 'clinicalStatus', [
+    'active',
+    'resolved',
+    'inactive',
+    'entered_in_error',
+  ]);
+  if (!clinicalStatus.ok) return validationError(clinicalStatus.error);
+
+  const conditions = await dependencies.listPatientConditions({
+    patientId,
+    clinicalStatus: clinicalStatus.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPatientConditionDtos(conditions) },
+  };
+}
+
+export async function handleGetPatientCondition(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  conditionId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getPatientConditionById) {
+    return mapError(new Error('Patient condition read dependency is not configured'));
+  }
+
+  const condition = await dependencies.getPatientConditionById({ conditionId });
+  if (!condition) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient condition not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
+}
+
+export async function handleCreatePatientCondition(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreatePatientConditionBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const condition = await dependencies.createPatientCondition(validation.value);
+  const actor = getActorContext(request);
+
+  await dependencies.createAuditLog({
+    entityType: 'patient_condition',
+    entityId: (condition as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { conditionName: validation.value.conditionName, patientId: validation.value.patientId },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
+}
+
+export async function handleUpdatePatientCondition(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  conditionId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdatePatientConditionBody(request.body, conditionId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const condition = await dependencies.updatePatientCondition(validation.value);
+  if (!condition) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient condition not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'patient_condition',
+    entityId: conditionId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
 }
 
 export async function handleListUsers(
@@ -969,6 +1366,66 @@ export async function handleDeletePrescription(
   }
 }
 
+export async function handleDeletePatientAllergy(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  allergyId: string
+): Promise<HttpResponse> {
+  if (!dependencies.softDeletePatientAllergy) {
+    return mapError(new Error('Patient allergy delete dependency is not configured'));
+  }
+
+  try {
+    const allergy = await dependencies.softDeletePatientAllergy({ allergyId });
+    if (!allergy) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient allergy not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'patient_allergy',
+      entityId: allergyId,
+      action: 'deleted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPatientAllergyDto(allergy) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleDeletePatientCondition(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  conditionId: string
+): Promise<HttpResponse> {
+  if (!dependencies.softDeletePatientCondition) {
+    return mapError(new Error('Patient condition delete dependency is not configured'));
+  }
+
+  try {
+    const condition = await dependencies.softDeletePatientCondition({ conditionId });
+    if (!condition) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient condition not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'patient_condition',
+      entityId: conditionId,
+      action: 'deleted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPatientConditionDto(condition) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
 export function validationError(error: string): HttpResponse {
   return {
     status: 400,
@@ -1022,6 +1479,27 @@ function readOptionalEnumQuery<T extends string>(
 
   if (value === undefined) {
     return { ok: true, value: undefined };
+  }
+
+  if (!allowedValues.includes(value as T)) {
+    return {
+      ok: false,
+      error: `${fieldName} must be one of: ${allowedValues.join(', ')}`,
+    };
+  }
+
+  return { ok: true, value: value as T };
+}
+
+function readRequiredEnumQuery<T extends string>(
+  request: HttpRequest,
+  fieldName: string,
+  allowedValues: readonly T[]
+): { ok: true; value: T } | { ok: false; error: string } {
+  const value = request.query?.[fieldName];
+
+  if (value === undefined || value.trim().length === 0) {
+    return { ok: false, error: `${fieldName} is required query parameter` };
   }
 
   if (!allowedValues.includes(value as T)) {

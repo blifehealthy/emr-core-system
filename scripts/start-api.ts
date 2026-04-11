@@ -2,8 +2,13 @@ import { createNodeServer } from '../backend/api/nodeServer.ts';
 import { createPostgresDb } from '../backend/database/postgres.ts';
 import { createAuditLog } from '../backend/services/createAuditLog.ts';
 import { createAppointment } from '../backend/services/createAppointment.ts';
+import { createAttachmentLink } from '../backend/services/createAttachmentLink.ts';
+import { createConsentRecord } from '../backend/services/createConsentRecord.ts';
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
+import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
+import { createPatientAllergy } from '../backend/services/createPatientAllergy.ts';
+import { createPatientCondition } from '../backend/services/createPatientCondition.ts';
 import { createPractitioner } from '../backend/services/createPractitioner.ts';
 import { createPrescription } from '../backend/services/createPrescription.ts';
 import { createUser } from '../backend/services/createUser.ts';
@@ -11,25 +16,38 @@ import { createVitalSign } from '../backend/services/createVitalSign.ts';
 import { finalizeClinicalNote } from '../backend/services/finalizeClinicalNote.ts';
 import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.ts';
 import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
+import { getConsentRecordById } from '../backend/services/getConsentRecordById.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
+import { getFileAssetById } from '../backend/services/getFileAssetById.ts';
+import { getPatientAllergyById } from '../backend/services/getPatientAllergyById.ts';
+import { getPatientConditionById } from '../backend/services/getPatientConditionById.ts';
 import { createGetPatientWithEncountersAndSOAPService } from '../backend/services/getPatientWithEncountersAndSOAP.ts';
 import { getPatientTimeline } from '../backend/services/getPatientTimeline.ts';
 import { getPrescriptionById } from '../backend/services/getPrescriptionById.ts';
 import { getSoapNoteByClinicalNoteId } from '../backend/services/getSoapNoteByClinicalNoteId.ts';
 import { getVitalSignById } from '../backend/services/getVitalSignById.ts';
+import { listAttachmentsByTarget } from '../backend/services/listAttachmentsByTarget.ts';
 import { listAppointments } from '../backend/services/listAppointments.ts';
+import { listConsentRecordsByPatient } from '../backend/services/listConsentRecordsByPatient.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
+import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
+import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
 import { listPractitioners } from '../backend/services/listPractitioners.ts';
 import { listPrescriptionsByEncounter } from '../backend/services/listPrescriptionsByEncounter.ts';
 import { listUsers } from '../backend/services/listUsers.ts';
 import { listVitalSignsByEncounter } from '../backend/services/listVitalSignsByEncounter.ts';
 import { signClinicalNote } from '../backend/services/signClinicalNote.ts';
 import { softDeleteDiagnosis } from '../backend/services/softDeleteDiagnosis.ts';
+import { softDeletePatientAllergy } from '../backend/services/softDeletePatientAllergy.ts';
+import { softDeletePatientCondition } from '../backend/services/softDeletePatientCondition.ts';
 import { softDeletePrescription } from '../backend/services/softDeletePrescription.ts';
 import { softDeleteSoapNote } from '../backend/services/softDeleteSoapNote.ts';
 import { softDeleteVitalSign } from '../backend/services/softDeleteVitalSign.ts';
 import { updateAppointment } from '../backend/services/updateAppointment.ts';
+import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
+import { updatePatientAllergy } from '../backend/services/updatePatientAllergy.ts';
+import { updatePatientCondition } from '../backend/services/updatePatientCondition.ts';
 import { updatePractitioner } from '../backend/services/updatePractitioner.ts';
 import { updatePrescription } from '../backend/services/updatePrescription.ts';
 import { updateSoapNote } from '../backend/services/updateSoapNote.ts';
@@ -47,18 +65,34 @@ const db = createPostgresDb(databaseUrl);
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
+  getConsentRecordById: getConsentRecordById(db),
+  getFileAssetById: getFileAssetById(db),
+  getPatientAllergyById: getPatientAllergyById(db),
+  getPatientConditionById: getPatientConditionById(db),
   getAppointmentById: getAppointmentById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
   getDiagnosisById: getDiagnosisById(db),
   getVitalSignById: getVitalSignById(db),
   getPrescriptionById: getPrescriptionById(db),
   listAppointments: listAppointments(db),
+  listAttachmentsByTarget: listAttachmentsByTarget(db),
+  listConsentRecordsByPatient: listConsentRecordsByPatient(db),
+  listPatientAllergies: listPatientAllergies(db),
+  listPatientConditions: listPatientConditions(db),
   listDiagnosesByEncounter: listDiagnosesByEncounter(db),
   listVitalSignsByEncounter: listVitalSignsByEncounter(db),
   createAppointment: createAppointment(db),
+  createAttachmentLink: createAttachmentLink(db),
+  createConsentRecord: createConsentRecord(db),
+  createFileAsset: createFileAsset(db),
+  createPatientAllergy: createPatientAllergy(db),
+  createPatientCondition: createPatientCondition(db),
   listUsers: listUsers(db),
   createUser: createUser(db),
   updateAppointment: updateAppointment(db),
+  updateConsentRecord: updateConsentRecord(db),
+  updatePatientAllergy: updatePatientAllergy(db),
+  updatePatientCondition: updatePatientCondition(db),
   updateUser: updateUser(db),
   listPractitioners: listPractitioners(db),
   createPractitioner: createPractitioner(db),
@@ -73,6 +107,8 @@ const server = createNodeServer({
   updateDiagnosis: updateDiagnosis(db),
   updateVitalSign: updateVitalSign(db),
   softDeleteSoapNote: softDeleteSoapNote(db),
+  softDeletePatientAllergy: softDeletePatientAllergy(db),
+  softDeletePatientCondition: softDeletePatientCondition(db),
   softDeleteDiagnosis: softDeleteDiagnosis(db),
   softDeleteVitalSign: softDeleteVitalSign(db),
   softDeletePrescription: softDeletePrescription(db),

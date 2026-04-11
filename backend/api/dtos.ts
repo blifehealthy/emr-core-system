@@ -120,6 +120,87 @@ const APPOINTMENT_KEYS = [
   'deleted_at',
 ] as const;
 
+const CONSENT_RECORD_KEYS = [
+  'id',
+  'clinic_id',
+  'patient_id',
+  'consent_type',
+  'status',
+  'granted_at',
+  'revoked_at',
+  'expires_at',
+  'captured_by_user_id',
+  'document_reference',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const FILE_ASSET_KEYS = [
+  'id',
+  'clinic_id',
+  'storage_key',
+  'original_filename',
+  'mime_type',
+  'byte_size',
+  'checksum_sha256',
+  'uploaded_by_user_id',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const ATTACHMENT_LINK_KEYS = [
+  'id',
+  'file_asset_id',
+  'target_type',
+  'target_id',
+  'label',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'clinic_id',
+  'storage_key',
+  'original_filename',
+  'mime_type',
+  'byte_size',
+  'checksum_sha256',
+  'uploaded_by_user_id',
+] as const;
+
+const PATIENT_ALLERGY_KEYS = [
+  'id',
+  'patient_id',
+  'allergen_name',
+  'allergen_category',
+  'reaction',
+  'severity',
+  'status',
+  'criticality',
+  'recorded_at',
+  'last_occurrence_at',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const PATIENT_CONDITION_KEYS = [
+  'id',
+  'patient_id',
+  'condition_code',
+  'coding_system',
+  'condition_name',
+  'clinical_status',
+  'onset_date',
+  'abatement_date',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const SOAP_NOTE_KEYS = [
   'clinical_note_id',
   'subjective',
@@ -177,6 +258,42 @@ export function toAppointmentDto(row: unknown): Record<string, unknown> {
 
 export function toAppointmentDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toAppointmentDto(row));
+}
+
+export function toConsentRecordDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...CONSENT_RECORD_KEYS]);
+}
+
+export function toConsentRecordDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toConsentRecordDto(row));
+}
+
+export function toFileAssetDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...FILE_ASSET_KEYS]);
+}
+
+export function toAttachmentLinkDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...ATTACHMENT_LINK_KEYS]);
+}
+
+export function toAttachmentLinkDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toAttachmentLinkDto(row));
+}
+
+export function toPatientAllergyDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PATIENT_ALLERGY_KEYS]);
+}
+
+export function toPatientAllergyDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPatientAllergyDto(row));
+}
+
+export function toPatientConditionDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PATIENT_CONDITION_KEYS]);
+}
+
+export function toPatientConditionDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPatientConditionDto(row));
 }
 
 export function toSoapNoteDto(row: unknown): Record<string, unknown> {

@@ -1,6 +1,16 @@
 import type {
+  AttachmentTargetType,
+  AllergySeverity,
+  AllergyStatus,
   AppointmentStatus,
+  ConsentStatus,
+  PatientConditionStatus,
+  CreateAttachmentLinkInput,
   CreateAppointmentInput,
+  CreateConsentRecordInput,
+  CreateFileAssetInput,
+  CreatePatientAllergyInput,
+  CreatePatientConditionInput,
   CreateDiagnosisInput,
   CreateEncounterInput,
   CreatePractitionerValidatedInput,
@@ -15,6 +25,9 @@ import type {
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
   UpdateAppointmentInput,
+  UpdateConsentRecordInput,
+  UpdatePatientAllergyInput,
+  UpdatePatientConditionInput,
   UpdateSoapNoteInput,
   UpdatePractitionerValidatedInput,
   UpdatePrescriptionInput,
@@ -473,6 +486,137 @@ export function validateUpdateAppointmentBody(body: unknown, appointmentId: stri
         ? { scheduledEndAt: scheduledEndAt.value }
         : {}),
       ...(Object.hasOwn(candidate, 'reason') ? { reason: reason.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreateConsentRecordBody(body: unknown):
+  | { ok: true; value: CreateConsentRecordInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const consentType = readRequiredString(candidate.consentType, 'consentType');
+  if (!consentType.ok) return consentType;
+
+  const status = readEnumValue<ConsentStatus>(candidate.status, 'status', [
+    'granted',
+    'revoked',
+    'expired',
+    'declined',
+  ]);
+  if (!status.ok) return status;
+
+  const grantedAt = readOptionalNullableStringField(candidate, 'grantedAt');
+  if (!grantedAt.ok) return grantedAt;
+
+  const revokedAt = readOptionalNullableStringField(candidate, 'revokedAt');
+  if (!revokedAt.ok) return revokedAt;
+
+  const expiresAt = readOptionalNullableStringField(candidate, 'expiresAt');
+  if (!expiresAt.ok) return expiresAt;
+
+  const capturedByUserId = readOptionalNullableStringField(candidate, 'capturedByUserId');
+  if (!capturedByUserId.ok) return capturedByUserId;
+
+  const documentReference = readOptionalNullableStringField(candidate, 'documentReference');
+  if (!documentReference.ok) return documentReference;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      consentType: consentType.value,
+      status: status.value,
+      grantedAt: grantedAt.value,
+      revokedAt: revokedAt.value,
+      expiresAt: expiresAt.value,
+      capturedByUserId: capturedByUserId.value,
+      documentReference: documentReference.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateConsentRecordBody(body: unknown, consentId: string):
+  | { ok: true; value: UpdateConsentRecordInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'consentType',
+    'status',
+    'grantedAt',
+    'revokedAt',
+    'expiresAt',
+    'capturedByUserId',
+    'documentReference',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one consent field must be provided for update' };
+  }
+
+  const consentType = readOptionalTrimmedStringField(candidate, 'consentType');
+  if (!consentType.ok) return consentType;
+
+  const status = readEnumValue<ConsentStatus>(candidate.status, 'status', [
+    'granted',
+    'revoked',
+    'expired',
+    'declined',
+  ]);
+  if (!status.ok) return status;
+
+  const grantedAt = readOptionalNullableStringField(candidate, 'grantedAt');
+  if (!grantedAt.ok) return grantedAt;
+
+  const revokedAt = readOptionalNullableStringField(candidate, 'revokedAt');
+  if (!revokedAt.ok) return revokedAt;
+
+  const expiresAt = readOptionalNullableStringField(candidate, 'expiresAt');
+  if (!expiresAt.ok) return expiresAt;
+
+  const capturedByUserId = readOptionalNullableStringField(candidate, 'capturedByUserId');
+  if (!capturedByUserId.ok) return capturedByUserId;
+
+  const documentReference = readOptionalNullableStringField(candidate, 'documentReference');
+  if (!documentReference.ok) return documentReference;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      consentId,
+      ...(Object.hasOwn(candidate, 'consentType') ? { consentType: consentType.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'grantedAt') ? { grantedAt: grantedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'revokedAt') ? { revokedAt: revokedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'expiresAt') ? { expiresAt: expiresAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'capturedByUserId')
+        ? { capturedByUserId: capturedByUserId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'documentReference')
+        ? { documentReference: documentReference.value }
+        : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
@@ -1048,6 +1192,347 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
   };
 }
 
+export function validateCreateFileAssetBody(body: unknown):
+  | { ok: true; value: CreateFileAssetInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const storageKey = readRequiredString(candidate.storageKey, 'storageKey');
+  if (!storageKey.ok) return storageKey;
+
+  const originalFilename = readRequiredString(candidate.originalFilename, 'originalFilename');
+  if (!originalFilename.ok) return originalFilename;
+
+  const mimeType = readOptionalNullableStringField(candidate, 'mimeType');
+  if (!mimeType.ok) return mimeType;
+
+  const byteSize = readRequiredIntegerField(candidate.byteSize, 'byteSize');
+  if (!byteSize.ok) return byteSize;
+  if (byteSize.value < 0) {
+    return { ok: false, error: 'byteSize must be greater than or equal to 0' };
+  }
+
+  const checksumSha256 = readOptionalNullableStringField(candidate, 'checksumSha256');
+  if (!checksumSha256.ok) return checksumSha256;
+
+  const uploadedByUserId = readOptionalNullableStringField(candidate, 'uploadedByUserId');
+  if (!uploadedByUserId.ok) return uploadedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      storageKey: storageKey.value,
+      originalFilename: originalFilename.value,
+      mimeType: mimeType.value,
+      byteSize: byteSize.value,
+      checksumSha256: checksumSha256.value,
+      uploadedByUserId: uploadedByUserId.value,
+    },
+  };
+}
+
+export function validateCreateAttachmentLinkBody(body: unknown):
+  | { ok: true; value: CreateAttachmentLinkInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const fileAssetId = readRequiredString(candidate.fileAssetId, 'fileAssetId');
+  if (!fileAssetId.ok) return fileAssetId;
+
+  const targetType = readRequiredEnumValue<AttachmentTargetType>(
+    candidate.targetType,
+    'targetType',
+    ['patient', 'encounter', 'clinical_note', 'consent_record']
+  );
+  if (!targetType.ok) return targetType;
+
+  const targetId = readRequiredString(candidate.targetId, 'targetId');
+  if (!targetId.ok) return targetId;
+
+  const label = readOptionalNullableStringField(candidate, 'label');
+  if (!label.ok) return label;
+
+  return {
+    ok: true,
+    value: {
+      fileAssetId: fileAssetId.value,
+      targetType: targetType.value,
+      targetId: targetId.value,
+      label: label.value,
+    },
+  };
+}
+
+export function validateCreatePatientAllergyBody(body: unknown):
+  | { ok: true; value: CreatePatientAllergyInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const allergenName = readRequiredString(candidate.allergenName, 'allergenName');
+  if (!allergenName.ok) return allergenName;
+
+  const allergenCategory = readOptionalNullableStringField(candidate, 'allergenCategory');
+  if (!allergenCategory.ok) return allergenCategory;
+
+  const reaction = readOptionalNullableStringField(candidate, 'reaction');
+  if (!reaction.ok) return reaction;
+
+  const severity = readEnumValue<AllergySeverity>(candidate.severity, 'severity', [
+    'mild',
+    'moderate',
+    'severe',
+    'unknown',
+  ]);
+  if (!severity.ok) return severity;
+
+  const status = readEnumValue<AllergyStatus>(candidate.status, 'status', [
+    'active',
+    'inactive',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const criticality = readOptionalNullableStringField(candidate, 'criticality');
+  if (!criticality.ok) return criticality;
+
+  const recordedAt = readOptionalNullableStringField(candidate, 'recordedAt');
+  if (!recordedAt.ok) return recordedAt;
+
+  const lastOccurrenceAt = readOptionalNullableStringField(candidate, 'lastOccurrenceAt');
+  if (!lastOccurrenceAt.ok) return lastOccurrenceAt;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      patientId: patientId.value,
+      allergenName: allergenName.value,
+      allergenCategory: allergenCategory.value,
+      reaction: reaction.value,
+      severity: severity.value,
+      status: status.value,
+      criticality: criticality.value,
+      recordedAt: recordedAt.value,
+      lastOccurrenceAt: lastOccurrenceAt.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdatePatientAllergyBody(body: unknown, allergyId: string):
+  | { ok: true; value: UpdatePatientAllergyInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'allergenName',
+    'allergenCategory',
+    'reaction',
+    'severity',
+    'status',
+    'criticality',
+    'recordedAt',
+    'lastOccurrenceAt',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one allergy field must be provided for update' };
+  }
+
+  const allergenName = readOptionalTrimmedStringField(candidate, 'allergenName');
+  if (!allergenName.ok) return allergenName;
+
+  const allergenCategory = readOptionalNullableStringField(candidate, 'allergenCategory');
+  if (!allergenCategory.ok) return allergenCategory;
+
+  const reaction = readOptionalNullableStringField(candidate, 'reaction');
+  if (!reaction.ok) return reaction;
+
+  const severity = readEnumValue<AllergySeverity>(candidate.severity, 'severity', [
+    'mild',
+    'moderate',
+    'severe',
+    'unknown',
+  ]);
+  if (!severity.ok) return severity;
+
+  const status = readEnumValue<AllergyStatus>(candidate.status, 'status', [
+    'active',
+    'inactive',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const criticality = readOptionalNullableStringField(candidate, 'criticality');
+  if (!criticality.ok) return criticality;
+
+  const recordedAt = readOptionalNullableStringField(candidate, 'recordedAt');
+  if (!recordedAt.ok) return recordedAt;
+
+  const lastOccurrenceAt = readOptionalNullableStringField(candidate, 'lastOccurrenceAt');
+  if (!lastOccurrenceAt.ok) return lastOccurrenceAt;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      allergyId,
+      ...(Object.hasOwn(candidate, 'allergenName') ? { allergenName: allergenName.value } : {}),
+      ...(Object.hasOwn(candidate, 'allergenCategory')
+        ? { allergenCategory: allergenCategory.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'reaction') ? { reaction: reaction.value } : {}),
+      ...(Object.hasOwn(candidate, 'severity') ? { severity: severity.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'criticality') ? { criticality: criticality.value } : {}),
+      ...(Object.hasOwn(candidate, 'recordedAt') ? { recordedAt: recordedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'lastOccurrenceAt')
+        ? { lastOccurrenceAt: lastOccurrenceAt.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreatePatientConditionBody(body: unknown):
+  | { ok: true; value: CreatePatientConditionInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const conditionName = readRequiredString(candidate.conditionName, 'conditionName');
+  if (!conditionName.ok) return conditionName;
+
+  const conditionCode = readOptionalNullableStringField(candidate, 'conditionCode');
+  if (!conditionCode.ok) return conditionCode;
+
+  const codingSystem = readOptionalNullableStringField(candidate, 'codingSystem');
+  if (!codingSystem.ok) return codingSystem;
+
+  const clinicalStatus = readEnumValue<PatientConditionStatus>(
+    candidate.clinicalStatus,
+    'clinicalStatus',
+    ['active', 'resolved', 'inactive', 'entered_in_error']
+  );
+  if (!clinicalStatus.ok) return clinicalStatus;
+
+  const onsetDate = readOptionalNullableStringField(candidate, 'onsetDate');
+  if (!onsetDate.ok) return onsetDate;
+
+  const abatementDate = readOptionalNullableStringField(candidate, 'abatementDate');
+  if (!abatementDate.ok) return abatementDate;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      patientId: patientId.value,
+      conditionCode: conditionCode.value,
+      codingSystem: codingSystem.value,
+      conditionName: conditionName.value,
+      clinicalStatus: clinicalStatus.value,
+      onsetDate: onsetDate.value,
+      abatementDate: abatementDate.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdatePatientConditionBody(body: unknown, conditionId: string):
+  | { ok: true; value: UpdatePatientConditionInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'conditionCode',
+    'codingSystem',
+    'conditionName',
+    'clinicalStatus',
+    'onsetDate',
+    'abatementDate',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one condition field must be provided for update' };
+  }
+
+  const conditionCode = readOptionalNullableStringField(candidate, 'conditionCode');
+  if (!conditionCode.ok) return conditionCode;
+
+  const codingSystem = readOptionalNullableStringField(candidate, 'codingSystem');
+  if (!codingSystem.ok) return codingSystem;
+
+  const conditionName = readOptionalTrimmedStringField(candidate, 'conditionName');
+  if (!conditionName.ok) return conditionName;
+
+  const clinicalStatus = readEnumValue<PatientConditionStatus>(
+    candidate.clinicalStatus,
+    'clinicalStatus',
+    ['active', 'resolved', 'inactive', 'entered_in_error']
+  );
+  if (!clinicalStatus.ok) return clinicalStatus;
+
+  const onsetDate = readOptionalNullableStringField(candidate, 'onsetDate');
+  if (!onsetDate.ok) return onsetDate;
+
+  const abatementDate = readOptionalNullableStringField(candidate, 'abatementDate');
+  if (!abatementDate.ok) return abatementDate;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      conditionId,
+      ...(Object.hasOwn(candidate, 'conditionCode') ? { conditionCode: conditionCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'codingSystem') ? { codingSystem: codingSystem.value } : {}),
+      ...(Object.hasOwn(candidate, 'conditionName') ? { conditionName: conditionName.value } : {}),
+      ...(Object.hasOwn(candidate, 'clinicalStatus')
+        ? { clinicalStatus: clinicalStatus.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'onsetDate') ? { onsetDate: onsetDate.value } : {}),
+      ...(Object.hasOwn(candidate, 'abatementDate')
+        ? { abatementDate: abatementDate.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
 export function validateFinalizeClinicalNoteBody(body: unknown, clinicalNoteId: string):
   | { ok: true; value: FinalizeClinicalNoteInput }
   | { ok: false; error: string } {
@@ -1103,6 +1588,14 @@ function readRequiredString(value: unknown, fieldName: string) {
   }
 
   return { ok: true as const, value: (value as string).trim() };
+}
+
+function readRequiredIntegerField(value: unknown, fieldName: string) {
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    return { ok: false as const, error: `${fieldName} must be an integer` };
+  }
+
+  return { ok: true as const, value };
 }
 
 function readOptionalNullableString(value: unknown): string | null | undefined {

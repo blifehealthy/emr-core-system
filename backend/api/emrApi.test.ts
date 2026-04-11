@@ -9,6 +9,18 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientWithEncountersAndSOAP() {
       return null;
     },
+    async getConsentRecordById() {
+      return { id: 'consent-1' };
+    },
+    async getFileAssetById() {
+      return { id: 'file-1' };
+    },
+    async getPatientAllergyById() {
+      return { id: 'allergy-1' };
+    },
+    async getPatientConditionById() {
+      return { id: 'condition-1' };
+    },
     async getSoapNoteByClinicalNoteId() {
       return { clinical_note_id: 'clinical-note-1' };
     },
@@ -35,6 +47,42 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async createAppointment() {
       return { id: 'appointment-1' };
+    },
+    async listAttachmentsByTarget() {
+      return [];
+    },
+    async createFileAsset() {
+      return { id: 'file-1' };
+    },
+    async createAttachmentLink() {
+      return { id: 'attachment-1' };
+    },
+    async listPatientAllergies() {
+      return [];
+    },
+    async createPatientAllergy() {
+      return { id: 'allergy-1' };
+    },
+    async listPatientConditions() {
+      return [];
+    },
+    async createPatientCondition() {
+      return { id: 'condition-1' };
+    },
+    async updatePatientCondition() {
+      return { id: 'condition-1' };
+    },
+    async updatePatientAllergy() {
+      return { id: 'allergy-1' };
+    },
+    async listConsentRecordsByPatient() {
+      return [];
+    },
+    async createConsentRecord() {
+      return { id: 'consent-1' };
+    },
+    async updateConsentRecord() {
+      return { id: 'consent-1' };
     },
     async updateAppointment() {
       return { id: 'appointment-1' };
@@ -110,6 +158,12 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async softDeletePrescription() {
       return { id: 'prescription-1', deleted_at: '2026-01-01T00:00:00.000Z' };
+    },
+    async softDeletePatientAllergy() {
+      return { id: 'allergy-1', deleted_at: '2026-01-01T00:00:00.000Z' };
+    },
+    async softDeletePatientCondition() {
+      return { id: 'condition-1', deleted_at: '2026-01-01T00:00:00.000Z' };
     },
     async finalizeClinicalNote() {
       return { id: 'clinical-note-1', status: 'final' };
@@ -280,6 +334,372 @@ test('appointments APIs validate bad payloads and filters', async () => {
     body: {},
   });
   assert.equal(patchInvalid.status, 400);
+});
+
+test('consent APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listConsentRecordsByPatient(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.status, 'granted');
+        return [{ id: 'consent-1' }];
+      },
+      async getConsentRecordById(input) {
+        assert.equal(input.consentId, 'consent-1');
+        return { id: 'consent-1' };
+      },
+      async createConsentRecord(input) {
+        assert.equal(input.consentType, 'privacy_notice');
+        return { id: 'consent-1' };
+      },
+      async updateConsentRecord(input) {
+        assert.equal(input.consentId, 'consent-1');
+        assert.equal(input.status, 'revoked');
+        return { id: 'consent-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/consents',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'granted' },
+  });
+  assert.equal(list.status, 200);
+
+  const getOne = await api({
+    method: 'GET',
+    path: '/api/consents/consent-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getOne.status, 200);
+
+  const create = await api({
+    method: 'POST',
+    path: '/api/consents',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: {
+      clinicId: 'clinic-1',
+      patientId: 'patient-1',
+      consentType: 'privacy_notice',
+      status: 'granted',
+    },
+  });
+  assert.equal(create.status, 201);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/consents/consent-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'revoked' },
+  });
+  assert.equal(update.status, 200);
+});
+
+test('consent APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const invalidListStatus = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/consents',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'pending' },
+  });
+  assert.equal(invalidListStatus.status, 400);
+
+  const invalidCreate = await api({
+    method: 'POST',
+    path: '/api/consents',
+    headers: { 'x-user-role': 'doctor' },
+    body: { clinicId: 'clinic-1', patientId: 'patient-1' },
+  });
+  assert.equal(invalidCreate.status, 400);
+
+  const invalidPatch = await api({
+    method: 'PATCH',
+    path: '/api/consents/consent-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(invalidPatch.status, 400);
+});
+
+test('attachment APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listAttachmentsByTarget(input) {
+        assert.equal(input.targetType, 'consent_record');
+        assert.equal(input.targetId, 'consent-1');
+        return [{ id: 'attachment-1' }];
+      },
+      async getFileAssetById(input) {
+        assert.equal(input.fileAssetId, 'file-1');
+        return { id: 'file-1' };
+      },
+      async createFileAsset(input) {
+        assert.equal(input.storageKey, 'uploads/file-1.pdf');
+        return { id: 'file-1' };
+      },
+      async createAttachmentLink(input) {
+        assert.equal(input.fileAssetId, 'file-1');
+        assert.equal(input.targetType, 'patient');
+        return { id: 'attachment-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/attachments',
+    headers: { 'x-user-role': 'doctor' },
+    query: { targetType: 'consent_record', targetId: 'consent-1' },
+  });
+  assert.equal(list.status, 200);
+
+  const getFile = await api({
+    method: 'GET',
+    path: '/api/file-assets/file-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getFile.status, 200);
+
+  const createFile = await api({
+    method: 'POST',
+    path: '/api/file-assets',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: {
+      clinicId: 'clinic-1',
+      storageKey: 'uploads/file-1.pdf',
+      originalFilename: 'lab-result.pdf',
+      byteSize: 1024,
+    },
+  });
+  assert.equal(createFile.status, 201);
+
+  const createLink = await api({
+    method: 'POST',
+    path: '/api/attachments',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: {
+      fileAssetId: 'file-1',
+      targetType: 'patient',
+      targetId: 'patient-1',
+    },
+  });
+  assert.equal(createLink.status, 201);
+});
+
+test('attachment APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const missingTarget = await api({
+    method: 'GET',
+    path: '/api/attachments',
+    headers: { 'x-user-role': 'doctor' },
+    query: { targetId: 'patient-1' },
+  });
+  assert.equal(missingTarget.status, 400);
+
+  const invalidFile = await api({
+    method: 'POST',
+    path: '/api/file-assets',
+    headers: { 'x-user-role': 'doctor' },
+    body: { clinicId: 'clinic-1', storageKey: 'uploads/file-1.pdf', byteSize: -1 },
+  });
+  assert.equal(invalidFile.status, 400);
+
+  const invalidLink = await api({
+    method: 'POST',
+    path: '/api/attachments',
+    headers: { 'x-user-role': 'doctor' },
+    body: { fileAssetId: 'file-1', targetType: 'visit', targetId: 'patient-1' },
+  });
+  assert.equal(invalidLink.status, 400);
+});
+
+test('patient allergy APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listPatientAllergies(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.status, 'active');
+        return [{ id: 'allergy-1' }];
+      },
+      async getPatientAllergyById(input) {
+        assert.equal(input.allergyId, 'allergy-1');
+        return { id: 'allergy-1' };
+      },
+      async createPatientAllergy(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.allergenName, 'Peanuts');
+        return { id: 'allergy-1' };
+      },
+      async updatePatientAllergy(input) {
+        assert.equal(input.allergyId, 'allergy-1');
+        assert.equal(input.status, 'inactive');
+        return { id: 'allergy-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/allergies',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'active' },
+  });
+  assert.equal(list.status, 200);
+
+  const getOne = await api({
+    method: 'GET',
+    path: '/api/patient-allergies/allergy-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getOne.status, 200);
+
+  const create = await api({
+    method: 'POST',
+    path: '/api/patient-allergies',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: { patientId: 'patient-1', allergenName: 'Peanuts', severity: 'severe' },
+  });
+  assert.equal(create.status, 201);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/patient-allergies/allergy-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'inactive' },
+  });
+  assert.equal(update.status, 200);
+
+  const remove = await api({
+    method: 'DELETE',
+    path: '/api/patient-allergies/allergy-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+  });
+  assert.equal(remove.status, 200);
+});
+
+test('patient allergy APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const invalidListStatus = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/allergies',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'pending' },
+  });
+  assert.equal(invalidListStatus.status, 400);
+
+  const invalidCreate = await api({
+    method: 'POST',
+    path: '/api/patient-allergies',
+    headers: { 'x-user-role': 'doctor' },
+    body: { patientId: 'patient-1' },
+  });
+  assert.equal(invalidCreate.status, 400);
+
+  const invalidPatch = await api({
+    method: 'PATCH',
+    path: '/api/patient-allergies/allergy-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(invalidPatch.status, 400);
+});
+
+test('patient condition APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listPatientConditions(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.clinicalStatus, 'active');
+        return [{ id: 'condition-1' }];
+      },
+      async getPatientConditionById(input) {
+        assert.equal(input.conditionId, 'condition-1');
+        return { id: 'condition-1' };
+      },
+      async createPatientCondition(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.conditionName, 'Asthma');
+        return { id: 'condition-1' };
+      },
+      async updatePatientCondition(input) {
+        assert.equal(input.conditionId, 'condition-1');
+        assert.equal(input.clinicalStatus, 'resolved');
+        return { id: 'condition-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/conditions',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicalStatus: 'active' },
+  });
+  assert.equal(list.status, 200);
+
+  const getOne = await api({
+    method: 'GET',
+    path: '/api/patient-conditions/condition-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getOne.status, 200);
+
+  const create = await api({
+    method: 'POST',
+    path: '/api/patient-conditions',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: { patientId: 'patient-1', conditionName: 'Asthma', clinicalStatus: 'active' },
+  });
+  assert.equal(create.status, 201);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/patient-conditions/condition-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { clinicalStatus: 'resolved' },
+  });
+  assert.equal(update.status, 200);
+
+  const remove = await api({
+    method: 'DELETE',
+    path: '/api/patient-conditions/condition-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+  });
+  assert.equal(remove.status, 200);
+});
+
+test('patient condition APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const invalidListStatus = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/conditions',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicalStatus: 'pending' },
+  });
+  assert.equal(invalidListStatus.status, 400);
+
+  const invalidCreate = await api({
+    method: 'POST',
+    path: '/api/patient-conditions',
+    headers: { 'x-user-role': 'doctor' },
+    body: { patientId: 'patient-1' },
+  });
+  assert.equal(invalidCreate.status, 400);
+
+  const invalidPatch = await api({
+    method: 'PATCH',
+    path: '/api/patient-conditions/condition-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(invalidPatch.status, 400);
 });
 
 test('PATCH update routes honor role permissions', async () => {

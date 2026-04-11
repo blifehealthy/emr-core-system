@@ -27,6 +27,9 @@ const migrations = [
   '0005_add_users_and_practitioners.up.sql',
   '0006_add_prescriptions.up.sql',
   '0007_add_appointments.up.sql',
+  '0008_add_consent_records.up.sql',
+  '0009_add_file_attachments.up.sql',
+  '0010_add_patient_conditions.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
