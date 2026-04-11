@@ -7,12 +7,28 @@ export function updateUser(db: {
     role?: 'doctor' | 'nurse' | 'admin';
     isActive?: boolean;
   }) {
+    const assignments: string[] = [];
+    const params: unknown[] = [input.userId];
+
+    if (Object.hasOwn(input, 'displayName')) {
+      params.push(input.displayName ?? null);
+      assignments.push(`display_name = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'role')) {
+      params.push(input.role ?? null);
+      assignments.push(`role = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'isActive')) {
+      params.push(input.isActive ?? null);
+      assignments.push(`is_active = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE users
-        SET display_name = COALESCE($2, display_name),
-            role = COALESCE($3, role),
-            is_active = COALESCE($4, is_active)
+        SET ${assignments.join(',\n            ')}
         WHERE id = $1
           AND deleted_at IS NULL
         RETURNING
@@ -26,7 +42,7 @@ export function updateUser(db: {
           updated_at,
           deleted_at
       `,
-      [input.userId, input.displayName ?? null, input.role ?? null, input.isActive ?? null]
+      params
     );
 
     return result.rows[0] ?? null;
