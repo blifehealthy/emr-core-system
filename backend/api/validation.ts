@@ -375,10 +375,16 @@ export function validateUpdateSoapNoteBody(body: unknown, clinicalNoteId: string
     ok: true,
     value: {
       clinicalNoteId,
-      subjective: readOptionalNullableString(candidate.subjective),
-      objective: readOptionalNullableString(candidate.objective),
-      assessment: readOptionalNullableString(candidate.assessment),
-      plan: readOptionalNullableString(candidate.plan),
+      ...(Object.hasOwn(candidate, 'subjective')
+        ? { subjective: readOptionalNullableString(candidate.subjective) }
+        : {}),
+      ...(Object.hasOwn(candidate, 'objective')
+        ? { objective: readOptionalNullableString(candidate.objective) }
+        : {}),
+      ...(Object.hasOwn(candidate, 'assessment')
+        ? { assessment: readOptionalNullableString(candidate.assessment) }
+        : {}),
+      ...(Object.hasOwn(candidate, 'plan') ? { plan: readOptionalNullableString(candidate.plan) } : {}),
     },
   };
 }
@@ -465,15 +471,19 @@ export function validateUpdateDiagnosisBody(body: unknown, diagnosisId: string):
     ok: true,
     value: {
       diagnosisId,
-      diagnosisCode: diagnosisCode.value,
-      codingSystem: codingSystem.value,
-      diagnosisName: diagnosisName.value,
-      diagnosisType: diagnosisType.value,
-      status: diagnosisStatus.value,
-      sequenceNumber: sequenceNumber.value,
-      diagnosedAt: diagnosedAt.value,
-      resolutionNote: resolutionNote.value,
-      notes: notes.value,
+      ...(Object.hasOwn(candidate, 'diagnosisCode') ? { diagnosisCode: diagnosisCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'codingSystem') ? { codingSystem: codingSystem.value } : {}),
+      ...(Object.hasOwn(candidate, 'diagnosisName') ? { diagnosisName: diagnosisName.value } : {}),
+      ...(Object.hasOwn(candidate, 'diagnosisType') ? { diagnosisType: diagnosisType.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: diagnosisStatus.value } : {}),
+      ...(Object.hasOwn(candidate, 'sequenceNumber')
+        ? { sequenceNumber: sequenceNumber.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'diagnosedAt') ? { diagnosedAt: diagnosedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'resolutionNote')
+        ? { resolutionNote: resolutionNote.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
 }
@@ -552,19 +562,31 @@ export function validateUpdateVitalSignBody(body: unknown, vitalSignId: string):
     ok: true,
     value: {
       vitalSignId,
-      measuredAt: measuredAt.value,
-      measuredByPractitionerId: measuredByPractitionerId.value,
-      bodyTemperatureC: bodyTemperatureC.value,
-      heartRateBpm: heartRateBpm.value,
-      respiratoryRateBpm: respiratoryRateBpm.value,
-      systolicBpMmhg: systolicBpMmhg.value,
-      diastolicBpMmhg: diastolicBpMmhg.value,
-      oxygenSaturationPct: oxygenSaturationPct.value,
-      weightKg: weightKg.value,
-      heightCm: heightCm.value,
-      bmi: bmi.value,
-      painScore: painScore.value,
-      notes: notes.value,
+      ...(Object.hasOwn(candidate, 'measuredAt') ? { measuredAt: measuredAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'measuredByPractitionerId')
+        ? { measuredByPractitionerId: measuredByPractitionerId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'bodyTemperatureC')
+        ? { bodyTemperatureC: bodyTemperatureC.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'heartRateBpm') ? { heartRateBpm: heartRateBpm.value } : {}),
+      ...(Object.hasOwn(candidate, 'respiratoryRateBpm')
+        ? { respiratoryRateBpm: respiratoryRateBpm.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'systolicBpMmhg')
+        ? { systolicBpMmhg: systolicBpMmhg.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'diastolicBpMmhg')
+        ? { diastolicBpMmhg: diastolicBpMmhg.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'oxygenSaturationPct')
+        ? { oxygenSaturationPct: oxygenSaturationPct.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'weightKg') ? { weightKg: weightKg.value } : {}),
+      ...(Object.hasOwn(candidate, 'heightCm') ? { heightCm: heightCm.value } : {}),
+      ...(Object.hasOwn(candidate, 'bmi') ? { bmi: bmi.value } : {}),
+      ...(Object.hasOwn(candidate, 'painScore') ? { painScore: painScore.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
 }
@@ -724,12 +746,14 @@ export function validateUpdatePractitionerBody(body: unknown, practitionerId: st
     ok: true,
     value: {
       practitionerId,
-      userId: userId.value,
-      firstName: firstName.value,
-      lastName: lastName.value,
-      licenseNumber: licenseNumber.value,
-      specialty: specialty.value,
-      isActive: isActive.value,
+      ...(Object.hasOwn(candidate, 'userId') ? { userId: userId.value } : {}),
+      ...(Object.hasOwn(candidate, 'firstName') ? { firstName: firstName.value } : {}),
+      ...(Object.hasOwn(candidate, 'lastName') ? { lastName: lastName.value } : {}),
+      ...(Object.hasOwn(candidate, 'licenseNumber')
+        ? { licenseNumber: licenseNumber.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'specialty') ? { specialty: specialty.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
     },
   };
 }
@@ -877,17 +901,23 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
     ok: true,
     value: {
       prescriptionId,
-      prescribedByPractitionerId: prescribedByPractitionerId.value,
-      medicationName: medicationName.value,
-      rxnormCode: rxnormCode.value,
-      dosage: dosage.value,
-      route: route.value,
-      frequency: frequency.value,
-      durationText: durationText.value,
-      instructions: instructions.value,
-      status: status.value,
-      startDate: startDate.value,
-      endDate: endDate.value,
+      ...(Object.hasOwn(candidate, 'prescribedByPractitionerId')
+        ? { prescribedByPractitionerId: prescribedByPractitionerId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'medicationName')
+        ? { medicationName: medicationName.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'rxnormCode') ? { rxnormCode: rxnormCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'dosage') ? { dosage: dosage.value } : {}),
+      ...(Object.hasOwn(candidate, 'route') ? { route: route.value } : {}),
+      ...(Object.hasOwn(candidate, 'frequency') ? { frequency: frequency.value } : {}),
+      ...(Object.hasOwn(candidate, 'durationText')
+        ? { durationText: durationText.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'instructions') ? { instructions: instructions.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'startDate') ? { startDate: startDate.value } : {}),
+      ...(Object.hasOwn(candidate, 'endDate') ? { endDate: endDate.value } : {}),
     },
   };
 }

@@ -5,7 +5,7 @@ import { createEmrApi } from './emrApi.ts';
 import type { Dependencies } from './types.ts';
 
 function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
-  return {
+  const base: Dependencies = {
     async getPatientWithEncountersAndSOAP() {
       return null;
     },
@@ -114,10 +114,11 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientTimeline() {
       return [];
     },
-    async resolveActor() {
-      return null;
-    },
     async healthCheck() {},
+  };
+
+  return {
+    ...base,
     ...overrides,
   };
 }
@@ -510,6 +511,34 @@ test('API can resolve role and practitioner context from user id', async () => {
   });
 
   assert.equal(response.status, 200);
+});
+
+test('API rejects unresolved actor context when resolver is configured', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async resolveActor() {
+        return null;
+      },
+    })
+  );
+
+  const missingUserId = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+  assert.equal(missingUserId.status, 403);
+  assert.deepEqual(missingUserId.body, { error: 'x-user-id header is required' });
+
+  const unresolvedActor = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    headers: { 'x-user-id': 'missing-user', 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+  assert.equal(unresolvedActor.status, 403);
+  assert.deepEqual(unresolvedActor.body, { error: 'Actor could not be resolved' });
 });
 
 test('users, practitioners, and prescriptions APIs work and enforce roles', async () => {

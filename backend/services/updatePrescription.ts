@@ -15,20 +15,68 @@ export function updatePrescription(db: {
     startDate?: string | null;
     endDate?: string | null;
   }) {
+    const assignments: string[] = [];
+    const params: unknown[] = [input.prescriptionId];
+
+    if (Object.hasOwn(input, 'prescribedByPractitionerId')) {
+      params.push(input.prescribedByPractitionerId ?? null);
+      assignments.push(`prescribed_by_practitioner_id = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'medicationName')) {
+      params.push(input.medicationName ?? null);
+      assignments.push(`medication_name = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'rxnormCode')) {
+      params.push(input.rxnormCode ?? null);
+      assignments.push(`rxnorm_code = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'dosage')) {
+      params.push(input.dosage ?? null);
+      assignments.push(`dosage = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'route')) {
+      params.push(input.route ?? null);
+      assignments.push(`route = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'frequency')) {
+      params.push(input.frequency ?? null);
+      assignments.push(`frequency = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'durationText')) {
+      params.push(input.durationText ?? null);
+      assignments.push(`duration_text = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'instructions')) {
+      params.push(input.instructions ?? null);
+      assignments.push(`instructions = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'status')) {
+      params.push(input.status ?? null);
+      assignments.push(`status = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'startDate')) {
+      params.push(input.startDate ?? null);
+      assignments.push(`start_date = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'endDate')) {
+      params.push(input.endDate ?? null);
+      assignments.push(`end_date = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE prescriptions
-        SET prescribed_by_practitioner_id = COALESCE($2, prescribed_by_practitioner_id),
-            medication_name = COALESCE($3, medication_name),
-            rxnorm_code = COALESCE($4, rxnorm_code),
-            dosage = COALESCE($5, dosage),
-            route = COALESCE($6, route),
-            frequency = COALESCE($7, frequency),
-            duration_text = COALESCE($8, duration_text),
-            instructions = COALESCE($9, instructions),
-            status = COALESCE($10, status),
-            start_date = COALESCE($11, start_date),
-            end_date = COALESCE($12, end_date)
+        SET ${assignments.join(',\n            ')}
         WHERE id = $1
           AND deleted_at IS NULL
         RETURNING
@@ -50,20 +98,7 @@ export function updatePrescription(db: {
           updated_at,
           deleted_at
       `,
-      [
-        input.prescriptionId,
-        input.prescribedByPractitionerId ?? null,
-        input.medicationName ?? null,
-        input.rxnormCode ?? null,
-        input.dosage ?? null,
-        input.route ?? null,
-        input.frequency ?? null,
-        input.durationText ?? null,
-        input.instructions ?? null,
-        input.status ?? null,
-        input.startDate ?? null,
-        input.endDate ?? null,
-      ]
+      params
     );
 
     return result.rows[0] ?? null;

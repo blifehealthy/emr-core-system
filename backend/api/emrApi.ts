@@ -53,16 +53,30 @@ export function createEmrApi(dependencies: Dependencies) {
     let actorAwareRequest = request;
     const actor = getActorContext(request);
 
-    if (actor.userId && dependencies.resolveActor) {
+    if (dependencies.resolveActor) {
+      if (!actor.userId) {
+        return {
+          status: 403,
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          body: { error: 'x-user-id header is required' },
+        };
+      }
+
       const resolvedActor = await dependencies.resolveActor({ userId: actor.userId });
 
-      if (resolvedActor) {
-        actorAwareRequest = withResolvedActor(request, {
-          userId: resolvedActor.user_id,
-          practitionerId: resolvedActor.practitioner_id,
-          role: resolvedActor.role,
-        });
+      if (!resolvedActor) {
+        return {
+          status: 403,
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          body: { error: 'Actor could not be resolved' },
+        };
       }
+
+      actorAwareRequest = withResolvedActor(request, {
+        userId: resolvedActor.user_id,
+        practitionerId: resolvedActor.practitioner_id,
+        role: resolvedActor.role,
+      });
     }
 
     if (request.method === 'GET' && request.path === '/api/patients/detail') {

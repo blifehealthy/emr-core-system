@@ -10,28 +10,48 @@ export function updatePractitioner(db: {
     specialty?: string | null;
     isActive?: boolean;
   }) {
+    const assignments: string[] = [];
+    const params: unknown[] = [input.practitionerId];
+
+    if (Object.hasOwn(input, 'userId')) {
+      params.push(input.userId ?? null);
+      assignments.push(`user_id = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'firstName')) {
+      params.push(input.firstName ?? null);
+      assignments.push(`first_name = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'lastName')) {
+      params.push(input.lastName ?? null);
+      assignments.push(`last_name = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'licenseNumber')) {
+      params.push(input.licenseNumber ?? null);
+      assignments.push(`license_number = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'specialty')) {
+      params.push(input.specialty ?? null);
+      assignments.push(`specialty = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'isActive')) {
+      params.push(input.isActive ?? null);
+      assignments.push(`is_active = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE practitioners
-        SET user_id = COALESCE($2, user_id),
-            first_name = COALESCE($3, first_name),
-            last_name = COALESCE($4, last_name),
-            license_number = COALESCE($5, license_number),
-            specialty = COALESCE($6, specialty),
-            is_active = COALESCE($7, is_active)
+        SET ${assignments.join(',\n            ')}
         WHERE id = $1
           AND deleted_at IS NULL
         RETURNING *
       `,
-      [
-        input.practitionerId,
-        input.userId ?? null,
-        input.firstName ?? null,
-        input.lastName ?? null,
-        input.licenseNumber ?? null,
-        input.specialty ?? null,
-        input.isActive ?? null,
-      ]
+      params
     );
 
     return result.rows[0] ?? null;
