@@ -50,7 +50,58 @@ SELECT
     sn.assessment,
     sn.plan,
     sn.created_at AS soap_note_created_at,
-    sn.updated_at AS soap_note_updated_at
+    sn.updated_at AS soap_note_updated_at,
+
+    d.id AS diagnosis_id,
+    d.encounter_id AS diagnosis_encounter_id,
+    d.clinical_note_id AS diagnosis_clinical_note_id,
+    d.diagnosis_code,
+    d.coding_system,
+    d.diagnosis_name,
+    d.diagnosis_type,
+    d.status AS diagnosis_status,
+    d.sequence_number,
+    d.diagnosed_at,
+    d.resolution_note,
+    d.notes AS diagnosis_notes,
+    d.created_at AS diagnosis_created_at,
+    d.updated_at AS diagnosis_updated_at,
+
+    vs.id AS vital_sign_id,
+    vs.encounter_id AS vital_sign_encounter_id,
+    vs.clinical_note_id AS vital_sign_clinical_note_id,
+    vs.measured_at,
+    vs.measured_by_practitioner_id,
+    vs.body_temperature_c,
+    vs.heart_rate_bpm,
+    vs.respiratory_rate_bpm,
+    vs.systolic_bp_mmhg,
+    vs.diastolic_bp_mmhg,
+    vs.oxygen_saturation_pct,
+    vs.weight_kg,
+    vs.height_cm,
+    vs.bmi,
+    vs.pain_score,
+    vs.notes AS vital_sign_notes,
+    vs.created_at AS vital_sign_created_at,
+    vs.updated_at AS vital_sign_updated_at,
+
+    pr.id AS prescription_id,
+    pr.encounter_id AS prescription_encounter_id,
+    pr.clinical_note_id AS prescription_clinical_note_id,
+    pr.prescribed_by_practitioner_id,
+    pr.medication_name,
+    pr.rxnorm_code,
+    pr.dosage,
+    pr.route,
+    pr.frequency,
+    pr.duration_text,
+    pr.instructions AS prescription_instructions,
+    pr.status AS prescription_status,
+    pr.start_date AS prescription_start_date,
+    pr.end_date AS prescription_end_date,
+    pr.created_at AS prescription_created_at,
+    pr.updated_at AS prescription_updated_at
 FROM patients p
 LEFT JOIN encounters e
     ON e.patient_id = p.id
@@ -61,8 +112,21 @@ LEFT JOIN clinical_notes cn
 LEFT JOIN soap_notes sn
     ON sn.clinical_note_id = cn.id
    AND sn.deleted_at IS NULL
+LEFT JOIN diagnoses d
+    ON d.encounter_id = e.id
+   AND d.deleted_at IS NULL
+LEFT JOIN vital_signs vs
+    ON vs.encounter_id = e.id
+   AND vs.deleted_at IS NULL
+LEFT JOIN prescriptions pr
+    ON pr.encounter_id = e.id
+   AND pr.deleted_at IS NULL
 WHERE p.clinic_id = $1
   AND p.medical_record_number = $2
   AND p.deleted_at IS NULL
 ORDER BY e.created_at DESC NULLS LAST,
-         cn.created_at DESC NULLS LAST;
+         cn.created_at DESC NULLS LAST,
+         d.sequence_number ASC NULLS LAST,
+         d.created_at DESC NULLS LAST,
+         vs.measured_at DESC NULLS LAST,
+         pr.created_at DESC NULLS LAST;
