@@ -2,6 +2,13 @@ import type { PatientWithEncountersAndSOAP } from '../repositories/getPatientWit
 
 export type EncounterStatus = 'draft' | 'in_progress' | 'completed' | 'signed' | 'cancelled';
 export type EncounterClass = 'outpatient' | 'inpatient' | 'emergency' | 'other';
+export type AppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'checked_in'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
 export type DiagnosisType = 'working' | 'final' | 'differential' | 'ruled_out';
 export type DiagnosisStatus = 'active' | 'resolved' | 'entered_in_error';
 export type UserRole = 'doctor' | 'nurse' | 'admin';
@@ -90,6 +97,28 @@ export type CreateEncounterResult = {
   soap_note: unknown;
   diagnoses: unknown[];
   vital_signs: unknown[];
+};
+
+export type CreateAppointmentInput = {
+  clinicId: string;
+  patientId: string;
+  practitionerId?: string | null;
+  appointmentNumber: string;
+  status?: AppointmentStatus;
+  scheduledStartAt: string;
+  scheduledEndAt?: string | null;
+  reason?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateAppointmentInput = {
+  appointmentId: string;
+  practitionerId?: string | null;
+  status?: AppointmentStatus;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string | null;
+  reason?: string | null;
+  notes?: string | null;
 };
 
 export type UpdateSoapNoteInput = {
@@ -254,9 +283,18 @@ export type Dependencies = {
     medicalRecordNumber: string;
   }) => Promise<PatientWithEncountersAndSOAP | null>;
   getSoapNoteByClinicalNoteId?: (input: { clinicalNoteId: string }) => Promise<unknown | null>;
+  getAppointmentById?: (input: { appointmentId: string }) => Promise<unknown | null>;
   getDiagnosisById?: (input: { diagnosisId: string }) => Promise<unknown | null>;
   getVitalSignById?: (input: { vitalSignId: string }) => Promise<unknown | null>;
   getPrescriptionById?: (input: { prescriptionId: string }) => Promise<unknown | null>;
+  listAppointments: (input: {
+    clinicId: string;
+    patientId?: string;
+    practitionerId?: string;
+    status?: AppointmentStatus;
+  }) => Promise<unknown[]>;
+  createAppointment: (input: CreateAppointmentInput) => Promise<unknown>;
+  updateAppointment: (input: UpdateAppointmentInput) => Promise<unknown | null>;
   listDiagnosesByEncounter?: (input: {
     encounterId: string;
     clinicalNoteId?: string;

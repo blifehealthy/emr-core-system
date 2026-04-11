@@ -45,7 +45,8 @@ for migration in \
   "$MIGRATIONS_DIR/0003_add_diagnoses_and_vital_signs.up.sql" \
   "$MIGRATIONS_DIR/0004_add_audit_logs.up.sql" \
   "$MIGRATIONS_DIR/0005_add_users_and_practitioners.up.sql" \
-  "$MIGRATIONS_DIR/0006_add_prescriptions.up.sql"
+  "$MIGRATIONS_DIR/0006_add_prescriptions.up.sql" \
+  "$MIGRATIONS_DIR/0007_add_appointments.up.sql"
 do
   run_psql "$migration"
 done

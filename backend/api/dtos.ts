@@ -104,6 +104,22 @@ const PRACTITIONER_KEYS = [
   'deleted_at',
 ] as const;
 
+const APPOINTMENT_KEYS = [
+  'id',
+  'clinic_id',
+  'patient_id',
+  'practitioner_id',
+  'appointment_number',
+  'status',
+  'scheduled_start_at',
+  'scheduled_end_at',
+  'reason',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const SOAP_NOTE_KEYS = [
   'clinical_note_id',
   'subjective',
@@ -153,6 +169,14 @@ export function toPractitionerDto(row: unknown): Record<string, unknown> {
 
 export function toPractitionerDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPractitionerDto(row));
+}
+
+export function toAppointmentDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...APPOINTMENT_KEYS]);
+}
+
+export function toAppointmentDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toAppointmentDto(row));
 }
 
 export function toSoapNoteDto(row: unknown): Record<string, unknown> {

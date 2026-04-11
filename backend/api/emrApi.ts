@@ -1,5 +1,6 @@
 import { getActorContext, requireBearerAuth, withResolvedActor } from './auth.ts';
 import {
+  handleCreateAppointment,
   handleCreateDiagnosis,
   handleCreatePractitioner,
   handleCreatePrescription,
@@ -12,6 +13,7 @@ import {
   handleDeleteVitalSign,
   handleFinalizeClinicalNote,
   handleGetAuditLogsByEntity,
+  handleGetAppointment,
   handleGetDiagnosis,
   handleGetPatientDetail,
   handleGetPatientTimeline,
@@ -19,12 +21,14 @@ import {
   handleGetSoapNote,
   handleGetVitalSign,
   handleHealthCheck,
+  handleListAppointments,
   handleListDiagnosesByEncounter,
   handleListPractitioners,
   handleListPrescriptionsByEncounter,
   handleListUsers,
   handleListVitalSignsByEncounter,
   handleSignClinicalNote,
+  handleUpdateAppointment,
   handleUpdatePractitioner,
   handleUpdatePrescription,
   handleUpdateDiagnosis,
@@ -85,6 +89,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleGetPatientDetail(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'GET' && request.path === '/api/appointments') {
+      const roleError = requireRole(actorAwareRequest, 'appointment_read');
+      if (roleError) return roleError;
+      return handleListAppointments(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'GET' && request.path === '/api/users') {
       const roleError = requireRole(actorAwareRequest, 'user_read');
       if (roleError) return roleError;
@@ -117,6 +127,14 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'patient_read');
       if (roleError) return roleError;
       return handleGetDiagnosis(actorAwareRequest, dependencies, diagnosisReadMatch[1]);
+    }
+
+    const appointmentReadMatch =
+      request.method === 'GET' ? request.path.match(/^\/api\/appointments\/([^/]+)$/) : null;
+    if (appointmentReadMatch) {
+      const roleError = requireRole(actorAwareRequest, 'appointment_read');
+      if (roleError) return roleError;
+      return handleGetAppointment(actorAwareRequest, dependencies, appointmentReadMatch[1]);
     }
 
     const vitalSignReadMatch =
@@ -189,6 +207,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreateEncounter(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/appointments') {
+      const roleError = requireRole(actorAwareRequest, 'appointment_write');
+      if (roleError) return roleError;
+      return handleCreateAppointment(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/users') {
       const roleError = requireRole(actorAwareRequest, 'user_write');
       if (roleError) return roleError;
@@ -232,6 +256,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'practitioner_write');
         if (roleError) return roleError;
         return handleUpdatePractitioner(actorAwareRequest, dependencies, practitionerMatch[1]);
+      }
+
+      const appointmentMatch = request.path.match(/^\/api\/appointments\/([^/]+)$/);
+      if (appointmentMatch) {
+        const roleError = requireRole(actorAwareRequest, 'appointment_write');
+        if (roleError) return roleError;
+        return handleUpdateAppointment(actorAwareRequest, dependencies, appointmentMatch[1]);
       }
 
       const soapMatch = request.path.match(/^\/api\/clinical-notes\/([^/]+)\/soap$/);

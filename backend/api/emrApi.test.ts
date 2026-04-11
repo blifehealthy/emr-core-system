@@ -12,6 +12,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getSoapNoteByClinicalNoteId() {
       return { clinical_note_id: 'clinical-note-1' };
     },
+    async getAppointmentById() {
+      return { id: 'appointment-1' };
+    },
     async getDiagnosisById() {
       return { id: 'diagnosis-1' };
     },
@@ -26,6 +29,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
         rows: [],
         meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
       };
+    },
+    async listAppointments() {
+      return [];
+    },
+    async createAppointment() {
+      return { id: 'appointment-1' };
+    },
+    async updateAppointment() {
+      return { id: 'appointment-1' };
     },
     async listVitalSignsByEncounter() {
       return {
@@ -170,6 +182,104 @@ test('POST /api/encounters validates and creates encounter', async () => {
     body: { patientId: 'patient-1', encounterNumber: 'ENC-001', subjective: 'fever' },
   });
   assert.equal(response.status, 201);
+});
+
+test('appointments APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listAppointments(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.status, 'confirmed');
+        return [{ id: 'appointment-1' }];
+      },
+      async getAppointmentById(input) {
+        assert.equal(input.appointmentId, 'appointment-1');
+        return { id: 'appointment-1' };
+      },
+      async createAppointment(input) {
+        assert.equal(input.appointmentNumber, 'APT-001');
+        assert.equal(input.scheduledStartAt, '2026-01-10T09:00:00.000Z');
+        return { id: 'appointment-1' };
+      },
+      async updateAppointment(input) {
+        assert.equal(input.appointmentId, 'appointment-1');
+        assert.equal(input.status, 'checked_in');
+        return { id: 'appointment-1' };
+      },
+    })
+  );
+
+  const listAppointments = await api({
+    method: 'GET',
+    path: '/api/appointments',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', patientId: 'patient-1', status: 'confirmed' },
+  });
+  assert.equal(listAppointments.status, 200);
+
+  const getAppointment = await api({
+    method: 'GET',
+    path: '/api/appointments/appointment-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getAppointment.status, 200);
+
+  const createAppointment = await api({
+    method: 'POST',
+    path: '/api/appointments',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: {
+      clinicId: 'clinic-1',
+      patientId: 'patient-1',
+      appointmentNumber: 'APT-001',
+      scheduledStartAt: '2026-01-10T09:00:00.000Z',
+    },
+  });
+  assert.equal(createAppointment.status, 201);
+
+  const updateAppointment = await api({
+    method: 'PATCH',
+    path: '/api/appointments/appointment-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'checked_in' },
+  });
+  assert.equal(updateAppointment.status, 200);
+});
+
+test('appointments APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const missingClinicId = await api({
+    method: 'GET',
+    path: '/api/appointments',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(missingClinicId.status, 400);
+
+  const invalidStatus = await api({
+    method: 'GET',
+    path: '/api/appointments',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', status: 'rescheduled' },
+  });
+  assert.equal(invalidStatus.status, 400);
+
+  const createInvalid = await api({
+    method: 'POST',
+    path: '/api/appointments',
+    headers: { 'x-user-role': 'doctor' },
+    body: { clinicId: 'clinic-1', patientId: 'patient-1' },
+  });
+  assert.equal(createInvalid.status, 400);
+
+  const patchInvalid = await api({
+    method: 'PATCH',
+    path: '/api/appointments/appointment-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(patchInvalid.status, 400);
 });
 
 test('PATCH update routes honor role permissions', async () => {

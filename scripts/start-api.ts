@@ -1,6 +1,7 @@
 import { createNodeServer } from '../backend/api/nodeServer.ts';
 import { createPostgresDb } from '../backend/database/postgres.ts';
 import { createAuditLog } from '../backend/services/createAuditLog.ts';
+import { createAppointment } from '../backend/services/createAppointment.ts';
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPractitioner } from '../backend/services/createPractitioner.ts';
@@ -9,12 +10,14 @@ import { createUser } from '../backend/services/createUser.ts';
 import { createVitalSign } from '../backend/services/createVitalSign.ts';
 import { finalizeClinicalNote } from '../backend/services/finalizeClinicalNote.ts';
 import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.ts';
+import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
 import { createGetPatientWithEncountersAndSOAPService } from '../backend/services/getPatientWithEncountersAndSOAP.ts';
 import { getPatientTimeline } from '../backend/services/getPatientTimeline.ts';
 import { getPrescriptionById } from '../backend/services/getPrescriptionById.ts';
 import { getSoapNoteByClinicalNoteId } from '../backend/services/getSoapNoteByClinicalNoteId.ts';
 import { getVitalSignById } from '../backend/services/getVitalSignById.ts';
+import { listAppointments } from '../backend/services/listAppointments.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
 import { listPractitioners } from '../backend/services/listPractitioners.ts';
 import { listPrescriptionsByEncounter } from '../backend/services/listPrescriptionsByEncounter.ts';
@@ -25,6 +28,7 @@ import { softDeleteDiagnosis } from '../backend/services/softDeleteDiagnosis.ts'
 import { softDeletePrescription } from '../backend/services/softDeletePrescription.ts';
 import { softDeleteSoapNote } from '../backend/services/softDeleteSoapNote.ts';
 import { softDeleteVitalSign } from '../backend/services/softDeleteVitalSign.ts';
+import { updateAppointment } from '../backend/services/updateAppointment.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
 import { updatePractitioner } from '../backend/services/updatePractitioner.ts';
 import { updatePrescription } from '../backend/services/updatePrescription.ts';
@@ -43,14 +47,18 @@ const db = createPostgresDb(databaseUrl);
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
+  getAppointmentById: getAppointmentById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
   getDiagnosisById: getDiagnosisById(db),
   getVitalSignById: getVitalSignById(db),
   getPrescriptionById: getPrescriptionById(db),
+  listAppointments: listAppointments(db),
   listDiagnosesByEncounter: listDiagnosesByEncounter(db),
   listVitalSignsByEncounter: listVitalSignsByEncounter(db),
+  createAppointment: createAppointment(db),
   listUsers: listUsers(db),
   createUser: createUser(db),
+  updateAppointment: updateAppointment(db),
   updateUser: updateUser(db),
   listPractitioners: listPractitioners(db),
   createPractitioner: createPractitioner(db),

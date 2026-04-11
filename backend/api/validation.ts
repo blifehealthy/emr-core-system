@@ -1,4 +1,6 @@
 import type {
+  AppointmentStatus,
+  CreateAppointmentInput,
   CreateDiagnosisInput,
   CreateEncounterInput,
   CreatePractitionerValidatedInput,
@@ -12,6 +14,7 @@ import type {
   UpdateDiagnosisInput,
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
+  UpdateAppointmentInput,
   UpdateSoapNoteInput,
   UpdatePractitionerValidatedInput,
   UpdatePrescriptionInput,
@@ -348,6 +351,129 @@ export function validateCreateVitalSignBody(body: unknown):
       bmi: bmi.value,
       painScore: painScore.value,
       notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateAppointmentBody(body: unknown):
+  | { ok: true; value: CreateAppointmentInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const appointmentNumber = readRequiredString(candidate.appointmentNumber, 'appointmentNumber');
+  if (!appointmentNumber.ok) return appointmentNumber;
+
+  const practitionerId = readOptionalNullableStringField(candidate, 'practitionerId');
+  if (!practitionerId.ok) return practitionerId;
+
+  const status = readEnumValue<AppointmentStatus>(candidate.status, 'status', [
+    'pending',
+    'confirmed',
+    'checked_in',
+    'completed',
+    'cancelled',
+    'no_show',
+  ]);
+  if (!status.ok) return status;
+
+  const scheduledStartAt = readRequiredString(candidate.scheduledStartAt, 'scheduledStartAt');
+  if (!scheduledStartAt.ok) return scheduledStartAt;
+
+  const scheduledEndAt = readOptionalNullableStringField(candidate, 'scheduledEndAt');
+  if (!scheduledEndAt.ok) return scheduledEndAt;
+
+  const reason = readOptionalNullableStringField(candidate, 'reason');
+  if (!reason.ok) return reason;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      practitionerId: practitionerId.value,
+      appointmentNumber: appointmentNumber.value,
+      status: status.value,
+      scheduledStartAt: scheduledStartAt.value,
+      scheduledEndAt: scheduledEndAt.value,
+      reason: reason.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateAppointmentBody(body: unknown, appointmentId: string):
+  | { ok: true; value: UpdateAppointmentInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'practitionerId',
+    'status',
+    'scheduledStartAt',
+    'scheduledEndAt',
+    'reason',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one appointment field must be provided for update' };
+  }
+
+  const practitionerId = readOptionalNullableStringField(candidate, 'practitionerId');
+  if (!practitionerId.ok) return practitionerId;
+
+  const status = readEnumValue<AppointmentStatus>(candidate.status, 'status', [
+    'pending',
+    'confirmed',
+    'checked_in',
+    'completed',
+    'cancelled',
+    'no_show',
+  ]);
+  if (!status.ok) return status;
+
+  const scheduledStartAt = readOptionalTrimmedStringField(candidate, 'scheduledStartAt');
+  if (!scheduledStartAt.ok) return scheduledStartAt;
+
+  const scheduledEndAt = readOptionalNullableStringField(candidate, 'scheduledEndAt');
+  if (!scheduledEndAt.ok) return scheduledEndAt;
+
+  const reason = readOptionalNullableStringField(candidate, 'reason');
+  if (!reason.ok) return reason;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      appointmentId,
+      ...(Object.hasOwn(candidate, 'practitionerId')
+        ? { practitionerId: practitionerId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'scheduledStartAt')
+        ? { scheduledStartAt: scheduledStartAt.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'scheduledEndAt')
+        ? { scheduledEndAt: scheduledEndAt.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'reason') ? { reason: reason.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
 }

@@ -79,6 +79,7 @@ The script applies these migrations in order:
 - `0004_add_audit_logs.up.sql`
 - `0005_add_users_and_practitioners.up.sql`
 - `0006_add_prescriptions.up.sql`
+- `0007_add_appointments.up.sql`
 
 Then it runs:
 

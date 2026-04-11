@@ -1,5 +1,7 @@
 import { toHttpError } from './postgresError.ts';
 import {
+  toAppointmentDto,
+  toAppointmentDtos,
   toDiagnosisDto,
   toDiagnosisDtos,
   toPractitionerDto,
@@ -13,6 +15,7 @@ import {
   toVitalSignDtos,
 } from './dtos.ts';
 import {
+  validateCreateAppointmentBody,
   validateCreateDiagnosisBody,
   validateCreatePractitionerBody,
   validateCreatePrescriptionBody,
@@ -21,6 +24,7 @@ import {
   validateCreateEncounterBody,
   validateFinalizeClinicalNoteBody,
   validateSignClinicalNoteBody,
+  validateUpdateAppointmentBody,
   validateUpdatePractitionerBody,
   validateUpdatePrescriptionBody,
   validateUpdateDiagnosisBody,
@@ -148,6 +152,127 @@ export async function handleCreateEncounter(
   } catch (error) {
     return mapError(error);
   }
+}
+
+export async function handleListAppointments(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const clinicId = request.query?.clinicId?.trim();
+
+  if (!clinicId) {
+    return validationError('clinicId is required query parameter');
+  }
+
+  const patientId = readOptionalQueryString(request, 'patientId');
+  if (!patientId.ok) return validationError(patientId.error);
+
+  const practitionerId = readOptionalQueryString(request, 'practitionerId');
+  if (!practitionerId.ok) return validationError(practitionerId.error);
+
+  const status = readOptionalEnumQuery(request, 'status', [
+    'pending',
+    'confirmed',
+    'checked_in',
+    'completed',
+    'cancelled',
+    'no_show',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const appointments = await dependencies.listAppointments({
+    clinicId,
+    patientId: patientId.value,
+    practitionerId: practitionerId.value,
+    status: status.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toAppointmentDtos(appointments) },
+  };
+}
+
+export async function handleGetAppointment(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  appointmentId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getAppointmentById) {
+    return mapError(new Error('Appointment read dependency is not configured'));
+  }
+
+  try {
+    const appointment = await dependencies.getAppointmentById({ appointmentId });
+    if (!appointment) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Appointment not found' } };
+    }
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toAppointmentDto(appointment) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCreateAppointment(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreateAppointmentBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const appointment = await dependencies.createAppointment(validation.value);
+  const actor = getActorContext(request);
+
+  await dependencies.createAuditLog({
+    entityType: 'appointment',
+    entityId: (appointment as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      appointmentNumber: validation.value.appointmentNumber,
+      scheduledStartAt: validation.value.scheduledStartAt,
+    },
+  });
+
+  return {
+    status: 201,
+    headers: JSON_HEADERS,
+    body: { data: toAppointmentDto(appointment) },
+  };
+}
+
+export async function handleUpdateAppointment(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  appointmentId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdateAppointmentBody(request.body, appointmentId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const appointment = await dependencies.updateAppointment(validation.value);
+
+  if (!appointment) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Appointment not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'appointment',
+    entityId: appointmentId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toAppointmentDto(appointment) },
+  };
 }
 
 export async function handleListUsers(
