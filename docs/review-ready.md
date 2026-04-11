@@ -2,16 +2,19 @@
 
 ## Scope
 
-- SOAP note soft delete support now matches the patient read query
-- patient read path has both repository and service wrappers
-- transactional create flow has commit and rollback tests
-- migration order is constrained to `0000 -> 0001 -> 0002`
+- patient read now includes encounter-level prescriptions
+- clinical child entities now have read, update, and soft delete API coverage
+- request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
+- DB integration tests can run through local `psql` or a Docker Postgres container fallback
 
 ## Quick Checks
 
 - Run `npm test` for TypeScript unit and migration guard tests
-- Run `DATABASE_URL=... npm run db:test` when Postgres is available
+- Run `DATABASE_URL=... npm run db:test` when local `psql` is available
+- Or run `POSTGRES_CONTAINER=... POSTGRES_DB=... npm run db:test` to use `docker exec`
+- Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database
 
-## Current Limitation
+## Verified
 
-- DB integration tests are prepared but cannot be executed in this environment because `psql` and a reachable Postgres instance are not available
+- `npm test`
+- `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

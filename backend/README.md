@@ -26,4 +26,13 @@ This directory is reserved for the application layer of the EMR system.
 - tests
 - environment configuration
 
-This placeholder exists so the backend can be designed intentionally in the next phase.
+## Current Progress
+
+- repository and service flows exist for patient read and encounter creation
+- API handlers now exist for:
+  - `GET /health`
+  - `GET /api/patients/detail`
+  - `POST /api/encounters`
+- a lightweight Node HTTP adapter is wired to Postgres through `DATABASE_URL`
+
+This backend now has a real Postgres adapter, but it is still missing authentication, authorization, richer error policies, and production runtime configuration.

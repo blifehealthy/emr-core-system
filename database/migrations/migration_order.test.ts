@@ -21,6 +21,22 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     false,
     'did not expect duplicate foreign key migration'
   );
+  assert.ok(
+    filenames.includes('0003_add_diagnoses_and_vital_signs.up.sql'),
+    'expected diagnoses and vital signs expansion migration'
+  );
+  assert.ok(
+    filenames.includes('0004_add_audit_logs.up.sql'),
+    'expected audit logs migration'
+  );
+  assert.ok(
+    filenames.includes('0005_add_users_and_practitioners.up.sql'),
+    'expected users and practitioners migration'
+  );
+  assert.ok(
+    filenames.includes('0006_add_prescriptions.up.sql'),
+    'expected prescriptions migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {
