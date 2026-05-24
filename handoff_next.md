@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest local and remote commit before this worktree: `6dedab7` (`Refresh handoff after patient registration`)
+- Latest local and remote commit: `3acd54c` (`Add patient registration frontend`)
 - This stretch adds a verified first frontend MVP slice:
   - static frontend under `frontend/`
   - `npm run start:frontend`
