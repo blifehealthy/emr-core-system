@@ -3,13 +3,14 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `280bdc6` (`Add patient lookup frontend`)
-- This stretch extends the patient detail frontend:
+- Latest completed checkpoint before this worktree: `4180eca` (`Add patient detail profile subviews`)
+- This stretch extends the patient detail frontend with profile create controls:
   - static frontend under `frontend/`
   - `npm run start:frontend`
   - patient registration form wired to `POST /api/patients`
   - patient lookup/detail form wired to `GET /api/patients/detail`
   - patient detail subviews for flags, allergies, conditions, medications, encounters, diagnoses, vitals, prescriptions, and notes
+  - create forms for flags, allergies, conditions, and medications
   - frontend dev proxy for `/api/*` and `/health`
 - Previous verified patient registration API:
   - `POST /api/patients`
@@ -49,6 +50,13 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
+  - frontend proxy profile create checks
+  - current result: `201 Created`
+  - URLs checked:
+    - `POST http://127.0.0.1:5173/api/patient-flags`
+    - `POST http://127.0.0.1:5173/api/patient-allergies`
+    - `POST http://127.0.0.1:5173/api/patient-conditions`
+    - `POST http://127.0.0.1:5173/api/patient-medications`
 
 ## Local Tooling
 
@@ -85,7 +93,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, and clinical profile subviews started
+- frontend patient registration, lookup, clinical profile subviews, and profile create controls started
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -143,7 +151,7 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add create/update controls for allergies, conditions, medications, and flags from the patient detail subviews
+1. add update/delete controls for allergies, conditions, medications, and flags from the patient detail subviews
 2. add an encounter/SOAP entry point after profile editing is usable
 
 The deliverables added in this worktree are:
@@ -155,14 +163,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create controls, and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, and profile-list APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, and profile-create APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -179,5 +187,5 @@ Start by reading:
 
 Then produce:
 
-1. create/update controls for patient profile subviews
-2. registration form polish only if clinical users request extra demographics
+1. update/delete controls for patient profile subviews
+2. encounter/SOAP entry point after profile editing is usable

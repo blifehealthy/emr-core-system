@@ -378,6 +378,44 @@ button:disabled {
   font-size: 14px;
 }
 
+.inline-profile-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  margin-bottom: 12px;
+  padding: 12px;
+}
+
+.inline-profile-form label {
+  font-size: 12px;
+}
+
+.inline-profile-form label:first-child {
+  grid-column: 1 / -1;
+}
+
+.inline-profile-form input,
+.inline-profile-form select {
+  min-height: 38px;
+  padding: 7px 9px;
+}
+
+.compact-button {
+  grid-column: 1 / -1;
+  min-height: 38px;
+}
+
+.inline-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--error);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .record-list {
   display: grid;
   gap: 8px;
@@ -472,6 +510,10 @@ pre {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-profile-form {
     grid-template-columns: 1fr;
   }
 

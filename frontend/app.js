@@ -12,6 +12,54 @@ const tabButtons = Array.from(document.querySelectorAll('[data-view]'));
 const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
 
 let activeView = 'registration';
+let currentPatient = null;
+let currentProfile = null;
+let currentApiToken = '';
+let currentProfileSection = 'Flags';
+
+const createProfileConfigs = {
+  Flags: {
+    endpoint: '/api/patient-flags',
+    submitText: 'เพิ่ม flag',
+    fields: [
+      { name: 'flagType', label: 'Flag type', required: true },
+      { name: 'label', label: 'Label', required: true },
+      { name: 'severity', label: 'Severity', type: 'select', options: ['info', 'caution', 'critical'] },
+      { name: 'notes', label: 'Notes' },
+    ],
+  },
+  Allergies: {
+    endpoint: '/api/patient-allergies',
+    submitText: 'เพิ่ม allergy',
+    fields: [
+      { name: 'allergenName', label: 'Allergen', required: true },
+      { name: 'reaction', label: 'Reaction' },
+      { name: 'severity', label: 'Severity', type: 'select', options: ['unknown', 'mild', 'moderate', 'severe'] },
+      { name: 'notes', label: 'Notes' },
+    ],
+  },
+  Conditions: {
+    endpoint: '/api/patient-conditions',
+    submitText: 'เพิ่ม condition',
+    fields: [
+      { name: 'conditionName', label: 'Condition', required: true },
+      { name: 'conditionCode', label: 'Code' },
+      { name: 'clinicalStatus', label: 'Status', type: 'select', options: ['active', 'resolved', 'inactive', 'entered_in_error'] },
+      { name: 'notes', label: 'Notes' },
+    ],
+  },
+  Medications: {
+    endpoint: '/api/patient-medications',
+    submitText: 'เพิ่ม medication',
+    fields: [
+      { name: 'medicationName', label: 'Medication', required: true },
+      { name: 'dosage', label: 'Dosage' },
+      { name: 'frequency', label: 'Frequency' },
+      { name: 'status', label: 'Status', type: 'select', options: ['active', 'completed', 'stopped', 'on_hold', 'entered_in_error'] },
+      { name: 'notes', label: 'Notes' },
+    ],
+  },
+};
 
 const defaults = {
   clinicId: '10000000-0000-0000-0000-000000000101',
@@ -106,6 +154,7 @@ searchForm.addEventListener('submit', async (event) => {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
     const profile = await fetchClinicalProfile(patient.id, apiToken);
     showPatientDetail(patient, profile);
+    currentApiToken = apiToken;
     setStatus('เปิดเวชระเบียนแล้ว', 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'ไม่พบข้อมูลผู้ป่วย';
@@ -250,6 +299,9 @@ function showRegisteredPatient(patient) {
 }
 
 function showPatientDetail(patient, profile = {}) {
+  currentPatient = patient;
+  currentProfile = profile;
+
   const encounters = patient.encounters ?? [];
   const derived = buildEncounterDerivedLists(encounters);
   const flags = profile.flags ?? patient.flags ?? [];
@@ -294,7 +346,7 @@ function showPatientDetail(patient, profile = {}) {
         'frequency',
       ]),
       Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at']),
-    })
+    }, currentProfileSection)
   );
 }
 
@@ -362,7 +414,7 @@ function createMetric(label, value) {
   return item;
 }
 
-function createProfileTabs(sections) {
+function createProfileTabs(sections, initialLabel) {
   const wrapper = document.createElement('div');
   wrapper.className = 'profile-tabs';
   const tabs = document.createElement('div');
@@ -371,12 +423,15 @@ function createProfileTabs(sections) {
   content.className = 'profile-tab-content';
   const entries = Object.entries(sections);
 
-  for (const [index, [label, section]] of entries.entries()) {
+  const activeLabel = sections[initialLabel] ? initialLabel : entries[0][0];
+
+  for (const [label, section] of entries) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = index === 0 ? 'profile-tab active' : 'profile-tab';
+    button.className = label === activeLabel ? 'profile-tab active' : 'profile-tab';
     button.textContent = `${label} ${section.items.length}`;
     button.addEventListener('click', () => {
+      currentProfileSection = label;
       for (const tab of tabs.querySelectorAll('.profile-tab')) {
         tab.classList.toggle('active', tab === button);
       }
@@ -386,7 +441,7 @@ function createProfileTabs(sections) {
   }
 
   wrapper.append(tabs, content);
-  renderProfileSection(content, entries[0][0], entries[0][1]);
+  renderProfileSection(content, activeLabel, sections[activeLabel]);
   return wrapper;
 }
 
@@ -396,6 +451,11 @@ function renderProfileSection(container, label, section) {
   const title = document.createElement('h3');
   title.textContent = label;
   container.append(title);
+
+  const createConfig = createProfileConfigs[label];
+  if (createConfig && currentPatient) {
+    container.append(createProfileForm(label, createConfig));
+  }
 
   if (section.items.length === 0) {
     const empty = document.createElement('p');
@@ -413,6 +473,100 @@ function renderProfileSection(container, label, section) {
   }
 
   container.append(list);
+}
+
+function createProfileForm(sectionLabel, config) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+
+  for (const field of config.fields) {
+    const label = document.createElement('label');
+    label.textContent = field.label;
+    const input =
+      field.type === 'select'
+        ? createSelect(field.name, field.options ?? [])
+        : document.createElement('input');
+
+    input.name = field.name;
+    input.required = Boolean(field.required);
+    input.autocomplete = 'off';
+    label.append(input);
+    form.append(label);
+  }
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = config.submitText;
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createProfileRecord(sectionLabel, config, form, submit);
+  });
+
+  return form;
+}
+
+function createSelect(name, options) {
+  const select = document.createElement('select');
+  select.name = name;
+
+  for (const optionValue of options) {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionValue;
+    select.append(option);
+  }
+
+  return select;
+}
+
+async function createProfileRecord(sectionLabel, config, form, submit) {
+  if (!currentPatient) return;
+
+  const payload = compactPayload({
+    patientId: currentPatient.id,
+    ...Object.fromEntries(new FormData(form).entries()),
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังบันทึก profile', '');
+
+  try {
+    const response = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    form.reset();
+    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
+    currentProfileSection = sectionLabel;
+    showPatientDetail(currentPatient, currentProfile);
+    setStatus(`${sectionLabel} บันทึกแล้ว`, 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'บันทึก profile ไม่สำเร็จ';
+    setStatus('บันทึก profile ไม่สำเร็จ', 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = config.submitText;
+  }
+}
+
+function renderInlineFormError(form, message) {
+  form.querySelector('.inline-error')?.remove();
+  const error = document.createElement('p');
+  error.className = 'inline-error';
+  error.textContent = message;
+  form.append(error);
 }
 
 function records(items, summary, fields) {
