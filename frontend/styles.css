@@ -306,6 +306,12 @@ button:disabled {
 
 .detail-stack {
   display: grid;
+  gap: 14px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -320,6 +326,10 @@ button:disabled {
   padding: 10px 12px;
 }
 
+.metric-grid .detail-metric:first-child {
+  grid-column: 1 / -1;
+}
+
 .detail-metric strong {
   font-size: 22px;
   line-height: 1;
@@ -332,24 +342,79 @@ button:disabled {
   font-weight: 700;
 }
 
-.timeline-block {
+.profile-tabs {
   border-top: 1px solid var(--line);
-  margin-top: 4px;
   padding-top: 14px;
 }
 
-.timeline-block h3 {
+.profile-tab-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.profile-tab {
+  min-height: 34px;
+  border-color: var(--line);
+  background: #fff;
+  color: var(--muted);
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.profile-tab.active {
+  border-color: rgba(15, 118, 110, 0.35);
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+
+.profile-tab-content {
+  padding-top: 10px;
+}
+
+.profile-tab-content h3 {
   margin: 0 0 10px;
   font-size: 14px;
 }
 
-.timeline-block ol {
+.record-list {
   display: grid;
   gap: 8px;
+}
+
+.record-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 11px;
+}
+
+.record-card h4 {
+  margin: 0 0 9px;
+  color: var(--text);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.record-card dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
   margin: 0;
-  padding-left: 20px;
-  color: #30403c;
   font-size: 13px;
+}
+
+.record-card dt {
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.record-card dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 pre {
@@ -403,6 +468,10 @@ pre {
 
   .field-grid,
   .field-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
     grid-template-columns: 1fr;
   }
 

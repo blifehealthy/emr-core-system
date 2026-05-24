@@ -104,7 +104,8 @@ searchForm.addEventListener('submit', async (event) => {
 
   try {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
-    showPatientDetail(patient);
+    const profile = await fetchClinicalProfile(patient.id, apiToken);
+    showPatientDetail(patient, profile);
     setStatus('เปิดเวชระเบียนแล้ว', 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'ไม่พบข้อมูลผู้ป่วย';
@@ -171,6 +172,30 @@ async function fetchPatientDetail(clinicId, medicalRecordNumber, apiToken) {
   return result.data;
 }
 
+async function fetchClinicalProfile(patientId, apiToken) {
+  const endpoints = {
+    allergies: `/api/patients/${patientId}/allergies`,
+    conditions: `/api/patients/${patientId}/conditions`,
+    medications: `/api/patients/${patientId}/medications`,
+    flags: `/api/patients/${patientId}/flags`,
+  };
+
+  const entries = await Promise.all(
+    Object.entries(endpoints).map(async ([key, url]) => {
+      const response = await fetch(url, { headers: buildHeaders(apiToken) });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+      }
+
+      return [key, result.data ?? []];
+    })
+  );
+
+  return Object.fromEntries(entries);
+}
+
 function compactPayload(payload) {
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined && value !== '')
@@ -224,7 +249,14 @@ function showRegisteredPatient(patient) {
   });
 }
 
-function showPatientDetail(patient) {
+function showPatientDetail(patient, profile = {}) {
+  const encounters = patient.encounters ?? [];
+  const derived = buildEncounterDerivedLists(encounters);
+  const flags = profile.flags ?? patient.flags ?? [];
+  const allergies = profile.allergies ?? [];
+  const conditions = profile.conditions ?? [];
+  const medications = profile.medications ?? [];
+
   resultTitle.textContent = `${patient.first_name} ${patient.last_name}`;
   renderResultRows({
     'Patient ID': patient.id,
@@ -237,12 +269,32 @@ function showPatientDetail(patient) {
 
   patientDetailPanel.hidden = false;
   patientDetail.replaceChildren(
-    createMetric('Active Flags', patient.flags?.length ?? 0),
-    createMetric('Encounters', patient.encounters?.length ?? 0),
-    createMetric('Allergies', patient.allergies?.length ?? 0),
-    createMetric('Conditions', patient.conditions?.length ?? 0),
-    createMetric('Medications', patient.medications?.length ?? 0),
-    createTimeline(patient.encounters ?? [])
+    createMetricGrid([
+      ['Active Flags', flags.length],
+      ['Encounters', encounters.length],
+      ['Allergies', allergies.length],
+      ['Conditions', conditions.length],
+      ['Medications', medications.length],
+    ]),
+    createProfileTabs({
+      Flags: records(flags, flagSummary, ['severity', 'status', 'notes']),
+      Allergies: records(allergies, allergySummary, ['severity', 'status', 'reaction']),
+      Conditions: records(conditions, conditionSummary, ['status', 'onset_date', 'notes']),
+      Medications: records(medications, medicationSummary, ['status', 'dosage', 'frequency']),
+      Encounters: records(encounters, encounterSummary, ['status', 'encounter_class', 'started_at']),
+      Diagnoses: records(derived.diagnoses, diagnosisSummary, ['status', 'diagnosis_type', 'diagnosed_at']),
+      Vitals: records(derived.vitalSigns, vitalSummary, [
+        'body_temperature_c',
+        'heart_rate_bpm',
+        'oxygen_saturation_pct',
+      ]),
+      Prescriptions: records(derived.prescriptions, prescriptionSummary, [
+        'status',
+        'dosage',
+        'frequency',
+      ]),
+      Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at']),
+    })
   );
 }
 
@@ -277,6 +329,26 @@ function renderRequestPreview() {
   payloadPreview.textContent = JSON.stringify(body, null, 2);
 }
 
+function buildEncounterDerivedLists(encounters) {
+  return {
+    diagnoses: encounters.flatMap((encounter) => encounter.diagnoses ?? []),
+    vitalSigns: encounters.flatMap((encounter) => encounter.vital_signs ?? []),
+    prescriptions: encounters.flatMap((encounter) => encounter.prescriptions ?? []),
+    clinicalNotes: encounters.flatMap((encounter) => encounter.clinical_notes ?? []),
+  };
+}
+
+function createMetricGrid(metrics) {
+  const grid = document.createElement('div');
+  grid.className = 'metric-grid';
+
+  for (const [label, value] of metrics) {
+    grid.append(createMetric(label, value));
+  }
+
+  return grid;
+}
+
 function createMetric(label, value) {
   const item = document.createElement('div');
   item.className = 'detail-metric';
@@ -290,29 +362,135 @@ function createMetric(label, value) {
   return item;
 }
 
-function createTimeline(encounters) {
+function createProfileTabs(sections) {
   const wrapper = document.createElement('div');
-  wrapper.className = 'timeline-block';
+  wrapper.className = 'profile-tabs';
+  const tabs = document.createElement('div');
+  tabs.className = 'profile-tab-bar';
+  const content = document.createElement('div');
+  content.className = 'profile-tab-content';
+  const entries = Object.entries(sections);
+
+  for (const [index, [label, section]] of entries.entries()) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = index === 0 ? 'profile-tab active' : 'profile-tab';
+    button.textContent = `${label} ${section.items.length}`;
+    button.addEventListener('click', () => {
+      for (const tab of tabs.querySelectorAll('.profile-tab')) {
+        tab.classList.toggle('active', tab === button);
+      }
+      renderProfileSection(content, label, section);
+    });
+    tabs.append(button);
+  }
+
+  wrapper.append(tabs, content);
+  renderProfileSection(content, entries[0][0], entries[0][1]);
+  return wrapper;
+}
+
+function renderProfileSection(container, label, section) {
+  container.replaceChildren();
 
   const title = document.createElement('h3');
-  title.textContent = 'Recent Encounters';
-  wrapper.append(title);
+  title.textContent = label;
+  container.append(title);
 
-  if (encounters.length === 0) {
+  if (section.items.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'muted-text';
-    empty.textContent = 'ยังไม่มี encounter';
-    wrapper.append(empty);
-    return wrapper;
+    empty.textContent = 'ยังไม่มีข้อมูลในหมวดนี้';
+    container.append(empty);
+    return;
   }
 
-  const list = document.createElement('ol');
-  for (const encounter of encounters.slice(0, 3)) {
-    const item = document.createElement('li');
-    item.textContent = `${encounter.encounter_number ?? encounter.id} · ${encounter.status ?? 'unknown'}`;
-    list.append(item);
+  const list = document.createElement('div');
+  list.className = 'record-list';
+
+  for (const item of section.items) {
+    list.append(createRecordCard(item, section.summary, section.fields));
   }
 
-  wrapper.append(list);
-  return wrapper;
+  container.append(list);
+}
+
+function records(items, summary, fields) {
+  return { items, summary, fields };
+}
+
+function createRecordCard(item, summary, fields) {
+  const card = document.createElement('article');
+  card.className = 'record-card';
+  const title = document.createElement('h4');
+  title.textContent = summary(item);
+  const details = document.createElement('dl');
+
+  for (const field of fields) {
+    const value = item[field];
+    if (value === undefined || value === null || value === '') continue;
+
+    const term = document.createElement('dt');
+    term.textContent = labelize(field);
+    const description = document.createElement('dd');
+    description.textContent = formatValue(value);
+    details.append(term, description);
+  }
+
+  card.append(title, details);
+  return card;
+}
+
+function labelize(field) {
+  return field.replaceAll('_', ' ');
+}
+
+function formatValue(value) {
+  if (typeof value !== 'string') return String(value);
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return new Intl.DateTimeFormat('th-TH', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
+
+  return value;
+}
+
+function flagSummary(item) {
+  return item.label ?? item.flag_type ?? item.id;
+}
+
+function allergySummary(item) {
+  return item.allergen_name ?? item.allergen ?? item.id;
+}
+
+function conditionSummary(item) {
+  return item.condition_name ?? item.condition_code ?? item.id;
+}
+
+function medicationSummary(item) {
+  return item.medication_name ?? item.rxnorm_code ?? item.id;
+}
+
+function encounterSummary(item) {
+  return item.encounter_number ?? item.id;
+}
+
+function diagnosisSummary(item) {
+  return item.diagnosis_name ?? item.diagnosis_code ?? item.id;
+}
+
+function vitalSummary(item) {
+  const measuredAt = item.measured_at ? formatValue(item.measured_at) : item.id;
+  return `Vitals · ${measuredAt}`;
+}
+
+function prescriptionSummary(item) {
+  return item.medication_name ?? item.rxnorm_code ?? item.id;
+}
+
+function noteSummary(item) {
+  return item.title ?? item.note_type ?? item.id;
 }
