@@ -3,8 +3,8 @@
 ## Current State
 
 - Current branch: `main`
-- Latest local and remote commit before this worktree: `21b8cb0` (`Include patient flags in patient detail`)
-- Working tree now has a verified patient registration API:
+- Latest local and remote commit: `72819d7` (`Add patient registration API`)
+- Working tree is clean after a verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
   - validation + DTO + route + audit log
@@ -69,6 +69,9 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 
 Recent commits on `main`:
 
+- `72819d7` Add patient registration API
+- `21b8cb0` Include patient flags in patient detail
+- `53eb843` Add patient flags and Phase 1 docs
 - `98a95c9` Add appointment foundation APIs and migration
 - `a8a16f0` Expand patient profile and governance APIs
 - `2773148` Add patient medication APIs and migration
@@ -116,9 +119,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. commit/push the patient registration API if accepted
-2. start the frontend patient registration form against `POST /api/patients`
-3. begin Phase 1 frontend MVP planning or scaffold work
+1. start the frontend patient registration form against `POST /api/patients`
+2. begin Phase 1 frontend MVP planning or scaffold work
 
 The deliverables added in this worktree are:
 
@@ -151,5 +153,5 @@ Start by reading:
 
 Then produce:
 
-1. commit/push if accepted
-2. a frontend MVP plan/scaffold if Phase 1 backend is accepted
+1. a frontend MVP plan/scaffold if Phase 1 backend is accepted
+2. the first patient registration screen wired to `POST /api/patients`
