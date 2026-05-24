@@ -520,6 +520,20 @@ button:disabled {
   margin: 10px 0 0;
 }
 
+.soap-editor-form {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  border-radius: 6px;
+  background: #f7fbfa;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.soap-editor-form textarea {
+  min-height: 82px;
+}
+
 pre {
   min-height: 220px;
   max-height: 440px;

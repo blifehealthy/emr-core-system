@@ -350,7 +350,7 @@ function showPatientDetail(patient, profile = {}) {
         'dosage',
         'frequency',
       ]),
-      Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at']),
+      Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at'], 'Notes'),
     }, currentProfileSection)
   );
 }
@@ -789,6 +789,10 @@ function createRecordCard(item, summary, fields, sectionLabel) {
     card.append(createRecordActions(card, item, sectionLabel, config));
   }
 
+  if (sectionLabel === 'Notes' && item.id && (item.note_type === 'soap' || item.soap_note)) {
+    card.append(createSoapActions(card, item));
+  }
+
   return card;
 }
 
@@ -816,6 +820,121 @@ function createRecordActions(card, item, sectionLabel, config) {
 
   actions.append(editButton, deleteButton);
   return actions;
+}
+
+function createSoapActions(card, note) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'secondary-button small-button';
+  openButton.textContent = 'เปิด SOAP';
+
+  openButton.addEventListener('click', async () => {
+    card.querySelector('.soap-editor-form')?.remove();
+    openButton.disabled = true;
+    openButton.textContent = 'กำลังเปิด';
+
+    try {
+      const soapNote = await fetchSoapNote(note.id);
+      card.append(createSoapEditorForm(note.id, soapNote));
+      setStatus('เปิด SOAP แล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'เปิด SOAP ไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      openButton.disabled = false;
+      openButton.textContent = 'เปิด SOAP';
+    }
+  });
+
+  actions.append(openButton);
+  return actions;
+}
+
+async function fetchSoapNote(clinicalNoteId) {
+  const response = await fetch(`/api/clinical-notes/${clinicalNoteId}/soap`, {
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+function createSoapEditorForm(clinicalNoteId, soapNote) {
+  const form = document.createElement('form');
+  form.className = 'soap-editor-form';
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'SOAP';
+  const idLabel = document.createElement('span');
+  idLabel.textContent = clinicalNoteId;
+  heading.append(title, idLabel);
+  form.append(heading);
+
+  for (const field of ['subjective', 'objective', 'assessment', 'plan']) {
+    const label = createFormField(field, labelize(field), 'textarea');
+    label.querySelector('textarea').value = soapNote[field] ?? '';
+    form.append(label);
+  }
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'บันทึก SOAP';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await updateSoapNote(clinicalNoteId, form, submit);
+  });
+
+  return form;
+}
+
+async function updateSoapNote(clinicalNoteId, form, submit) {
+  const payload = compactPayload(Object.fromEntries(new FormData(form).entries()));
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังบันทึก SOAP', '');
+
+  try {
+    const response = await fetch(`/api/clinical-notes/${clinicalNoteId}/soap`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    if (currentPatient) {
+      const refreshed = await fetchPatientDetail(
+        currentPatient.clinic_id,
+        currentPatient.medical_record_number,
+        currentApiToken || readValue('apiToken')
+      );
+      const profile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
+      currentProfileSection = 'Notes';
+      showPatientDetail(refreshed, profile);
+    }
+    setStatus('บันทึก SOAP แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'บันทึก SOAP ไม่สำเร็จ';
+    setStatus('บันทึก SOAP ไม่สำเร็จ', 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'บันทึก SOAP';
+  }
 }
 
 function valuesForForm(item, config) {

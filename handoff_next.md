@@ -3,8 +3,8 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `e568e28` (`Add patient profile update controls`)
-- This stretch extends the patient detail frontend with an encounter/SOAP entry point:
+- Latest completed checkpoint before this worktree: `dab1082` (`Add encounter SOAP entry frontend`)
+- This stretch extends the patient detail frontend with SOAP read/update:
   - static frontend under `frontend/`
   - `npm run start:frontend`
   - patient registration form wired to `POST /api/patients`
@@ -14,6 +14,8 @@
   - edit and soft-delete controls for flags, allergies, conditions, and medications
   - create encounter/SOAP form from the patient detail panel
   - optional inline diagnosis and vital-sign capture while starting a visit
+  - open SOAP notes from the Notes subview
+  - edit and save SOAP subjective/objective/assessment/plan fields
   - frontend dev proxy for `/api/*` and `/health`
 - Previous verified patient registration API:
   - `POST /api/patients`
@@ -71,6 +73,11 @@
   - current result: `201 Created`
   - URL checked:
     `POST http://127.0.0.1:5173/api/encounters`
+  - frontend proxy SOAP read/update checks
+  - current result: `200 OK`
+  - URLs checked:
+    - `GET http://127.0.0.1:5173/api/clinical-notes/:id/soap`
+    - `PATCH http://127.0.0.1:5173/api/clinical-notes/:id/soap`
 
 ## Local Tooling
 
@@ -107,7 +114,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, and encounter/SOAP entry started
+- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, encounter/SOAP entry, and SOAP read/update started
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -165,8 +172,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add SOAP read/update workflow from encounter notes
-2. add appointment/check-in workflow to connect registration to encounters
+1. add appointment/check-in workflow to connect registration to encounters
+2. add encounter finalize/sign workflow after SOAP editing is comfortable
 
 The deliverables added in this worktree are:
 
@@ -177,14 +184,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, encounter/SOAP entry, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, encounter/SOAP entry, SOAP read/update, and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, and encounter/SOAP create APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, encounter/SOAP create, and SOAP read/update APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -201,5 +208,5 @@ Start by reading:
 
 Then produce:
 
-1. SOAP read/update workflow from encounter notes
-2. appointment/check-in workflow to connect registration to encounters
+1. appointment/check-in workflow to connect registration to encounters
+2. encounter finalize/sign workflow after SOAP editing is comfortable
