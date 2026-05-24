@@ -32,7 +32,12 @@ and clinician usability.
   linked queue visit status.
 - Queue board shows active queue, waiting, with-doctor, provider, and room
   summary metrics.
+- Clinic branding settings drive prescription print headers and footers.
+- Daily operations reporting summarizes visits, diagnosis count, prescription
+  count, provider workload, room workload, and top diagnoses.
 
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
+- Add date-range/export support for operations reporting.
+- Add upload/asset support for clinic logos.

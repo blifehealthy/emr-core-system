@@ -6,6 +6,7 @@ import {
   toAppointmentDtos,
   toClinicVisitDto,
   toClinicVisitDtos,
+  toClinicSettingsDto,
   toClinicalNoteTemplateDto,
   toClinicalNoteTemplateDtos,
   toConsentRecordDto,
@@ -57,6 +58,7 @@ import {
   validateUpdateClinicVisitBody,
   validateUpdateClinicalNoteTemplateBody,
   validateUpdateConsentRecordBody,
+  validateUpsertClinicSettingsBody,
   validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
   validateUpdatePatientConditionBody,
@@ -492,6 +494,69 @@ export async function handleUpdateClinicalNoteTemplate(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toClinicalNoteTemplateDto(template) } };
+}
+
+export async function handleGetClinicSettings(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  clinicId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getClinicSettings) {
+    return mapError(new Error('Clinic settings dependency is not configured'));
+  }
+
+  const settings = await dependencies.getClinicSettings({ clinicId });
+  if (!settings) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Clinic settings not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicSettingsDto(settings) } };
+}
+
+export async function handleUpsertClinicSettings(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  clinicId: string
+): Promise<HttpResponse> {
+  if (!dependencies.upsertClinicSettings) {
+    return mapError(new Error('Clinic settings update dependency is not configured'));
+  }
+
+  const validation = validateUpsertClinicSettingsBody(request.body, clinicId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const settings = await dependencies.upsertClinicSettings(validation.value);
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'clinic_settings',
+    entityId: clinicId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicSettingsDto(settings) } };
+}
+
+export async function handleGetDailyOperationsReport(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.getDailyOperationsReport) {
+    return mapError(new Error('Daily operations report dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const date = request.query?.date?.trim();
+  if (!date) return validationError('date is required query parameter');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return validationError('date must be YYYY-MM-DD');
+  }
+
+  const report = await dependencies.getDailyOperationsReport({ clinicId, date });
+  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { date } } };
 }
 
 export async function handleCreateAppointment(

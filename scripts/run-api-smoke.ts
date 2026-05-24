@@ -35,6 +35,7 @@ const migrations = [
   '0012_add_patient_flags.up.sql',
   '0013_add_clinic_visits.up.sql',
   '0014_add_clinical_note_templates.up.sql',
+  '0015_add_clinic_settings.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -558,6 +559,33 @@ async function main() {
     );
     assert.equal(inactiveTemplate.data.is_active, false);
 
+    const clinicSettings = await requestJson<{ clinic_id: string; display_name: string }>(
+      '/api/clinics/10000000-0000-0000-0000-000000000101/settings',
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        displayName: 'Smoke Clinic',
+        phoneNumber: '02-000-0000',
+        prescriptionFooter: 'Smoke verified signature',
+      }
+    );
+    assert.equal(clinicSettings.data.display_name, 'Smoke Clinic');
+
+    const readClinicSettings = await requestJson<{ display_name: string }>(
+      '/api/clinics/10000000-0000-0000-0000-000000000101/settings',
+      authHeaders
+    );
+    assert.equal(readClinicSettings.data.display_name, 'Smoke Clinic');
+
+    const smokeReportDate = new Date().toISOString().slice(0, 10);
+    const dailyReport = await requestJson<{ visits_total: number; by_room: unknown[] }>(
+      `/api/reports/daily-operations?clinicId=10000000-0000-0000-0000-000000000101&date=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.ok(dailyReport.data.visits_total >= 1);
+    assert.ok(Array.isArray(dailyReport.data.by_room));
+
     const updatedEncounter = await requestJson<{
       id: string;
       status: string;
@@ -855,6 +883,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /createTemplateAdminSection/);
   assert.match(app.body, /getAvailableNoteTemplates/);
   assert.match(app.body, /syncVisitStatusForEncounter/);
+  assert.match(app.body, /createClinicSettingsSection/);
+  assert.match(app.body, /fetchDailyOperationsReport/);
+  assert.match(app.body, /currentClinicSettings/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
     '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',

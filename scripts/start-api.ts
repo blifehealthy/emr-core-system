@@ -21,7 +21,9 @@ import { createVitalSign } from '../backend/services/createVitalSign.ts';
 import { finalizeClinicalNote } from '../backend/services/finalizeClinicalNote.ts';
 import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.ts';
 import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
+import { getClinicSettings } from '../backend/services/getClinicSettings.ts';
 import { getConsentRecordById } from '../backend/services/getConsentRecordById.ts';
+import { getDailyOperationsReport } from '../backend/services/getDailyOperationsReport.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
 import { getEncounterById } from '../backend/services/getEncounterById.ts';
 import { getFileAssetById } from '../backend/services/getFileAssetById.ts';
@@ -72,6 +74,7 @@ import { updatePrescription } from '../backend/services/updatePrescription.ts';
 import { updateSoapNote } from '../backend/services/updateSoapNote.ts';
 import { updateUser } from '../backend/services/updateUser.ts';
 import { updateVitalSign } from '../backend/services/updateVitalSign.ts';
+import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.ts';
 import { resolveActor } from '../backend/services/resolveActor.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -92,6 +95,8 @@ const server = createNodeServer({
   getPatientFlagById: getPatientFlagById(db),
   getPatientMedicationById: getPatientMedicationById(db),
   getAppointmentById: getAppointmentById(db),
+  getClinicSettings: getClinicSettings(db),
+  getDailyOperationsReport: getDailyOperationsReport(db),
   getEncounterById: getEncounterById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
   getDiagnosisById: getDiagnosisById(db),
@@ -142,6 +147,7 @@ const server = createNodeServer({
   updateSoapNote: updateSoapNote(db),
   updateDiagnosis: updateDiagnosis(db),
   updateVitalSign: updateVitalSign(db),
+  upsertClinicSettings: upsertClinicSettings(db),
   softDeleteSoapNote: softDeleteSoapNote(db),
   softDeletePatientAllergy: softDeletePatientAllergy(db),
   softDeletePatientCondition: softDeletePatientCondition(db),

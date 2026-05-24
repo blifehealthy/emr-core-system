@@ -69,6 +69,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/clinical-note-templates` | List clinic-managed SOAP templates. |
 | `POST` | `/api/clinical-note-templates` | Create clinic-managed SOAP template. |
 | `PATCH` | `/api/clinical-note-templates/:templateId` | Update or deactivate clinic-managed SOAP template. |
+| `GET` | `/api/clinics/:clinicId/settings` | Read clinic branding and prescription print settings. |
+| `PATCH` | `/api/clinics/:clinicId/settings` | Create or update clinic branding and prescription print settings. |
 | `GET` | `/api/encounters/:encounterId/diagnoses` | List diagnoses for an encounter. |
 | `GET` | `/api/diagnoses/:diagnosisId` | Read one diagnosis. |
 | `POST` | `/api/diagnoses` | Create diagnosis. |
@@ -86,6 +88,12 @@ All routes except `GET /health` can be protected by bearer token when
 | `DELETE` | `/api/prescriptions/:prescriptionId` | Soft delete prescription. |
 
 ## Files, Consent, and Audit
+
+## Reporting
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/reports/daily-operations` | Daily visits, queue status, diagnosis, prescription, provider, and room aggregates. |
 
 | Method | Route | Purpose |
 | --- | --- | --- |

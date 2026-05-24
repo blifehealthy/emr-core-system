@@ -26,6 +26,8 @@ let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
 let currentClinicalNoteTemplates = [];
+let currentClinicSettings = null;
+let currentDailyReport = null;
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -116,6 +118,7 @@ const defaults = {
   searchClinicId: '10000000-0000-0000-0000-000000000101',
   adminClinicId: '10000000-0000-0000-0000-000000000101',
   queueClinicId: '10000000-0000-0000-0000-000000000101',
+  queueReportDate: new Date().toISOString().slice(0, 10),
   userId: '10000000-0000-0000-0000-000000000201',
   userRole: 'nurse',
   apiToken: localStorage.getItem('emr.apiToken') ?? '',
@@ -168,6 +171,7 @@ adminForm.addEventListener('submit', async (event) => {
 
   try {
     currentAdmin = await fetchAdminBundle(clinicId, apiToken);
+    currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
     renderAdminWorkspace(clinicId);
     setStatus('โหลดทีมแล้ว', 'success');
   } catch (error) {
@@ -191,6 +195,8 @@ queueForm.addEventListener('submit', async (event) => {
 
   try {
     currentQueue = await fetchQueue(clinicId, apiToken);
+    currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
+    currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
     renderQueueBoard();
     setStatus('โหลดคิวแล้ว', 'success');
   } catch (error) {
@@ -252,6 +258,7 @@ searchForm.addEventListener('submit', async (event) => {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
     const profile = await fetchPatientProfileBundle(patient, apiToken);
     currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
+    currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
     setStatus('เปิดเวชระเบียนแล้ว', 'success');
@@ -305,6 +312,7 @@ function buildQueueRequest() {
     status: readValue('queueStatus'),
     practitionerId: readValue('queuePractitionerId'),
     roomName: readValue('queueRoomName'),
+    reportDate: readValue('queueReportDate'),
     limit: readValue('queueLimit'),
   });
 }
@@ -504,6 +512,36 @@ async function fetchClinicalNoteTemplates(clinicId, apiToken, activeOnly = true)
   }
 
   return result.data ?? [];
+}
+
+async function fetchClinicSettings(clinicId, apiToken) {
+  const response = await fetch(`/api/clinics/${clinicId}/settings`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+async function fetchDailyOperationsReport(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    date: readValue('queueReportDate') || new Date().toISOString().slice(0, 10),
+  });
+  const response = await fetch(`/api/reports/daily-operations?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 function compactPayload(payload) {
@@ -753,6 +791,7 @@ function createQueueSummary() {
   const activeVisits = currentQueue.filter((visit) => !['discharged', 'cancelled'].includes(visit.status));
   const providerCount = new Set(activeVisits.map((visit) => visit.practitioner_id).filter(Boolean)).size;
   const roomCount = new Set(activeVisits.map((visit) => visit.room_name).filter(Boolean)).size;
+  const report = currentDailyReport ?? {};
 
   return createMetricGrid([
     ['Active Queue', activeVisits.length],
@@ -760,6 +799,9 @@ function createQueueSummary() {
     ['With Doctor', currentQueue.filter((visit) => visit.status === 'with_doctor').length],
     ['Providers', providerCount],
     ['Rooms', roomCount],
+    ['Daily Visits', report.visits_total ?? 0],
+    ['Daily Dx', report.diagnoses_total ?? 0],
+    ['Daily Rx', report.prescriptions_total ?? 0],
   ]);
 }
 
@@ -966,8 +1008,42 @@ function renderAdminWorkspace(clinicId) {
       createPractitionerActions
     ),
     createTemplateAdminSection(clinicId),
+    createClinicSettingsSection(clinicId),
     createAuditSection()
   );
+}
+
+function createClinicSettingsSection(clinicId) {
+  const section = document.createElement('div');
+  section.className = 'admin-section';
+  const title = document.createElement('h3');
+  title.textContent = 'Clinic Branding';
+  section.append(title, createClinicSettingsForm(clinicId));
+  return section;
+}
+
+function createClinicSettingsForm(clinicId) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+  form.append(
+    createAdminInput('displayName', 'Display name', currentClinicSettings?.display_name ?? 'EMR Core Clinic', true),
+    createFormField('address', 'Address', 'textarea'),
+    createAdminInput('phoneNumber', 'Phone', currentClinicSettings?.phone_number ?? ''),
+    createAdminInput('email', 'Email', currentClinicSettings?.email ?? ''),
+    createAdminInput('website', 'Website', currentClinicSettings?.website ?? ''),
+    createAdminInput('logoUrl', 'Logo URL', currentClinicSettings?.logo_url ?? ''),
+    createFormField('prescriptionFooter', 'Prescription footer', 'textarea')
+  );
+  form.elements.address.value = currentClinicSettings?.address ?? '';
+  form.elements.prescriptionFooter.value = currentClinicSettings?.prescription_footer ?? '';
+
+  const submit = createAdminSubmit('บันทึก branding');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveClinicSettings(clinicId, form, submit);
+  });
+  return form;
 }
 
 function createTemplateAdminSection(clinicId) {
@@ -1453,6 +1529,46 @@ async function saveClinicalNoteTemplate(clinicId, templateId, form, submit) {
     successText: templateId ? 'แก้ template แล้ว' : 'เพิ่ม template แล้ว',
     resetAfterSave: !templateId,
   });
+}
+
+async function saveClinicSettings(clinicId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    displayName: values.displayName,
+    address: values.address,
+    phoneNumber: values.phoneNumber,
+    email: values.email,
+    website: values.website,
+    logoUrl: values.logoUrl,
+    prescriptionFooter: values.prescriptionFooter,
+  });
+
+  const originalText = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังบันทึก branding', '');
+
+  try {
+    const response = await fetch(`/api/clinics/${clinicId}/settings`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) throw createApiError(response, result);
+
+    currentClinicSettings = result.data;
+    renderAdminWorkspace(clinicId);
+    setStatus('บันทึก branding แล้ว', 'success');
+  } catch (error) {
+    const message = friendlyAdminError(error);
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = originalText;
+  }
 }
 
 async function patchClinicalNoteTemplate(templateId, payload) {
@@ -2423,6 +2539,14 @@ function openPrescriptionPrint(prescription) {
   const practitionerName = practitioner ? practitionerSummary(practitioner) : prescription.prescribed_by_practitioner_id ?? '';
   const documentNumber = `RX-${String(prescription.id ?? Date.now()).slice(0, 8).toUpperCase()}`;
   const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const clinicName = currentClinicSettings?.display_name ?? 'EMR Core Clinic';
+  const clinicContact = [
+    currentClinicSettings?.address,
+    currentClinicSettings?.phone_number,
+    currentClinicSettings?.email,
+    currentClinicSettings?.website,
+  ].filter(Boolean).join(' | ');
+  const footer = currentClinicSettings?.prescription_footer ?? 'ลงชื่อแพทย์ / Pharmacist verification';
   printWindow.document.write(`
     <!doctype html>
     <html lang="th">
@@ -2446,8 +2570,8 @@ function openPrescriptionPrint(prescription) {
       </head>
       <body>
         <div class="header">
-          <div class="clinic">EMR Core Clinic</div>
-          <div class="doc-meta">Clinic ID: ${escapeHtml(currentPatient?.clinic_id ?? '')}</div>
+          <div class="clinic">${escapeHtml(clinicName)}</div>
+          <div class="doc-meta">${escapeHtml(clinicContact || `Clinic ID: ${currentPatient?.clinic_id ?? ''}`)}</div>
         </div>
         <h1>ใบสั่งยา / Prescription</h1>
         <div class="grid">
@@ -2475,7 +2599,7 @@ function openPrescriptionPrint(prescription) {
         </div>
         <div class="footer">
           <div></div>
-          <div class="signature">ลงชื่อแพทย์ / Pharmacist verification</div>
+          <div class="signature">${escapeHtml(footer)}</div>
         </div>
       </body>
     </html>

@@ -183,6 +183,20 @@ const CLINICAL_NOTE_TEMPLATE_KEYS = [
   'deleted_at',
 ] as const;
 
+const CLINIC_SETTINGS_KEYS = [
+  'clinic_id',
+  'display_name',
+  'address',
+  'phone_number',
+  'email',
+  'website',
+  'logo_url',
+  'prescription_footer',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const ENCOUNTER_KEYS = [
   'id',
   'patient_id',
@@ -395,6 +409,10 @@ export function toClinicalNoteTemplateDto(row: unknown): Record<string, unknown>
 
 export function toClinicalNoteTemplateDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toClinicalNoteTemplateDto(row));
+}
+
+export function toClinicSettingsDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...CLINIC_SETTINGS_KEYS]);
 }
 
 export function toEncounterDto(row: unknown): Record<string, unknown> {

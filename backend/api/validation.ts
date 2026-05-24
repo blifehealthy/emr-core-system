@@ -38,6 +38,7 @@ import type {
   UpdateAppointmentInput,
   UpdateClinicVisitInput,
   UpdateClinicalNoteTemplateInput,
+  UpsertClinicSettingsInput,
   UpdateConsentRecordInput,
   UpdatePatientAllergyInput,
   UpdatePatientConditionInput,
@@ -771,6 +772,42 @@ export function validateUpdateClinicalNoteTemplateBody(body: unknown, templateId
       ...(Object.hasOwn(candidate, 'assessment') ? { assessment: assessment.value } : {}),
       ...(Object.hasOwn(candidate, 'plan') ? { plan: plan.value } : {}),
       ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+    },
+  };
+}
+
+export function validateUpsertClinicSettingsBody(body: unknown, clinicId: string):
+  | { ok: true; value: UpsertClinicSettingsInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const displayName = readRequiredString(candidate.displayName, 'displayName');
+  if (!displayName.ok) return displayName;
+  const address = readOptionalNullableStringField(candidate, 'address');
+  if (!address.ok) return address;
+  const phoneNumber = readOptionalNullableStringField(candidate, 'phoneNumber');
+  if (!phoneNumber.ok) return phoneNumber;
+  const email = readOptionalNullableStringField(candidate, 'email');
+  if (!email.ok) return email;
+  const website = readOptionalNullableStringField(candidate, 'website');
+  if (!website.ok) return website;
+  const logoUrl = readOptionalNullableStringField(candidate, 'logoUrl');
+  if (!logoUrl.ok) return logoUrl;
+  const prescriptionFooter = readOptionalNullableStringField(candidate, 'prescriptionFooter');
+  if (!prescriptionFooter.ok) return prescriptionFooter;
+
+  return {
+    ok: true,
+    value: {
+      clinicId,
+      displayName: displayName.value,
+      address: address.value,
+      phoneNumber: phoneNumber.value,
+      email: email.value,
+      website: website.value,
+      logoUrl: logoUrl.value,
+      prescriptionFooter: prescriptionFooter.value,
     },
   };
 }

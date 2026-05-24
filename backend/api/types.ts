@@ -210,6 +210,17 @@ export type UpdateClinicalNoteTemplateInput = {
   isActive?: boolean;
 };
 
+export type UpsertClinicSettingsInput = {
+  clinicId: string;
+  displayName: string;
+  address?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  website?: string | null;
+  logoUrl?: string | null;
+  prescriptionFooter?: string | null;
+};
+
 export type UpdateEncounterInput = {
   encounterId: string;
   status?: EncounterStatus;
@@ -565,6 +576,9 @@ export type Dependencies = {
   }) => Promise<unknown[]>;
   createClinicalNoteTemplate?: (input: CreateClinicalNoteTemplateInput) => Promise<unknown>;
   updateClinicalNoteTemplate?: (input: UpdateClinicalNoteTemplateInput) => Promise<unknown | null>;
+  getClinicSettings?: (input: { clinicId: string }) => Promise<unknown | null>;
+  upsertClinicSettings?: (input: UpsertClinicSettingsInput) => Promise<unknown>;
+  getDailyOperationsReport?: (input: { clinicId: string; date: string }) => Promise<unknown | null>;
   listConsentRecordsByPatient: (input: {
     patientId: string;
     status?: ConsentStatus;

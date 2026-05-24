@@ -78,6 +78,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async updateClinicalNoteTemplate() {
       return { id: 'template-1' };
     },
+    async getClinicSettings() {
+      return { clinic_id: 'clinic-1', display_name: 'Clinic' };
+    },
+    async upsertClinicSettings() {
+      return { clinic_id: 'clinic-1', display_name: 'Clinic' };
+    },
+    async getDailyOperationsReport() {
+      return { date: '2026-05-24', visits_total: 0 };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -553,6 +562,52 @@ test('clinical note template APIs list, create, and update clinic templates', as
     body: { isActive: false },
   });
   assert.equal(updated.status, 200);
+});
+
+test('clinic settings and daily operations report APIs work', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async getClinicSettings(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        return { clinic_id: 'clinic-1', display_name: 'Clinic' };
+      },
+      async upsertClinicSettings(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.displayName, 'Clinic Updated');
+        return { clinic_id: 'clinic-1', display_name: 'Clinic Updated' };
+      },
+      async getDailyOperationsReport(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.date, '2026-05-24');
+        return { date: input.date, visits_total: 7 };
+      },
+    })
+  );
+
+  const settings = await api({
+    method: 'GET',
+    path: '/api/clinics/clinic-1/settings',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(settings.status, 200);
+  assert.deepEqual(settings.body, { data: { clinic_id: 'clinic-1', display_name: 'Clinic' } });
+
+  const updated = await api({
+    method: 'PATCH',
+    path: '/api/clinics/clinic-1/settings',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { displayName: 'Clinic Updated', phoneNumber: '02' },
+  });
+  assert.equal(updated.status, 200);
+
+  const report = await api({
+    method: 'GET',
+    path: '/api/reports/daily-operations',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', date: '2026-05-24' },
+  });
+  assert.equal(report.status, 200);
+  assert.deepEqual(report.body, { data: { date: '2026-05-24', visits_total: 7 } });
 });
 
 test('appointments API rejects unsupported status transitions', async () => {
