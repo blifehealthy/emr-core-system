@@ -1526,6 +1526,29 @@ test('users, practitioners, and prescriptions APIs work and enforce roles', asyn
   assert.equal(readDenied.status, 403);
 });
 
+test('PATCH /api/users preserves omitted role field', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async updateUser(input) {
+        assert.equal(input.userId, 'user-1');
+        assert.equal(input.displayName, 'Updated User');
+        assert.equal(input.isActive, false);
+        assert.equal(Object.hasOwn(input, 'role'), false);
+        return { id: 'user-1', display_name: 'Updated User', is_active: false };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'PATCH',
+    path: '/api/users/user-1',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: { displayName: 'Updated User', isActive: false },
+  });
+
+  assert.equal(response.status, 200);
+});
+
 test('entity validators reject empty or invalid patch bodies', async () => {
   const api = createEmrApi(makeDeps());
 

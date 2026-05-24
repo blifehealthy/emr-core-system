@@ -1078,9 +1078,9 @@ export function validateUpdateUserBody(body: unknown, userId: string):
     ok: true,
     value: {
       userId,
-      displayName: displayName.value,
-      role: role.value,
-      isActive: isActive.value,
+      ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
+      ...(Object.hasOwn(candidate, 'role') ? { role: role.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
     },
   };
 }

@@ -20,6 +20,12 @@ let currentProfile = null;
 let currentApiToken = '';
 let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
+let currentAdminFilters = {
+  usersSearch: '',
+  usersActive: 'active',
+  practitionersSearch: '',
+  practitionersActive: 'active',
+};
 
 const createProfileConfigs = {
   Flags: {
@@ -483,17 +489,29 @@ function showPatientDetail(patient, profile = {}) {
 
 function renderAdminWorkspace(clinicId) {
   adminWorkspace.hidden = false;
+  const users = filterAdminItems(currentAdmin.users, currentAdminFilters.usersSearch, currentAdminFilters.usersActive, [
+    'username',
+    'display_name',
+    'role',
+  ]);
+  const practitioners = filterAdminItems(
+    currentAdmin.practitioners,
+    currentAdminFilters.practitionersSearch,
+    currentAdminFilters.practitionersActive,
+    ['practitioner_code', 'first_name', 'last_name', 'specialty', 'license_number']
+  );
 
   adminWorkspace.replaceChildren(
-    createAdminSection('Users', createUserForm(clinicId), currentAdmin.users, userSummary, [
+    createAdminSection('Users', 'users', createUserForm(clinicId), users, userSummary, [
       'role',
       'is_active',
       'username',
     ], createUserActions),
     createAdminSection(
       'Practitioners',
+      'practitioners',
       createPractitionerForm(clinicId),
-      currentAdmin.practitioners,
+      practitioners,
       practitionerSummary,
       ['practitioner_code', 'specialty', 'is_active'],
       createPractitionerActions
@@ -501,12 +519,12 @@ function renderAdminWorkspace(clinicId) {
   );
 }
 
-function createAdminSection(titleText, form, items, summary, fields, actionsFactory) {
+function createAdminSection(titleText, filterKey, form, items, summary, fields, actionsFactory) {
   const section = document.createElement('div');
   section.className = 'admin-section';
   const title = document.createElement('h3');
   title.textContent = titleText;
-  section.append(title, form);
+  section.append(title, createAdminFilterBar(filterKey), form);
 
   const list = document.createElement('div');
   list.className = 'record-list';
@@ -517,6 +535,51 @@ function createAdminSection(titleText, form, items, summary, fields, actionsFact
   }
   section.append(list);
   return section;
+}
+
+function createAdminFilterBar(filterKey) {
+  const filters = document.createElement('div');
+  filters.className = 'admin-filter-bar';
+
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.autocomplete = 'off';
+  search.placeholder = 'Search';
+  search.value = currentAdminFilters[`${filterKey}Search`];
+  search.addEventListener('input', () => {
+    currentAdminFilters = {
+      ...currentAdminFilters,
+      [`${filterKey}Search`]: search.value,
+    };
+    renderAdminWorkspace(readValue('adminClinicId'));
+  });
+
+  const active = createSelect('activeFilter', ['active', 'inactive', 'all']);
+  active.value = currentAdminFilters[`${filterKey}Active`];
+  active.addEventListener('change', () => {
+    currentAdminFilters = {
+      ...currentAdminFilters,
+      [`${filterKey}Active`]: active.value,
+    };
+    renderAdminWorkspace(readValue('adminClinicId'));
+  });
+
+  filters.append(search, active);
+  return filters;
+}
+
+function filterAdminItems(items, searchValue, activeFilter, fields) {
+  const query = String(searchValue ?? '').trim().toLowerCase();
+  return items.filter((item) => {
+    const activeMatches =
+      activeFilter === 'all' ||
+      (activeFilter === 'active' && item.is_active !== false) ||
+      (activeFilter === 'inactive' && item.is_active === false);
+    if (!activeMatches) return false;
+    if (!query) return true;
+
+    return fields.some((field) => String(item[field] ?? '').toLowerCase().includes(query));
+  });
 }
 
 function createUserForm(clinicId, user = null) {
@@ -573,7 +636,7 @@ function createUserActions(card, user) {
     card.querySelector('.inline-profile-form')?.remove();
     card.append(createUserForm(readValue('adminClinicId'), user));
   });
-  actions.append(editButton);
+  actions.append(editButton, createAdminActiveButton('user', user.id, user.is_active !== false));
   return actions;
 }
 
@@ -588,8 +651,50 @@ function createPractitionerActions(card, practitioner) {
     card.querySelector('.inline-profile-form')?.remove();
     card.append(createPractitionerForm(readValue('adminClinicId'), practitioner));
   });
-  actions.append(editButton);
+  actions.append(
+    editButton,
+    createAdminActiveButton('practitioner', practitioner.id, practitioner.is_active !== false)
+  );
   return actions;
+}
+
+function createAdminActiveButton(kind, id, isActive) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = isActive
+    ? 'secondary-button danger-button small-button'
+    : 'secondary-button small-button';
+  button.textContent = isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังบันทึก';
+
+    try {
+      const url = kind === 'user' ? `/api/users/${id}` : `/api/practitioners/${id}`;
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: buildHeaders(currentApiToken || readValue('apiToken')),
+        body: JSON.stringify({ isActive: !isActive }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+      }
+
+      currentAdmin = await fetchAdminBundle(readValue('adminClinicId'), currentApiToken || readValue('apiToken'));
+      renderAdminWorkspace(readValue('adminClinicId'));
+      if (currentPatient) await refreshPatientWorkspace(currentProfileSection);
+      setStatus(isActive ? 'ปิดใช้งานแล้ว' : 'เปิดใช้งานแล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดตสถานะไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน';
+    }
+  });
+  return button;
 }
 
 async function saveUser(clinicId, userId, form, submit) {

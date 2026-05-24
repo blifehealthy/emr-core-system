@@ -75,6 +75,10 @@ async function main() {
       Authorization: `Bearer ${API_TOKEN}`,
       'x-user-id': '10000000-0000-0000-0000-000000000201',
     };
+    const adminHeaders = {
+      Authorization: `Bearer ${API_TOKEN}`,
+      'x-user-id': '10000000-0000-0000-0000-000000000202',
+    };
 
     const registeredPatient = await requestJson<{
       id: string;
@@ -280,6 +284,161 @@ async function main() {
     assert.equal(signedNote.data.status, 'final');
     assert.ok(signedNote.data.signed_at);
     assert.equal(signedNote.data.authored_by_practitioner_id, '10000000-0000-0000-0000-000000000301');
+
+    const createdUser = await requestJson<{
+      id: string;
+      username: string;
+      display_name: string;
+      role: string;
+    }>(
+      '/api/users',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        username: 'nurse.smoke',
+        displayName: 'Nurse Smoke',
+        role: 'nurse',
+      }
+    );
+    assert.equal(createdUser.data.username, 'nurse.smoke');
+    assert.equal(createdUser.data.role, 'nurse');
+
+    const updatedUser = await requestJson<{
+      id: string;
+      display_name: string;
+      is_active: boolean;
+    }>(
+      `/api/users/${createdUser.data.id}`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        displayName: 'Nurse Smoke Updated',
+        isActive: false,
+      }
+    );
+    assert.equal(updatedUser.data.display_name, 'Nurse Smoke Updated');
+    assert.equal(updatedUser.data.is_active, false);
+
+    const createdPractitioner = await requestJson<{
+      id: string;
+      practitioner_code: string;
+      user_id: string | null;
+      specialty: string | null;
+    }>(
+      '/api/practitioners',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        userId: createdUser.data.id,
+        practitionerCode: 'NP-SMOKE',
+        firstName: 'Nurse',
+        lastName: 'Smoke',
+        specialty: 'Triage',
+      }
+    );
+    assert.equal(createdPractitioner.data.practitioner_code, 'NP-SMOKE');
+    assert.equal(createdPractitioner.data.user_id, createdUser.data.id);
+
+    const updatedPractitioner = await requestJson<{
+      id: string;
+      specialty: string | null;
+      is_active: boolean;
+    }>(
+      `/api/practitioners/${createdPractitioner.data.id}`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        specialty: 'Primary Care',
+        isActive: false,
+      }
+    );
+    assert.equal(updatedPractitioner.data.specialty, 'Primary Care');
+    assert.equal(updatedPractitioner.data.is_active, false);
+
+    const users = await requestJson<Array<{ id: string; username: string }>>(
+      '/api/users?clinicId=10000000-0000-0000-0000-000000000101',
+      adminHeaders
+    );
+    assert.ok(users.data.some((user) => user.id === createdUser.data.id));
+
+    const practitioners = await requestJson<Array<{ id: string; practitioner_code: string }>>(
+      '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101',
+      authHeaders
+    );
+    assert.ok(practitioners.data.some((practitioner) => practitioner.id === createdPractitioner.data.id));
+
+    const createdAppointment = await requestJson<{
+      id: string;
+      status: string;
+      scheduled_start_at: string;
+      practitioner_id: string | null;
+    }>(
+      '/api/appointments',
+      authHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        patientId: '10000000-0000-0000-0000-000000001001',
+        practitionerId: '10000000-0000-0000-0000-000000000301',
+        appointmentNumber: 'APT-SMOKE-RESCHEDULE',
+        scheduledStartAt: '2026-01-05T09:00:00.000Z',
+        scheduledEndAt: '2026-01-05T09:30:00.000Z',
+        reason: 'Smoke follow-up',
+      }
+    );
+    assert.equal(createdAppointment.data.status, 'pending');
+
+    const rescheduledAppointment = await requestJson<{
+      id: string;
+      scheduled_start_at: string;
+      practitioner_id: string | null;
+      notes: string | null;
+    }>(
+      `/api/appointments/${createdAppointment.data.id}`,
+      authHeaders,
+      'PATCH',
+      200,
+      {
+        practitionerId: createdPractitioner.data.id,
+        scheduledStartAt: '2026-01-05T10:00:00.000Z',
+        scheduledEndAt: '2026-01-05T10:30:00.000Z',
+        notes: 'Rescheduled in smoke test',
+      }
+    );
+    assert.equal(rescheduledAppointment.data.practitioner_id, createdPractitioner.data.id);
+    assert.equal(rescheduledAppointment.data.notes, 'Rescheduled in smoke test');
+
+    const updatedEncounter = await requestJson<{
+      id: string;
+      status: string;
+      encounter_class: string;
+      attending_practitioner_id: string | null;
+      chief_complaint: string | null;
+      triage_summary: string | null;
+    }>(
+      '/api/encounters/10000000-0000-0000-0000-000000002001',
+      authHeaders,
+      'PATCH',
+      200,
+      {
+        status: 'completed',
+        encounterClass: 'outpatient',
+        attendingPractitionerId: '10000000-0000-0000-0000-000000000301',
+        chiefComplaint: 'Improving cough',
+        triageSummary: 'Stable for discharge',
+        endedAt: '2026-01-02T09:00:00.000Z',
+      }
+    );
+    assert.equal(updatedEncounter.data.status, 'completed');
+    assert.equal(updatedEncounter.data.chief_complaint, 'Improving cough');
+    assert.equal(updatedEncounter.data.triage_summary, 'Stable for discharge');
 
     const createdPrescription = await requestJson<{
       id: string;

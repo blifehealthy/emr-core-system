@@ -24,6 +24,21 @@ VALUES (
     'doctor'
 );
 
+INSERT INTO users (
+    id,
+    clinic_id,
+    username,
+    display_name,
+    role
+)
+VALUES (
+    '10000000-0000-0000-0000-000000000202',
+    '10000000-0000-0000-0000-000000000101',
+    'admin.smoke',
+    'Admin Smoke',
+    'admin'
+);
+
 INSERT INTO practitioners (
     id,
     clinic_id,
