@@ -1,13 +1,16 @@
 const registrationForm = document.querySelector('#registration-form');
 const searchForm = document.querySelector('#patient-search-form');
+const adminForm = document.querySelector('#admin-form');
 const submitButton = document.querySelector('#submit-button');
 const searchButton = document.querySelector('#search-button');
+const adminLoadButton = document.querySelector('#admin-load-button');
 const serviceStatus = document.querySelector('#service-status');
 const resultTitle = document.querySelector('#result-title');
 const resultList = document.querySelector('#result-list');
 const payloadPreview = document.querySelector('#payload-preview');
 const patientDetailPanel = document.querySelector('#patient-detail-panel');
 const patientDetail = document.querySelector('#patient-detail');
+const adminWorkspace = document.querySelector('#admin-workspace');
 const tabButtons = Array.from(document.querySelectorAll('[data-view]'));
 const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
 
@@ -16,6 +19,7 @@ let currentPatient = null;
 let currentProfile = null;
 let currentApiToken = '';
 let currentProfileSection = 'Flags';
+let currentAdmin = { users: [], practitioners: [] };
 
 const createProfileConfigs = {
   Flags: {
@@ -68,6 +72,7 @@ const createProfileConfigs = {
 const defaults = {
   clinicId: '10000000-0000-0000-0000-000000000101',
   searchClinicId: '10000000-0000-0000-0000-000000000101',
+  adminClinicId: '10000000-0000-0000-0000-000000000101',
   userId: '10000000-0000-0000-0000-000000000201',
   userRole: 'nurse',
   apiToken: localStorage.getItem('emr.apiToken') ?? '',
@@ -105,6 +110,29 @@ searchForm.addEventListener('reset', () => {
     setStatus('พร้อมค้นหา', '');
     renderRequestPreview();
   });
+});
+
+adminForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const clinicId = readValue('adminClinicId');
+  const apiToken = readValue('apiToken');
+  localStorage.setItem('emr.apiToken', apiToken);
+  currentApiToken = apiToken;
+
+  setAdminBusy(true);
+  setStatus('กำลังโหลดทีม', '');
+
+  try {
+    currentAdmin = await fetchAdminBundle(clinicId, apiToken);
+    renderAdminWorkspace(clinicId);
+    setStatus('โหลดทีมแล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'โหลดทีมไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    setAdminBusy(false);
+  }
 });
 
 registrationForm.addEventListener('submit', async (event) => {
@@ -195,6 +223,12 @@ function buildSearchRequest() {
   return compactPayload({
     clinicId: readValue('searchClinicId'),
     medicalRecordNumber: readValue('searchMedicalRecordNumber'),
+  });
+}
+
+function buildAdminRequest() {
+  return compactPayload({
+    clinicId: readValue('adminClinicId'),
   });
 }
 
@@ -290,6 +324,29 @@ async function fetchPractitioners(clinicId, apiToken) {
   return result.data ?? [];
 }
 
+async function fetchUsers(clinicId, apiToken) {
+  const searchParams = new URLSearchParams({ clinicId });
+  const response = await fetch(`/api/users?${searchParams.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchAdminBundle(clinicId, apiToken) {
+  const [users, practitioners] = await Promise.all([
+    fetchUsers(clinicId, apiToken),
+    fetchPractitioners(clinicId, apiToken),
+  ]);
+
+  return { users, practitioners };
+}
+
 function compactPayload(payload) {
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined && value !== '')
@@ -312,7 +369,13 @@ function setActiveView(view) {
     panel.classList.toggle('active', panel.dataset.viewPanel === activeView);
   }
 
-  setStatus(activeView === 'search' ? 'พร้อมค้นหา' : 'พร้อมกรอกข้อมูล', '');
+  const statusText =
+    activeView === 'search'
+      ? 'พร้อมค้นหา'
+      : activeView === 'admin'
+        ? 'พร้อมตั้งค่า'
+        : 'พร้อมกรอกข้อมูล';
+  setStatus(statusText, '');
   renderRequestPreview();
 }
 
@@ -324,6 +387,11 @@ function setBusy(isBusy) {
 function setSearchBusy(isBusy) {
   searchButton.disabled = isBusy;
   searchButton.textContent = isBusy ? 'กำลังค้นหา' : 'เปิดเวชระเบียน';
+}
+
+function setAdminBusy(isBusy) {
+  adminLoadButton.disabled = isBusy;
+  adminLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดทีมคลินิก';
 }
 
 function setStatus(text, mode) {
@@ -411,6 +479,212 @@ function showPatientDetail(patient, profile = {}) {
       ], 'Notes'),
     }, currentProfileSection)
   );
+}
+
+function renderAdminWorkspace(clinicId) {
+  adminWorkspace.hidden = false;
+
+  adminWorkspace.replaceChildren(
+    createAdminSection('Users', createUserForm(clinicId), currentAdmin.users, userSummary, [
+      'role',
+      'is_active',
+      'username',
+    ], createUserActions),
+    createAdminSection(
+      'Practitioners',
+      createPractitionerForm(clinicId),
+      currentAdmin.practitioners,
+      practitionerSummary,
+      ['practitioner_code', 'specialty', 'is_active'],
+      createPractitionerActions
+    )
+  );
+}
+
+function createAdminSection(titleText, form, items, summary, fields, actionsFactory) {
+  const section = document.createElement('div');
+  section.className = 'admin-section';
+  const title = document.createElement('h3');
+  title.textContent = titleText;
+  section.append(title, form);
+
+  const list = document.createElement('div');
+  list.className = 'record-list';
+  for (const item of items) {
+    const card = createRecordCard(item, summary, fields);
+    if (actionsFactory) card.append(actionsFactory(card, item));
+    list.append(card);
+  }
+  section.append(list);
+  return section;
+}
+
+function createUserForm(clinicId, user = null) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+  form.append(
+    createAdminInput('username', 'Username', user?.username ?? '', !user),
+    createAdminInput('displayName', 'Display name', user?.display_name ?? '', true),
+    createAdminSelect('role', 'Role', ['doctor', 'nurse', 'admin'], user?.role ?? 'nurse')
+  );
+  if (user) form.append(createAdminSelect('isActive', 'Active', ['true', 'false'], String(user.is_active ?? true)));
+
+  const submit = createAdminSubmit(user ? 'บันทึก user' : 'เพิ่ม user');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveUser(clinicId, user?.id, form, submit);
+  });
+  return form;
+}
+
+function createPractitionerForm(clinicId, practitioner = null) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+  form.append(
+    createAdminInput('practitionerCode', 'Code', practitioner?.practitioner_code ?? '', !practitioner),
+    createAdminInput('firstName', 'First name', practitioner?.first_name ?? '', true),
+    createAdminInput('lastName', 'Last name', practitioner?.last_name ?? '', true),
+    createUserLinkField(practitioner?.user_id ?? ''),
+    createAdminInput('licenseNumber', 'License', practitioner?.license_number ?? ''),
+    createAdminInput('specialty', 'Specialty', practitioner?.specialty ?? '')
+  );
+  if (practitioner) {
+    form.append(createAdminSelect('isActive', 'Active', ['true', 'false'], String(practitioner.is_active ?? true)));
+  }
+
+  const submit = createAdminSubmit(practitioner ? 'บันทึก practitioner' : 'เพิ่ม practitioner');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await savePractitioner(clinicId, practitioner?.id, form, submit);
+  });
+  return form;
+}
+
+function createUserActions(card, user) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'secondary-button small-button';
+  editButton.textContent = 'แก้ไข';
+  editButton.addEventListener('click', () => {
+    card.querySelector('.inline-profile-form')?.remove();
+    card.append(createUserForm(readValue('adminClinicId'), user));
+  });
+  actions.append(editButton);
+  return actions;
+}
+
+function createPractitionerActions(card, practitioner) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'secondary-button small-button';
+  editButton.textContent = 'แก้ไข';
+  editButton.addEventListener('click', () => {
+    card.querySelector('.inline-profile-form')?.remove();
+    card.append(createPractitionerForm(readValue('adminClinicId'), practitioner));
+  });
+  actions.append(editButton);
+  return actions;
+}
+
+async function saveUser(clinicId, userId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId,
+    username: values.username,
+    displayName: values.displayName,
+    role: values.role,
+    isActive: parseOptionalBoolean(values.isActive),
+  });
+
+  await saveAdminRecord({
+    form,
+    submit,
+    payload,
+    url: userId ? `/api/users/${userId}` : '/api/users',
+    method: userId ? 'PATCH' : 'POST',
+    busyText: 'กำลังบันทึก user',
+    successText: userId ? 'แก้ user แล้ว' : 'เพิ่ม user แล้ว',
+    resetAfterSave: !userId,
+  });
+}
+
+async function savePractitioner(clinicId, practitionerId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId,
+    practitionerCode: values.practitionerCode,
+    firstName: values.firstName,
+    lastName: values.lastName,
+    userId: values.userId,
+    licenseNumber: values.licenseNumber,
+    specialty: values.specialty,
+    isActive: parseOptionalBoolean(values.isActive),
+  });
+
+  await saveAdminRecord({
+    form,
+    submit,
+    payload,
+    url: practitionerId ? `/api/practitioners/${practitionerId}` : '/api/practitioners',
+    method: practitionerId ? 'PATCH' : 'POST',
+    busyText: 'กำลังบันทึก practitioner',
+    successText: practitionerId ? 'แก้ practitioner แล้ว' : 'เพิ่ม practitioner แล้ว',
+    resetAfterSave: !practitionerId,
+  });
+}
+
+async function saveAdminRecord({
+  form,
+  submit,
+  payload,
+  url,
+  method,
+  busyText,
+  successText,
+  resetAfterSave,
+}) {
+  const clinicId = readValue('adminClinicId');
+  const originalText = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus(busyText, '');
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    if (resetAfterSave) form.reset();
+    currentAdmin = await fetchAdminBundle(clinicId, currentApiToken || readValue('apiToken'));
+    renderAdminWorkspace(clinicId);
+    if (currentPatient) await refreshPatientWorkspace(currentProfileSection);
+    setStatus(successText, 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ';
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = originalText;
+  }
+}
+
+function parseOptionalBoolean(value) {
+  if (value === undefined || value === '') return undefined;
+  return value === 'true';
 }
 
 function createAppointmentForm(patient) {
@@ -501,6 +775,48 @@ function createAppointmentEditForm(appointment) {
   return form;
 }
 
+function createEncounterEditForm(encounter) {
+  const form = document.createElement('form');
+  form.className = 'encounter-edit-form appointment-form';
+
+  const header = document.createElement('div');
+  header.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'แก้ encounter';
+  const number = document.createElement('span');
+  number.textContent = encounter.encounter_number ?? encounter.id;
+  header.append(title, number);
+  form.append(header);
+
+  form.append(
+    createAdminSelect(
+      'encounterClass',
+      'Class',
+      ['outpatient', 'inpatient', 'emergency', 'other'],
+      encounter.encounter_class ?? 'outpatient'
+    ),
+    createPractitionerField(
+      'attendingPractitionerId',
+      'Practitioner',
+      encounter.attending_practitioner_id ?? ''
+    ),
+    createAdminInput('chiefComplaint', 'Chief complaint', encounter.chief_complaint ?? ''),
+    createFormField('triageSummary', 'Triage summary', 'textarea'),
+    createDateTimeField('startedAt', 'Started', encounter.started_at),
+    createDateTimeField('endedAt', 'Ended', encounter.ended_at)
+  );
+  form.elements.triageSummary.value = encounter.triage_summary ?? '';
+
+  const submit = createAdminSubmit('บันทึก encounter');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await updateEncounterFromForm(encounter.id, form, submit);
+  });
+
+  return form;
+}
+
 function createEncounterEntryForm(patient, appointment = null) {
   const form = document.createElement('form');
   form.className = 'encounter-entry-form';
@@ -550,6 +866,60 @@ function createFormField(name, labelText, type = 'input', required = false) {
   input.autocomplete = 'off';
   if (type === 'textarea') input.rows = 2;
   label.append(input);
+  return label;
+}
+
+function createDateTimeField(name, labelText, value = '') {
+  const field = createFormField(name, labelText, 'input');
+  const input = field.querySelector('input');
+  input.type = 'datetime-local';
+  input.value = toDateTimeLocal(value);
+  return field;
+}
+
+function createAdminInput(name, labelText, value = '', required = false) {
+  const field = createFormField(name, labelText, 'input', required);
+  field.querySelector('input').value = value ?? '';
+  return field;
+}
+
+function createAdminSelect(name, labelText, options, selectedValue = '') {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = createSelect(name, options);
+  select.value = selectedValue;
+  label.append(select);
+  return label;
+}
+
+function createAdminSubmit(text) {
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = text;
+  return submit;
+}
+
+function createUserLinkField(selectedValue = '') {
+  const label = document.createElement('label');
+  label.textContent = 'User';
+  const select = document.createElement('select');
+  select.name = 'userId';
+
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่ผูก user';
+  select.append(empty);
+
+  for (const user of currentAdmin.users ?? []) {
+    const option = document.createElement('option');
+    option.value = user.id ?? '';
+    option.textContent = userSummary(user);
+    select.append(option);
+  }
+
+  select.value = selectedValue;
+  label.append(select);
   return label;
 }
 
@@ -644,6 +1014,35 @@ async function updateAppointmentFromForm(appointmentId, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'บันทึกนัด';
+  }
+}
+
+async function updateEncounterFromForm(encounterId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    encounterClass: values.encounterClass,
+    attendingPractitionerId: values.attendingPractitionerId,
+    chiefComplaint: values.chiefComplaint,
+    triageSummary: values.triageSummary,
+    startedAt: toIsoDateTime(values.startedAt),
+    endedAt: toIsoDateTime(values.endedAt),
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังแก้ encounter', '');
+
+  try {
+    await patchEncounter(encounterId, payload);
+    await refreshPatientWorkspace('Encounters');
+    setStatus('แก้ encounter แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'แก้ encounter ไม่สำเร็จ';
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'บันทึก encounter';
   }
 }
 
@@ -760,6 +1159,7 @@ function toDateTimeLocal(value) {
 
 function syncSearchFields(patient) {
   document.querySelector('#searchClinicId').value = patient.clinic_id ?? readValue('clinicId');
+  document.querySelector('#adminClinicId').value = patient.clinic_id ?? readValue('clinicId');
   document.querySelector('#searchMedicalRecordNumber').value =
     patient.medical_record_number ?? readValue('medicalRecordNumber');
   renderRequestPreview();
@@ -785,7 +1185,12 @@ function clearPatientDetail() {
 }
 
 function renderRequestPreview() {
-  const body = activeView === 'search' ? buildSearchRequest() : buildPatientPayload();
+  const body =
+    activeView === 'search'
+      ? buildSearchRequest()
+      : activeView === 'admin'
+        ? buildAdminRequest()
+        : buildPatientPayload();
   payloadPreview.textContent = JSON.stringify(body, null, 2);
 }
 
@@ -1149,10 +1554,11 @@ function createAppointmentActions(card, appointment) {
   }
 
   if (!['completed', 'cancelled', 'no_show'].includes(appointment.status)) {
-    actions.append(
-      createAppointmentStatusButton(appointment, 'cancelled', 'ยกเลิก'),
-      createAppointmentStatusButton(appointment, 'no_show', 'No-show')
-    );
+    actions.append(createAppointmentStatusButton(appointment, 'cancelled', 'ยกเลิก'));
+  }
+
+  if (appointment.status === 'confirmed') {
+    actions.append(createAppointmentStatusButton(appointment, 'no_show', 'No-show'));
   }
 
   return actions;
@@ -1161,6 +1567,16 @@ function createAppointmentActions(card, appointment) {
 function createEncounterActions(encounter) {
   const actions = document.createElement('div');
   actions.className = 'record-actions';
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'secondary-button small-button';
+  editButton.textContent = 'แก้ encounter';
+  editButton.addEventListener('click', () => {
+    const card = editButton.closest('.record-card');
+    card.querySelector('.encounter-edit-form')?.remove();
+    card.append(createEncounterEditForm(encounter));
+  });
+  actions.append(editButton);
 
   if (encounter.status === 'draft') {
     actions.append(createEncounterStatusButton(encounter, 'in_progress', 'เริ่มตรวจ'));

@@ -20,6 +20,7 @@
         <nav class="tab-bar" aria-label="Patient workspace">
           <button type="button" class="tab-button active" data-view="registration">ลงทะเบียน</button>
           <button type="button" class="tab-button" data-view="search">ค้นหา / เวชระเบียน</button>
+          <button type="button" class="tab-button" data-view="admin">ตั้งค่าคลินิก</button>
         </nav>
 
         <section class="form-section compact" aria-labelledby="access-heading">
@@ -159,6 +160,29 @@
             <button type="submit" class="primary-button" id="search-button">เปิดเวชระเบียน</button>
           </footer>
         </form>
+
+        <div class="registration-form view-panel" data-view-panel="admin">
+          <form id="admin-form" class="registration-form">
+            <section class="form-section" aria-labelledby="admin-heading">
+              <div class="section-heading">
+                <h2 id="admin-heading">Users / Practitioners</h2>
+                <span>Admin</span>
+              </div>
+              <div class="field-grid">
+                <label>
+                  Clinic ID
+                  <input id="adminClinicId" name="adminClinicId" autocomplete="off" required />
+                </label>
+              </div>
+            </section>
+
+            <footer class="action-bar">
+              <button type="submit" class="primary-button" id="admin-load-button">โหลดทีมคลินิก</button>
+            </footer>
+          </form>
+
+          <section class="form-section" id="admin-workspace" hidden></section>
+        </div>
       </section>
 
       <aside class="result-panel" aria-live="polite">

@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `01d9a28` (`Add note signing and appointment transition guards`)
+- Latest completed checkpoint before this worktree: `5b289f8` (`Add encounter workflow and appointment rescheduling`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
   - `npm run start:frontend`
@@ -16,6 +16,11 @@
   - appointment create form wired to `POST /api/appointments`
   - appointment edit/reschedule form wired to `PATCH /api/appointments/:id`
   - practitioner picker loaded with `GET /api/practitioners?clinicId=...`
+  - clinic setup tab for user/practitioner administration:
+    - list users with `GET /api/users?clinicId=...`
+    - create/update users with `POST /api/users` and `PATCH /api/users/:id`
+    - list practitioners with `GET /api/practitioners?clinicId=...`
+    - create/update practitioners with `POST /api/practitioners` and `PATCH /api/practitioners/:id`
   - appointment status controls wired to `PATCH /api/appointments/:id`
   - check-in represented by the `checked_in` appointment status
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
@@ -31,6 +36,7 @@
     - `draft -> in_progress/cancelled`
     - `in_progress -> completed/cancelled`
     - `completed -> signed`
+  - encounter edit form for class, chief complaint, triage summary, attending practitioner, started time, and ended time
   - appointment status transitions are guarded server-side:
     - `pending -> confirmed/cancelled`
     - `confirmed -> checked_in/cancelled/no_show`
@@ -115,6 +121,10 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/updateEncounter.test.ts backend/services/updateAppointment.test.ts`
+  - TypeScript compile check
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npx tsc --noEmit`
 
 ## Local Tooling
 
@@ -151,7 +161,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, SOAP read/update, and note finalize/sign
+- frontend patient registration, lookup, clinic user/practitioner administration, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, and note finalize/sign
 - code-level appointment state transition guard in the appointment update API
 - code-level encounter state transition guard in the encounter update API
 - Phase 1 governance/API documentation:
@@ -161,6 +171,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 
 Recent commits on `main`:
 
+- `5b289f8` Add encounter workflow and appointment rescheduling
 - `01d9a28` Add note signing and appointment transition guards
 - `78f84f9` Add appointment check-in frontend workflow
 - `f5a3b3f` Add SOAP note editing frontend
@@ -202,6 +213,7 @@ Phase 1 is no longer blocked on the major clinical entities.
 - access foundation:
   - users
   - practitioners
+  - frontend user/practitioner administration
   - role-gated API checks
 
 ### Remaining Follow-ups For A Strong Phase 1 Close
@@ -220,8 +232,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add frontend practitioner/user administration so the picker has an in-app setup path
-2. add richer encounter editing for class, chief complaint, triage summary, and attending clinician
+1. add frontend user/practitioner search, deactivate filters, and fuller edit coverage
+2. add end-to-end smoke coverage for clinic setup, appointment reschedule, and encounter edit flows
 
 The deliverables added in this worktree are:
 
@@ -232,7 +244,7 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, SOAP read/update, note finalize/sign, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, note finalize/sign, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 
@@ -241,7 +253,7 @@ This was the highest-leverage next move because:
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, appointment create/update/list, practitioner list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, user create/update/list, practitioner create/update/list, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -258,5 +270,5 @@ Start by reading:
 
 Then produce:
 
-1. frontend practitioner/user administration so the picker has an in-app setup path
-2. richer encounter editing for class, chief complaint, triage summary, and attending clinician
+1. frontend user/practitioner search, deactivate filters, and fuller edit coverage
+2. end-to-end smoke coverage for clinic setup, appointment reschedule, and encounter edit flows

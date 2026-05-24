@@ -378,6 +378,22 @@ button:disabled {
   font-size: 14px;
 }
 
+.admin-section {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-section + .admin-section {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.admin-section h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
 .inline-profile-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
