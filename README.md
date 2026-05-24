@@ -11,6 +11,7 @@ The goal of this phase is to establish the project structure, architecture direc
 |-- README.md
 |-- backend/
 |-- database/
+|-- frontend/
 |-- docs/
 `-- emr_project_master_plan.md
 ```
@@ -59,6 +60,7 @@ Not included yet:
 ## API
 
 - `GET /health`
+- `POST /api/patients`
 - `GET /api/patients/detail?clinicId=...&medicalRecordNumber=...`
 - `POST /api/encounters`
 - `GET /api/clinical-notes/:id/soap`
@@ -93,6 +95,16 @@ Run locally with:
 ```bash
 DATABASE_URL=postgres://localhost:5432/emr_core npm run start:api
 ```
+
+Run the frontend patient registration MVP:
+
+```bash
+npm run start:frontend
+```
+
+The frontend dev server listens on `http://127.0.0.1:5173` and proxies
+`/api/*` plus `/health` to `API_BASE_URL`, which defaults to
+`http://127.0.0.1:3000`.
 
 Run an end-to-end HTTP smoke test against a temporary Docker Postgres database:
 

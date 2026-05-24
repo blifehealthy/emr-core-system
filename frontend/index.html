@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EMR Patient Registration</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-labelledby="page-title">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">EMR Core</p>
+            <h1 id="page-title">ลงทะเบียนผู้ป่วยใหม่</h1>
+          </div>
+          <div class="status-pill" id="service-status">พร้อมกรอกข้อมูล</div>
+        </header>
+
+        <form id="registration-form" class="registration-form">
+          <section class="form-section" aria-labelledby="identity-heading">
+            <div class="section-heading">
+              <h2 id="identity-heading">ข้อมูลระบุตัวตน</h2>
+              <span>Required</span>
+            </div>
+            <div class="field-grid">
+              <label>
+                Clinic ID
+                <input id="clinicId" name="clinicId" autocomplete="off" required />
+              </label>
+              <label>
+                HN / MRN
+                <input id="medicalRecordNumber" name="medicalRecordNumber" autocomplete="off" required />
+              </label>
+              <label>
+                เลขบัตรประชาชน
+                <input id="nationalId" name="nationalId" inputmode="numeric" autocomplete="off" />
+              </label>
+              <label>
+                เพศกำเนิด
+                <select id="sexAtBirth" name="sexAtBirth">
+                  <option value="unknown">ไม่ระบุ</option>
+                  <option value="female">หญิง</option>
+                  <option value="male">ชาย</option>
+                  <option value="intersex">Intersex</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="name-heading">
+            <div class="section-heading">
+              <h2 id="name-heading">ชื่อผู้ป่วย</h2>
+            </div>
+            <div class="field-grid three">
+              <label>
+                ชื่อ
+                <input id="firstName" name="firstName" autocomplete="given-name" required />
+              </label>
+              <label>
+                ชื่อกลาง
+                <input id="middleName" name="middleName" autocomplete="additional-name" />
+              </label>
+              <label>
+                นามสกุล
+                <input id="lastName" name="lastName" autocomplete="family-name" required />
+              </label>
+              <label>
+                ชื่อที่ต้องการให้เรียก
+                <input id="preferredName" name="preferredName" autocomplete="nickname" />
+              </label>
+              <label>
+                วันเกิด
+                <input id="dateOfBirth" name="dateOfBirth" type="date" />
+              </label>
+              <label>
+                กรุ๊ปเลือด
+                <input id="bloodType" name="bloodType" autocomplete="off" />
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="contact-heading">
+            <div class="section-heading">
+              <h2 id="contact-heading">ข้อมูลติดต่อ</h2>
+            </div>
+            <div class="field-grid">
+              <label>
+                โทรศัพท์
+                <input id="phoneNumber" name="phoneNumber" autocomplete="tel" />
+              </label>
+              <label>
+                อีเมล
+                <input id="email" name="email" type="email" autocomplete="email" />
+              </label>
+            </div>
+            <label class="wide-field">
+              หมายเหตุ
+              <textarea id="notes" name="notes" rows="4"></textarea>
+            </label>
+          </section>
+
+          <section class="form-section compact" aria-labelledby="access-heading">
+            <div class="section-heading">
+              <h2 id="access-heading">การเชื่อมต่อ</h2>
+              <span>Dev</span>
+            </div>
+            <div class="field-grid three">
+              <label>
+                API Token
+                <input id="apiToken" name="apiToken" autocomplete="off" />
+              </label>
+              <label>
+                Role
+                <select id="userRole" name="userRole">
+                  <option value="nurse">Nurse</option>
+                  <option value="doctor">Doctor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label>
+                User ID
+                <input id="userId" name="userId" autocomplete="off" />
+              </label>
+            </div>
+          </section>
+
+          <footer class="action-bar">
+            <button type="reset" class="secondary-button">ล้างฟอร์ม</button>
+            <button type="submit" class="primary-button" id="submit-button">บันทึกผู้ป่วย</button>
+          </footer>
+        </form>
+      </section>
+
+      <aside class="result-panel" aria-live="polite">
+        <div class="panel-block">
+          <p class="eyebrow">ผลการลงทะเบียน</p>
+          <h2 id="result-title">ยังไม่มีรายการใหม่</h2>
+          <dl id="result-list" class="result-list"></dl>
+        </div>
+        <div class="panel-block muted">
+          <p class="eyebrow">Payload</p>
+          <pre id="payload-preview">{}</pre>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -3,8 +3,13 @@
 ## Current State
 
 - Current branch: `main`
-- Latest local and remote commit: `72819d7` (`Add patient registration API`)
-- Working tree is clean after a verified patient registration API:
+- Latest local and remote commit before this worktree: `6dedab7` (`Refresh handoff after patient registration`)
+- This stretch adds a verified first frontend MVP slice:
+  - static frontend under `frontend/`
+  - `npm run start:frontend`
+  - patient registration form wired to `POST /api/patients`
+  - frontend dev proxy for `/api/*` and `/health`
+- Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
   - validation + DTO + route + audit log
@@ -26,6 +31,14 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/createPatient.test.ts backend/api/emrApi.test.ts`
+  - frontend static server check
+  - current result: passing
+  - URL checked:
+    `http://127.0.0.1:5173/`
+  - frontend proxy registration check
+  - current result: `201 Created`
+  - URL checked:
+    `http://127.0.0.1:5173/api/patients`
 
 ## Local Tooling
 
@@ -62,6 +75,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
+- frontend patient registration MVP started
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -119,8 +133,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. start the frontend patient registration form against `POST /api/patients`
-2. begin Phase 1 frontend MVP planning or scaffold work
+1. add patient search/detail navigation as the next frontend workflow
+2. add an edit/clinical-profile entry point after patient detail is navigable
 
 The deliverables added in this worktree are:
 
@@ -131,12 +145,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
+- frontend patient registration form and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
+- the first usable frontend screen now exercises the backend registration API
 
 ## Concrete Guidance For The Next Session
 
@@ -153,5 +169,5 @@ Start by reading:
 
 Then produce:
 
-1. a frontend MVP plan/scaffold if Phase 1 backend is accepted
-2. the first patient registration screen wired to `POST /api/patients`
+1. patient search/detail navigation as the next frontend workflow
+2. registration form polish only if clinical users request extra demographics
