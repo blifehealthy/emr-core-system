@@ -3,11 +3,12 @@
 ## Current State
 
 - Current branch: `main`
-- Latest local and remote commit: `3acd54c` (`Add patient registration frontend`)
-- This stretch adds a verified first frontend MVP slice:
+- Latest completed checkpoint before this worktree: `21ae1ca` (`Refresh handoff after frontend registration`)
+- This stretch extends the first frontend MVP slice:
   - static frontend under `frontend/`
   - `npm run start:frontend`
   - patient registration form wired to `POST /api/patients`
+  - patient lookup/detail form wired to `GET /api/patients/detail`
   - frontend dev proxy for `/api/*` and `/health`
 - Previous verified patient registration API:
   - `POST /api/patients`
@@ -39,6 +40,10 @@
   - current result: `201 Created`
   - URL checked:
     `http://127.0.0.1:5173/api/patients`
+  - frontend proxy patient detail check
+  - current result: `200 OK`
+  - URL checked:
+    `http://127.0.0.1:5173/api/patients/detail?clinicId=...&medicalRecordNumber=MRN-SMOKE-001`
 
 ## Local Tooling
 
@@ -75,7 +80,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration MVP started
+- frontend patient registration and lookup MVP started
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -133,7 +138,7 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add patient search/detail navigation as the next frontend workflow
+1. add patient detail subviews for allergies, conditions, medications, flags, and encounters
 2. add an edit/clinical-profile entry point after patient detail is navigable
 
 The deliverables added in this worktree are:
@@ -145,14 +150,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration form and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises the backend registration API
+- the first usable frontend screen now exercises the backend registration and patient-detail APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -169,5 +174,5 @@ Start by reading:
 
 Then produce:
 
-1. patient search/detail navigation as the next frontend workflow
+1. patient detail subviews for clinical profile data
 2. registration form polish only if clinical users request extra demographics

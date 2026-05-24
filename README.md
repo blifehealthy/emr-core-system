@@ -96,7 +96,7 @@ Run locally with:
 DATABASE_URL=postgres://localhost:5432/emr_core npm run start:api
 ```
 
-Run the frontend patient registration MVP:
+Run the frontend patient registration and lookup MVP:
 
 ```bash
 npm run start:frontend

@@ -220,6 +220,37 @@ button:disabled {
   opacity: 0.68;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 4px;
+}
+
+.tab-button {
+  min-height: 36px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 14px;
+}
+
+.tab-button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.view-panel {
+  display: none;
+}
+
+.view-panel.active {
+  display: flex;
+}
+
 .primary-button {
   background: var(--accent);
   color: #fff;
@@ -273,6 +304,54 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.detail-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfc;
+  padding: 10px 12px;
+}
+
+.detail-metric strong {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.detail-metric span,
+.muted-text {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.timeline-block {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 14px;
+}
+
+.timeline-block h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.timeline-block ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: #30403c;
+  font-size: 13px;
+}
+
 pre {
   min-height: 220px;
   max-height: 440px;
@@ -306,6 +385,16 @@ pre {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .tab-bar {
+    width: 100%;
+  }
+
+  .tab-button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 10px;
   }
 
   h1 {

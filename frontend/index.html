@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EMR Patient Registration</title>
+    <title>EMR Patient Workspace</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -12,12 +12,42 @@
         <header class="page-header">
           <div>
             <p class="eyebrow">EMR Core</p>
-            <h1 id="page-title">ลงทะเบียนผู้ป่วยใหม่</h1>
+            <h1 id="page-title">ทะเบียนผู้ป่วย</h1>
           </div>
           <div class="status-pill" id="service-status">พร้อมกรอกข้อมูล</div>
         </header>
 
-        <form id="registration-form" class="registration-form">
+        <nav class="tab-bar" aria-label="Patient workspace">
+          <button type="button" class="tab-button active" data-view="registration">ลงทะเบียน</button>
+          <button type="button" class="tab-button" data-view="search">ค้นหา / เวชระเบียน</button>
+        </nav>
+
+        <section class="form-section compact" aria-labelledby="access-heading">
+          <div class="section-heading">
+            <h2 id="access-heading">การเชื่อมต่อ</h2>
+            <span>Dev</span>
+          </div>
+          <div class="field-grid three">
+            <label>
+              API Token
+              <input id="apiToken" name="apiToken" autocomplete="off" />
+            </label>
+            <label>
+              Role
+              <select id="userRole" name="userRole">
+                <option value="nurse">Nurse</option>
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label>
+              User ID
+              <input id="userId" name="userId" autocomplete="off" />
+            </label>
+          </div>
+        </section>
+
+        <form id="registration-form" class="registration-form view-panel active" data-view-panel="registration">
           <section class="form-section" aria-labelledby="identity-heading">
             <div class="section-heading">
               <h2 id="identity-heading">ข้อมูลระบุตัวตน</h2>
@@ -100,46 +130,49 @@
             </label>
           </section>
 
-          <section class="form-section compact" aria-labelledby="access-heading">
+          <footer class="action-bar">
+            <button type="reset" class="secondary-button">ล้างฟอร์ม</button>
+            <button type="submit" class="primary-button" id="submit-button">บันทึกผู้ป่วย</button>
+          </footer>
+        </form>
+
+        <form id="patient-search-form" class="registration-form view-panel" data-view-panel="search">
+          <section class="form-section" aria-labelledby="search-heading">
             <div class="section-heading">
-              <h2 id="access-heading">การเชื่อมต่อ</h2>
-              <span>Dev</span>
+              <h2 id="search-heading">ค้นหาผู้ป่วย</h2>
+              <span>Clinic + HN</span>
             </div>
-            <div class="field-grid three">
+            <div class="field-grid">
               <label>
-                API Token
-                <input id="apiToken" name="apiToken" autocomplete="off" />
+                Clinic ID
+                <input id="searchClinicId" name="searchClinicId" autocomplete="off" required />
               </label>
               <label>
-                Role
-                <select id="userRole" name="userRole">
-                  <option value="nurse">Nurse</option>
-                  <option value="doctor">Doctor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </label>
-              <label>
-                User ID
-                <input id="userId" name="userId" autocomplete="off" />
+                HN / MRN
+                <input id="searchMedicalRecordNumber" name="searchMedicalRecordNumber" autocomplete="off" required />
               </label>
             </div>
           </section>
 
           <footer class="action-bar">
-            <button type="reset" class="secondary-button">ล้างฟอร์ม</button>
-            <button type="submit" class="primary-button" id="submit-button">บันทึกผู้ป่วย</button>
+            <button type="reset" class="secondary-button">ล้างการค้นหา</button>
+            <button type="submit" class="primary-button" id="search-button">เปิดเวชระเบียน</button>
           </footer>
         </form>
       </section>
 
       <aside class="result-panel" aria-live="polite">
         <div class="panel-block">
-          <p class="eyebrow">ผลการลงทะเบียน</p>
+          <p class="eyebrow">Patient Snapshot</p>
           <h2 id="result-title">ยังไม่มีรายการใหม่</h2>
           <dl id="result-list" class="result-list"></dl>
         </div>
+        <div class="panel-block" id="patient-detail-panel" hidden>
+          <p class="eyebrow">Clinical Profile</p>
+          <div id="patient-detail" class="detail-stack"></div>
+        </div>
         <div class="panel-block muted">
-          <p class="eyebrow">Payload</p>
+          <p class="eyebrow">Request</p>
           <pre id="payload-preview">{}</pre>
         </div>
       </aside>
