@@ -21,6 +21,7 @@ const createProfileConfigs = {
   Flags: {
     endpoint: '/api/patient-flags',
     submitText: 'เพิ่ม flag',
+    updateText: 'บันทึก flag',
     fields: [
       { name: 'flagType', label: 'Flag type', required: true },
       { name: 'label', label: 'Label', required: true },
@@ -31,6 +32,7 @@ const createProfileConfigs = {
   Allergies: {
     endpoint: '/api/patient-allergies',
     submitText: 'เพิ่ม allergy',
+    updateText: 'บันทึก allergy',
     fields: [
       { name: 'allergenName', label: 'Allergen', required: true },
       { name: 'reaction', label: 'Reaction' },
@@ -41,6 +43,7 @@ const createProfileConfigs = {
   Conditions: {
     endpoint: '/api/patient-conditions',
     submitText: 'เพิ่ม condition',
+    updateText: 'บันทึก condition',
     fields: [
       { name: 'conditionName', label: 'Condition', required: true },
       { name: 'conditionCode', label: 'Code' },
@@ -51,6 +54,7 @@ const createProfileConfigs = {
   Medications: {
     endpoint: '/api/patient-medications',
     submitText: 'เพิ่ม medication',
+    updateText: 'บันทึก medication',
     fields: [
       { name: 'medicationName', label: 'Medication', required: true },
       { name: 'dosage', label: 'Dosage' },
@@ -329,10 +333,10 @@ function showPatientDetail(patient, profile = {}) {
       ['Medications', medications.length],
     ]),
     createProfileTabs({
-      Flags: records(flags, flagSummary, ['severity', 'status', 'notes']),
-      Allergies: records(allergies, allergySummary, ['severity', 'status', 'reaction']),
-      Conditions: records(conditions, conditionSummary, ['status', 'onset_date', 'notes']),
-      Medications: records(medications, medicationSummary, ['status', 'dosage', 'frequency']),
+      Flags: records(flags, flagSummary, ['severity', 'status', 'notes'], 'Flags'),
+      Allergies: records(allergies, allergySummary, ['severity', 'status', 'reaction'], 'Allergies'),
+      Conditions: records(conditions, conditionSummary, ['clinical_status', 'onset_date', 'notes'], 'Conditions'),
+      Medications: records(medications, medicationSummary, ['status', 'dosage', 'frequency'], 'Medications'),
       Encounters: records(encounters, encounterSummary, ['status', 'encounter_class', 'started_at']),
       Diagnoses: records(derived.diagnoses, diagnosisSummary, ['status', 'diagnosis_type', 'diagnosed_at']),
       Vitals: records(derived.vitalSigns, vitalSummary, [
@@ -469,13 +473,13 @@ function renderProfileSection(container, label, section) {
   list.className = 'record-list';
 
   for (const item of section.items) {
-    list.append(createRecordCard(item, section.summary, section.fields));
+    list.append(createRecordCard(item, section.summary, section.fields, section.sectionLabel));
   }
 
   container.append(list);
 }
 
-function createProfileForm(sectionLabel, config) {
+function createProfileForm(sectionLabel, config, initialValues = null) {
   const form = document.createElement('form');
   form.className = 'inline-profile-form';
 
@@ -490,6 +494,7 @@ function createProfileForm(sectionLabel, config) {
     input.name = field.name;
     input.required = Boolean(field.required);
     input.autocomplete = 'off';
+    input.value = initialValues?.[field.name] ?? '';
     label.append(input);
     form.append(label);
   }
@@ -497,11 +502,16 @@ function createProfileForm(sectionLabel, config) {
   const submit = document.createElement('button');
   submit.type = 'submit';
   submit.className = 'primary-button compact-button';
-  submit.textContent = config.submitText;
+  submit.textContent = initialValues?.id ? config.updateText : config.submitText;
   form.append(submit);
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (initialValues?.id) {
+      await updateProfileRecord(sectionLabel, config, initialValues.id, form, submit);
+      return;
+    }
+
     await createProfileRecord(sectionLabel, config, form, submit);
   });
 
@@ -561,6 +571,68 @@ async function createProfileRecord(sectionLabel, config, form, submit) {
   }
 }
 
+async function updateProfileRecord(sectionLabel, config, recordId, form, submit) {
+  const payload = compactPayload(Object.fromEntries(new FormData(form).entries()));
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังแก้ไข profile', '');
+
+  try {
+    const response = await fetch(`${config.endpoint}/${recordId}`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
+    currentProfileSection = sectionLabel;
+    showPatientDetail(currentPatient, currentProfile);
+    setStatus(`${sectionLabel} แก้ไขแล้ว`, 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'แก้ไข profile ไม่สำเร็จ';
+    setStatus('แก้ไข profile ไม่สำเร็จ', 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = config.updateText;
+  }
+}
+
+async function deleteProfileRecord(sectionLabel, config, recordId, button) {
+  button.disabled = true;
+  button.textContent = 'กำลังปิด';
+  setStatus('กำลังปิดรายการ', '');
+
+  try {
+    const response = await fetch(`${config.endpoint}/${recordId}`, {
+      method: 'DELETE',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
+    currentProfileSection = sectionLabel;
+    showPatientDetail(currentPatient, currentProfile);
+    setStatus(`${sectionLabel} ปิดรายการแล้ว`, 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'ปิดรายการไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'ปิดรายการ';
+  }
+}
+
 function renderInlineFormError(form, message) {
   form.querySelector('.inline-error')?.remove();
   const error = document.createElement('p');
@@ -569,11 +641,11 @@ function renderInlineFormError(form, message) {
   form.append(error);
 }
 
-function records(items, summary, fields) {
-  return { items, summary, fields };
+function records(items, summary, fields, sectionLabel) {
+  return { items, summary, fields, sectionLabel };
 }
 
-function createRecordCard(item, summary, fields) {
+function createRecordCard(item, summary, fields, sectionLabel) {
   const card = document.createElement('article');
   card.className = 'record-card';
   const title = document.createElement('h4');
@@ -592,7 +664,52 @@ function createRecordCard(item, summary, fields) {
   }
 
   card.append(title, details);
+
+  const config = createProfileConfigs[sectionLabel];
+  if (config && item.id) {
+    card.append(createRecordActions(card, item, sectionLabel, config));
+  }
+
   return card;
+}
+
+function createRecordActions(card, item, sectionLabel, config) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'secondary-button small-button';
+  editButton.textContent = 'แก้ไข';
+  const deleteButton = document.createElement('button');
+  deleteButton.type = 'button';
+  deleteButton.className = 'secondary-button danger-button small-button';
+  deleteButton.textContent = 'ปิดรายการ';
+
+  editButton.addEventListener('click', () => {
+    card.querySelector('.inline-profile-form')?.remove();
+    const form = createProfileForm(sectionLabel, config, valuesForForm(item, config));
+    card.append(form);
+  });
+
+  deleteButton.addEventListener('click', async () => {
+    await deleteProfileRecord(sectionLabel, config, item.id, deleteButton);
+  });
+
+  actions.append(editButton, deleteButton);
+  return actions;
+}
+
+function valuesForForm(item, config) {
+  return {
+    id: item.id,
+    ...Object.fromEntries(
+      config.fields.map((field) => [field.name, item[camelToSnake(field.name)] ?? item[field.name] ?? ''])
+    ),
+  };
+}
+
+function camelToSnake(value) {
+  return value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 function labelize(field) {

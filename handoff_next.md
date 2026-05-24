@@ -3,14 +3,15 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `4180eca` (`Add patient detail profile subviews`)
-- This stretch extends the patient detail frontend with profile create controls:
+- Latest completed checkpoint before this worktree: `b9a1a71` (`Add patient profile create controls`)
+- This stretch extends the patient detail frontend with profile update/delete controls:
   - static frontend under `frontend/`
   - `npm run start:frontend`
   - patient registration form wired to `POST /api/patients`
   - patient lookup/detail form wired to `GET /api/patients/detail`
   - patient detail subviews for flags, allergies, conditions, medications, encounters, diagnoses, vitals, prescriptions, and notes
   - create forms for flags, allergies, conditions, and medications
+  - edit and soft-delete controls for flags, allergies, conditions, and medications
   - frontend dev proxy for `/api/*` and `/health`
 - Previous verified patient registration API:
   - `POST /api/patients`
@@ -57,6 +58,13 @@
     - `POST http://127.0.0.1:5173/api/patient-allergies`
     - `POST http://127.0.0.1:5173/api/patient-conditions`
     - `POST http://127.0.0.1:5173/api/patient-medications`
+  - frontend proxy profile update/delete checks
+  - current result: `200 OK`
+  - URLs checked:
+    - `PATCH/DELETE http://127.0.0.1:5173/api/patient-flags/:id`
+    - `PATCH/DELETE http://127.0.0.1:5173/api/patient-allergies/:id`
+    - `PATCH/DELETE http://127.0.0.1:5173/api/patient-conditions/:id`
+    - `PATCH/DELETE http://127.0.0.1:5173/api/patient-medications/:id`
 
 ## Local Tooling
 
@@ -93,7 +101,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, clinical profile subviews, and profile create controls started
+- frontend patient registration, lookup, clinical profile subviews, profile create controls, and profile update/delete controls started
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -151,8 +159,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add update/delete controls for allergies, conditions, medications, and flags from the patient detail subviews
-2. add an encounter/SOAP entry point after profile editing is usable
+1. add an encounter/SOAP entry point after profile editing is usable
+2. add appointment/check-in workflow to connect registration to encounters
 
 The deliverables added in this worktree are:
 
@@ -163,14 +171,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create controls, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, and profile-create APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, and profile-delete APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -187,5 +195,5 @@ Start by reading:
 
 Then produce:
 
-1. update/delete controls for patient profile subviews
-2. encounter/SOAP entry point after profile editing is usable
+1. encounter/SOAP entry point after profile editing is usable
+2. appointment/check-in workflow to connect registration to encounters

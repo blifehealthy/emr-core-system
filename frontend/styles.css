@@ -455,6 +455,27 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.record-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.small-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.danger-button {
+  border-color: rgba(180, 35, 24, 0.25);
+  color: var(--error);
+}
+
+.record-card .inline-profile-form {
+  margin: 10px 0 0;
+}
+
 pre {
   min-height: 220px;
   max-height: 440px;
