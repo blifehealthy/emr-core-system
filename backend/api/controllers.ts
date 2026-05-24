@@ -549,14 +549,59 @@ export async function handleGetDailyOperationsReport(
 
   const clinicId = request.query?.clinicId?.trim();
   if (!clinicId) return validationError('clinicId is required query parameter');
-  const date = request.query?.date?.trim();
-  if (!date) return validationError('date is required query parameter');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return validationError('date must be YYYY-MM-DD');
+  const startDate = request.query?.startDate?.trim() || request.query?.date?.trim();
+  if (!startDate) return validationError('startDate is required query parameter');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return validationError('startDate must be YYYY-MM-DD');
+  }
+  const endDate = request.query?.endDate?.trim() || startDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return validationError('endDate must be YYYY-MM-DD');
+  }
+  if (endDate < startDate) {
+    return validationError('endDate must be on or after startDate');
   }
 
-  const report = await dependencies.getDailyOperationsReport({ clinicId, date });
-  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { date } } };
+  const report = await dependencies.getDailyOperationsReport({ clinicId, startDate, endDate });
+  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { start_date: startDate, end_date: endDate } } };
+}
+
+export async function handleGetDailyOperationsReportCsv(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const reportResponse = await handleGetDailyOperationsReport(request, dependencies);
+  if (reportResponse.status !== 200) return reportResponse;
+
+  const report = (reportResponse.body as { data?: Record<string, unknown> }).data ?? {};
+  const rows = [
+    ['metric', 'value'],
+    ['start_date', String(report.start_date ?? '')],
+    ['end_date', String(report.end_date ?? '')],
+    ['visits_total', String(report.visits_total ?? 0)],
+    ['waiting', String(report.waiting ?? 0)],
+    ['in_room', String(report.in_room ?? 0)],
+    ['with_doctor', String(report.with_doctor ?? 0)],
+    ['completed', String(report.completed ?? 0)],
+    ['discharged', String(report.discharged ?? 0)],
+    ['cancelled', String(report.cancelled ?? 0)],
+    ['diagnoses_total', String(report.diagnoses_total ?? 0)],
+    ['prescriptions_total', String(report.prescriptions_total ?? 0)],
+  ];
+  appendAggregateRows(rows, 'by_practitioner', report.by_practitioner, 'practitioner_id', 'visits');
+  appendAggregateRows(rows, 'by_room', report.by_room, 'room_name', 'visits');
+  appendAggregateRows(rows, 'top_diagnoses', report.top_diagnoses, 'diagnosis_name', 'count');
+  appendAggregateRows(rows, 'by_prescriber', report.by_prescriber, 'prescribed_by_practitioner_id', 'prescriptions');
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+
+  return {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': 'attachment; filename="daily-operations.csv"',
+    },
+    body: `${csv}\n`,
+  };
 }
 
 export async function handleCreateAppointment(
@@ -2255,6 +2300,27 @@ function readOptionalQueryString(
   }
 
   return { ok: true, value: trimmed };
+}
+
+function csvCell(value: string) {
+  if (!/[",\n]/.test(value)) return value;
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function appendAggregateRows(
+  rows: string[][],
+  section: string,
+  items: unknown,
+  keyField: string,
+  valueField: string
+) {
+  if (!Array.isArray(items)) return;
+
+  for (const item of items) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    rows.push([`${section}:${String(row[keyField] ?? 'unassigned')}`, String(row[valueField] ?? 0)]);
+  }
 }
 
 function readOptionalEnumQuery<T extends string>(

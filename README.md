@@ -107,7 +107,8 @@ Not included yet:
 - `PATCH /api/clinical-note-templates/:id`
 - `GET /api/clinics/:id/settings`
 - `PATCH /api/clinics/:id/settings`
-- `GET /api/reports/daily-operations?clinicId=...&date=YYYY-MM-DD`
+- `GET /api/reports/daily-operations?clinicId=...&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+- `GET /api/reports/daily-operations.csv?clinicId=...&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
 - `GET /api/encounters/:id/diagnoses?clinicalNoteId=...&status=...&limit=...&offset=...`
 - `GET /api/encounters/:id/vital-signs?clinicalNoteId=...&limit=...&offset=...`
 - `GET /api/encounters/:id/prescriptions?clinicalNoteId=...&status=...&limit=...&offset=...`

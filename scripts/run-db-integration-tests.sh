@@ -54,7 +54,8 @@ for migration in \
   "$MIGRATIONS_DIR/0012_add_patient_flags.up.sql" \
   "$MIGRATIONS_DIR/0013_add_clinic_visits.up.sql" \
   "$MIGRATIONS_DIR/0014_add_clinical_note_templates.up.sql" \
-  "$MIGRATIONS_DIR/0015_add_clinic_settings.up.sql"
+  "$MIGRATIONS_DIR/0015_add_clinic_settings.up.sql" \
+  "$MIGRATIONS_DIR/0016_add_clinic_logo_asset.up.sql"
 do
   run_psql "$migration"
 done

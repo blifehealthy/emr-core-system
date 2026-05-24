@@ -12,6 +12,7 @@ export function getClinicSettings(db: {
           email,
           website,
           logo_url,
+          logo_file_asset_id,
           prescription_footer,
           created_at,
           updated_at,

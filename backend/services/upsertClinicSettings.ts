@@ -9,6 +9,7 @@ export function upsertClinicSettings(db: {
     email?: string | null;
     website?: string | null;
     logoUrl?: string | null;
+    logoFileAssetId?: string | null;
     prescriptionFooter?: string | null;
   }) {
     const result = await db.query(
@@ -21,9 +22,10 @@ export function upsertClinicSettings(db: {
           email,
           website,
           logo_url,
+          logo_file_asset_id,
           prescription_footer
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (clinic_id)
         DO UPDATE SET
           display_name = EXCLUDED.display_name,
@@ -32,6 +34,7 @@ export function upsertClinicSettings(db: {
           email = EXCLUDED.email,
           website = EXCLUDED.website,
           logo_url = EXCLUDED.logo_url,
+          logo_file_asset_id = EXCLUDED.logo_file_asset_id,
           prescription_footer = EXCLUDED.prescription_footer,
           deleted_at = NULL
         RETURNING *
@@ -44,6 +47,7 @@ export function upsertClinicSettings(db: {
         input.email ?? null,
         input.website ?? null,
         input.logoUrl ?? null,
+        input.logoFileAssetId ?? null,
         input.prescriptionFooter ?? null,
       ]
     );

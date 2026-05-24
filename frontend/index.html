@@ -203,14 +203,19 @@
                   <input id="queueRoomName" name="queueRoomName" autocomplete="off" />
                 </label>
                 <label>
-                  Report date
-                  <input id="queueReportDate" name="queueReportDate" type="date" />
+                  Report start
+                  <input id="queueReportStartDate" name="queueReportStartDate" type="date" />
+                </label>
+                <label>
+                  Report end
+                  <input id="queueReportEndDate" name="queueReportEndDate" type="date" />
                 </label>
               </div>
             </section>
 
             <footer class="action-bar">
               <button type="submit" class="primary-button" id="queue-load-button">โหลดคิว</button>
+              <button type="button" class="secondary-button" id="queue-export-button">Export CSV</button>
             </footer>
           </form>
 

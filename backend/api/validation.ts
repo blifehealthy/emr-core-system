@@ -794,6 +794,8 @@ export function validateUpsertClinicSettingsBody(body: unknown, clinicId: string
   if (!website.ok) return website;
   const logoUrl = readOptionalNullableStringField(candidate, 'logoUrl');
   if (!logoUrl.ok) return logoUrl;
+  const logoFileAssetId = readOptionalNullableStringField(candidate, 'logoFileAssetId');
+  if (!logoFileAssetId.ok) return logoFileAssetId;
   const prescriptionFooter = readOptionalNullableStringField(candidate, 'prescriptionFooter');
   if (!prescriptionFooter.ok) return prescriptionFooter;
 
@@ -807,6 +809,7 @@ export function validateUpsertClinicSettingsBody(body: unknown, clinicId: string
       email: email.value,
       website: website.value,
       logoUrl: logoUrl.value,
+      logoFileAssetId: logoFileAssetId.value,
       prescriptionFooter: prescriptionFooter.value,
     },
   };

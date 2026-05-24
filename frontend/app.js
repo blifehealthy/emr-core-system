@@ -6,6 +6,7 @@ const submitButton = document.querySelector('#submit-button');
 const searchButton = document.querySelector('#search-button');
 const adminLoadButton = document.querySelector('#admin-load-button');
 const queueLoadButton = document.querySelector('#queue-load-button');
+const queueExportButton = document.querySelector('#queue-export-button');
 const serviceStatus = document.querySelector('#service-status');
 const resultTitle = document.querySelector('#result-title');
 const resultList = document.querySelector('#result-list');
@@ -118,7 +119,8 @@ const defaults = {
   searchClinicId: '10000000-0000-0000-0000-000000000101',
   adminClinicId: '10000000-0000-0000-0000-000000000101',
   queueClinicId: '10000000-0000-0000-0000-000000000101',
-  queueReportDate: new Date().toISOString().slice(0, 10),
+  queueReportStartDate: new Date().toISOString().slice(0, 10),
+  queueReportEndDate: new Date().toISOString().slice(0, 10),
   userId: '10000000-0000-0000-0000-000000000201',
   userRole: 'nurse',
   apiToken: localStorage.getItem('emr.apiToken') ?? '',
@@ -205,6 +207,10 @@ queueForm.addEventListener('submit', async (event) => {
   } finally {
     setQueueBusy(false);
   }
+});
+
+queueExportButton.addEventListener('click', async () => {
+  await exportDailyOperationsCsv();
 });
 
 registrationForm.addEventListener('submit', async (event) => {
@@ -312,7 +318,8 @@ function buildQueueRequest() {
     status: readValue('queueStatus'),
     practitionerId: readValue('queuePractitionerId'),
     roomName: readValue('queueRoomName'),
-    reportDate: readValue('queueReportDate'),
+    reportStartDate: readValue('queueReportStartDate'),
+    reportEndDate: readValue('queueReportEndDate'),
     limit: readValue('queueLimit'),
   });
 }
@@ -530,7 +537,8 @@ async function fetchClinicSettings(clinicId, apiToken) {
 async function fetchDailyOperationsReport(clinicId, apiToken) {
   const params = new URLSearchParams({
     clinicId,
-    date: readValue('queueReportDate') || new Date().toISOString().slice(0, 10),
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
   });
   const response = await fetch(`/api/reports/daily-operations?${params.toString()}`, {
     headers: buildHeaders(apiToken),
@@ -542,6 +550,49 @@ async function fetchDailyOperationsReport(clinicId, apiToken) {
   }
 
   return result.data;
+}
+
+async function exportDailyOperationsCsv() {
+  const clinicId = readValue('queueClinicId');
+  if (!clinicId) {
+    setStatus('กรุณาระบุ Clinic ID ก่อน export', 'error');
+    return;
+  }
+
+  const params = new URLSearchParams({
+    clinicId,
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+  });
+  queueExportButton.disabled = true;
+  setStatus('กำลัง export report', '');
+
+  try {
+    const response = await fetch(`/api/reports/daily-operations.csv?${params.toString()}`, {
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `daily-operations-${params.get('startDate')}-${params.get('endDate')}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus('export report แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'export report ไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    queueExportButton.disabled = false;
+  }
 }
 
 function compactPayload(payload) {
@@ -595,6 +646,7 @@ function setAdminBusy(isBusy) {
 
 function setQueueBusy(isBusy) {
   queueLoadButton.disabled = isBusy;
+  queueExportButton.disabled = isBusy;
   queueLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดคิว';
 }
 
@@ -1032,6 +1084,7 @@ function createClinicSettingsForm(clinicId) {
     createAdminInput('email', 'Email', currentClinicSettings?.email ?? ''),
     createAdminInput('website', 'Website', currentClinicSettings?.website ?? ''),
     createAdminInput('logoUrl', 'Logo URL', currentClinicSettings?.logo_url ?? ''),
+    createAdminInput('logoFileAssetId', 'Logo file asset ID', currentClinicSettings?.logo_file_asset_id ?? ''),
     createFormField('prescriptionFooter', 'Prescription footer', 'textarea')
   );
   form.elements.address.value = currentClinicSettings?.address ?? '';
@@ -1540,6 +1593,7 @@ async function saveClinicSettings(clinicId, form, submit) {
     email: values.email,
     website: values.website,
     logoUrl: values.logoUrl,
+    logoFileAssetId: values.logoFileAssetId,
     prescriptionFooter: values.prescriptionFooter,
   });
 
@@ -2547,6 +2601,10 @@ function openPrescriptionPrint(prescription) {
     currentClinicSettings?.website,
   ].filter(Boolean).join(' | ');
   const footer = currentClinicSettings?.prescription_footer ?? 'ลงชื่อแพทย์ / Pharmacist verification';
+  const logoUrl = currentClinicSettings?.logo_url ?? '';
+  const logoMarkup = logoUrl
+    ? `<img class="clinic-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(clinicName)} logo" />`
+    : '';
   printWindow.document.write(`
     <!doctype html>
     <html lang="th">
@@ -2554,7 +2612,8 @@ function openPrescriptionPrint(prescription) {
         <title>Prescription</title>
         <style>
           body { font-family: system-ui, sans-serif; margin: 32px; color: #111827; }
-          .header { border-bottom: 2px solid #111827; padding-bottom: 16px; margin-bottom: 20px; }
+          .header { border-bottom: 2px solid #111827; padding-bottom: 16px; margin-bottom: 20px; display: flex; gap: 16px; align-items: center; }
+          .clinic-logo { width: 64px; height: 64px; object-fit: contain; }
           .clinic { font-size: 22px; font-weight: 800; }
           .doc-meta { color: #475569; margin-top: 4px; }
           h1 { font-size: 20px; margin: 0 0 12px; }
@@ -2570,8 +2629,11 @@ function openPrescriptionPrint(prescription) {
       </head>
       <body>
         <div class="header">
-          <div class="clinic">${escapeHtml(clinicName)}</div>
-          <div class="doc-meta">${escapeHtml(clinicContact || `Clinic ID: ${currentPatient?.clinic_id ?? ''}`)}</div>
+          ${logoMarkup}
+          <div>
+            <div class="clinic">${escapeHtml(clinicName)}</div>
+            <div class="doc-meta">${escapeHtml(clinicContact || `Clinic ID: ${currentPatient?.clinic_id ?? ''}`)}</div>
+          </div>
         </div>
         <h1>ใบสั่งยา / Prescription</h1>
         <div class="grid">

@@ -73,6 +73,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0015_add_clinic_settings.up.sql'),
     'expected clinic settings migration'
   );
+  assert.ok(
+    filenames.includes('0016_add_clinic_logo_asset.up.sql'),
+    'expected clinic logo asset migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

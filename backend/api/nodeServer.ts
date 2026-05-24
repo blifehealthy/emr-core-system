@@ -12,7 +12,7 @@ export function createNodeServer(dependencies: Dependencies) {
   return createServer(async (req, res) => {
     try {
       const response = await handleRequest(await toHttpRequest(req));
-      writeJson(res, response.status, response.body, response.headers);
+      writeResponse(res, response.status, response.body, response.headers);
     } catch (error) {
       const httpError = toHttpError(error);
 
@@ -51,12 +51,18 @@ async function readRequestBody(req: IncomingMessage) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function writeJson(
+function writeResponse(
   res: ServerResponse,
   status: number,
   body: unknown,
   headers?: Record<string, string>
 ) {
   res.writeHead(status, headers);
+  if (typeof body === 'string' && !headers?.['content-type']?.includes('application/json')) {
+    res.end(body);
+    return;
+  }
   res.end(JSON.stringify(body));
 }
+
+const writeJson = writeResponse;

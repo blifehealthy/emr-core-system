@@ -85,7 +85,7 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
       return { clinic_id: 'clinic-1', display_name: 'Clinic' };
     },
     async getDailyOperationsReport() {
-      return { date: '2026-05-24', visits_total: 0 };
+      return { start_date: '2026-05-24', end_date: '2026-05-24', visits_total: 0 };
     },
     async listAttachmentsByTarget() {
       return [];
@@ -574,12 +574,20 @@ test('clinic settings and daily operations report APIs work', async () => {
       async upsertClinicSettings(input) {
         assert.equal(input.clinicId, 'clinic-1');
         assert.equal(input.displayName, 'Clinic Updated');
-        return { clinic_id: 'clinic-1', display_name: 'Clinic Updated' };
+        assert.equal(input.logoFileAssetId, 'file-1');
+        return { clinic_id: 'clinic-1', display_name: 'Clinic Updated', logo_file_asset_id: 'file-1' };
       },
       async getDailyOperationsReport(input) {
         assert.equal(input.clinicId, 'clinic-1');
-        assert.equal(input.date, '2026-05-24');
-        return { date: input.date, visits_total: 7 };
+        assert.equal(input.startDate, '2026-05-24');
+        assert.equal(input.endDate, '2026-05-31');
+        return {
+          start_date: input.startDate,
+          end_date: input.endDate,
+          visits_total: 7,
+          by_room: [{ room_name: 'Room A', visits: 2 }],
+          by_prescriber: [{ prescribed_by_practitioner_id: 'doctor-1', prescriptions: 3 }],
+        };
       },
     })
   );
@@ -596,7 +604,7 @@ test('clinic settings and daily operations report APIs work', async () => {
     method: 'PATCH',
     path: '/api/clinics/clinic-1/settings',
     headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
-    body: { displayName: 'Clinic Updated', phoneNumber: '02' },
+    body: { displayName: 'Clinic Updated', phoneNumber: '02', logoFileAssetId: 'file-1' },
   });
   assert.equal(updated.status, 200);
 
@@ -604,10 +612,29 @@ test('clinic settings and daily operations report APIs work', async () => {
     method: 'GET',
     path: '/api/reports/daily-operations',
     headers: { 'x-user-role': 'admin' },
-    query: { clinicId: 'clinic-1', date: '2026-05-24' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
   });
   assert.equal(report.status, 200);
-  assert.deepEqual(report.body, { data: { date: '2026-05-24', visits_total: 7 } });
+  assert.deepEqual(report.body, {
+    data: {
+      start_date: '2026-05-24',
+      end_date: '2026-05-31',
+      visits_total: 7,
+      by_room: [{ room_name: 'Room A', visits: 2 }],
+      by_prescriber: [{ prescribed_by_practitioner_id: 'doctor-1', prescriptions: 3 }],
+    },
+  });
+
+  const csv = await api({
+    method: 'GET',
+    path: '/api/reports/daily-operations.csv',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(csv.status, 200);
+  assert.match(csv.body as string, /visits_total,7/);
+  assert.match(csv.body as string, /by_room:Room A,2/);
+  assert.match(csv.body as string, /by_prescriber:doctor-1,3/);
 });
 
 test('appointments API rejects unsupported status transitions', async () => {

@@ -31,6 +31,7 @@ import {
   handleGetClinicSettings,
   handleGetConsentRecord,
   handleGetDailyOperationsReport,
+  handleGetDailyOperationsReportCsv,
   handleGetDiagnosis,
   handleGetEncounter,
   handleGetFileAsset,
@@ -175,6 +176,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'audit_read');
       if (roleError) return roleError;
       return handleGetDailyOperationsReport(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/daily-operations.csv') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetDailyOperationsReportCsv(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/audit-logs') {

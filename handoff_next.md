@@ -301,22 +301,24 @@ The doctor-facing review document is now the preferred artifact for signoff:
 
 ## Phase 2A Assessment
 
-Phase 2A has started. The first slice adds dedicated visit/check-in records and
+Phase 2A has started. The current slice adds dedicated visit/check-in records and
 a queue board while improving clinician usability through timeline, clinic note
-templates, prescription print/export, clinic branding, and operations summary/reporting metrics.
+templates, prescription print/export, clinic branding, and operations reporting.
+The operations report now supports date ranges and CSV export, and clinic
+branding can link a logo file asset for printed prescription identity.
 
 Remaining Phase 2A follow-ups:
 
 1. Add real browser automation for queue and print workflows.
-2. Add date-range/export support for operations reporting.
-3. Add upload/asset support for clinic logos.
+2. Add an asset picker/upload UI for clinic logos.
+3. Add visual report charts once the report metrics settle.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
 1. add browser automation for queue and print workflows
-2. add date-range/export support for operations reporting
+2. add logo upload/picker UI on top of the `logo_file_asset_id` setting
 
 The deliverables added in this worktree are:
 
@@ -328,6 +330,7 @@ The deliverables added in this worktree are:
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
 - `database/migrations/0015_add_clinic_settings.*`
+- `database/migrations/0016_add_clinic_logo_asset.*`
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail

@@ -36,6 +36,7 @@ const migrations = [
   '0013_add_clinic_visits.up.sql',
   '0014_add_clinical_note_templates.up.sql',
   '0015_add_clinic_settings.up.sql',
+  '0016_add_clinic_logo_asset.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -559,7 +560,27 @@ async function main() {
     );
     assert.equal(inactiveTemplate.data.is_active, false);
 
-    const clinicSettings = await requestJson<{ clinic_id: string; display_name: string }>(
+    const logoAsset = await requestJson<{ id: string; original_filename: string }>(
+      '/api/file-assets',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        storageKey: `clinic-logo-${randomUUID()}.png`,
+        originalFilename: 'clinic-logo.png',
+        mimeType: 'image/png',
+        byteSize: 128,
+        uploadedByUserId: '10000000-0000-0000-0000-000000000202',
+      }
+    );
+    assert.equal(logoAsset.data.original_filename, 'clinic-logo.png');
+
+    const clinicSettings = await requestJson<{
+      clinic_id: string;
+      display_name: string;
+      logo_file_asset_id: string;
+    }>(
       '/api/clinics/10000000-0000-0000-0000-000000000101/settings',
       adminHeaders,
       'PATCH',
@@ -567,24 +588,42 @@ async function main() {
       {
         displayName: 'Smoke Clinic',
         phoneNumber: '02-000-0000',
+        logoFileAssetId: logoAsset.data.id,
         prescriptionFooter: 'Smoke verified signature',
       }
     );
     assert.equal(clinicSettings.data.display_name, 'Smoke Clinic');
+    assert.equal(clinicSettings.data.logo_file_asset_id, logoAsset.data.id);
 
-    const readClinicSettings = await requestJson<{ display_name: string }>(
+    const readClinicSettings = await requestJson<{ display_name: string; logo_file_asset_id: string }>(
       '/api/clinics/10000000-0000-0000-0000-000000000101/settings',
       authHeaders
     );
     assert.equal(readClinicSettings.data.display_name, 'Smoke Clinic');
+    assert.equal(readClinicSettings.data.logo_file_asset_id, logoAsset.data.id);
 
     const smokeReportDate = new Date().toISOString().slice(0, 10);
-    const dailyReport = await requestJson<{ visits_total: number; by_room: unknown[] }>(
-      `/api/reports/daily-operations?clinicId=10000000-0000-0000-0000-000000000101&date=${smokeReportDate}`,
+    const dailyReport = await requestJson<{
+      start_date: string;
+      end_date: string;
+      visits_total: number;
+      by_room: unknown[];
+      by_prescriber: unknown[];
+    }>(
+      `/api/reports/daily-operations?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
       adminHeaders
     );
+    assert.equal(dailyReport.data.start_date, smokeReportDate);
+    assert.equal(dailyReport.data.end_date, smokeReportDate);
     assert.ok(dailyReport.data.visits_total >= 1);
     assert.ok(Array.isArray(dailyReport.data.by_room));
+    assert.ok(Array.isArray(dailyReport.data.by_prescriber));
+    const dailyReportCsv = await requestText(
+      `/api/reports/daily-operations.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.equal(dailyReportCsv.statusCode, 200);
+    assert.match(dailyReportCsv.body, /visits_total,/);
 
     const updatedEncounter = await requestJson<{
       id: string;
@@ -885,6 +924,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /syncVisitStatusForEncounter/);
   assert.match(app.body, /createClinicSettingsSection/);
   assert.match(app.body, /fetchDailyOperationsReport/);
+  assert.match(app.body, /exportDailyOperationsCsv/);
+  assert.match(app.body, /queueReportStartDate/);
+  assert.match(app.body, /logoFileAssetId/);
   assert.match(app.body, /currentClinicSettings/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
@@ -946,6 +988,16 @@ async function requestJson<TData>(
     data: TData;
     meta?: { limit: number; offset: number; hasMore: boolean; nextOffset: number | null };
   };
+}
+
+async function requestText(
+  path: string,
+  headers: Record<string, string>,
+  expectedStatus = 200
+) {
+  const response = await httpText(path, PORT, headers);
+  assert.equal(response.statusCode, expectedStatus, response.body);
+  return response;
 }
 
 async function requestFrontendJson<TData>(
@@ -1035,7 +1087,7 @@ function httpJson<TData>(
   });
 }
 
-function httpText(path: string, port: number) {
+function httpText(path: string, port: number, headers: Record<string, string> = {}) {
   return new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
     const req = httpRequest(
       {
@@ -1043,6 +1095,7 @@ function httpText(path: string, port: number) {
         port,
         path,
         method: 'GET',
+        headers,
       },
       (res) => {
         const chunks: Buffer[] = [];

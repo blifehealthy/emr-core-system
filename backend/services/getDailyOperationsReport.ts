@@ -1,7 +1,7 @@
 export function getDailyOperationsReport(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
 }) {
-  return async function run(input: { clinicId: string; date: string }) {
+  return async function run(input: { clinicId: string; startDate: string; endDate: string }) {
     const result = await db.query(
       `
         WITH visit_rows AS (
@@ -9,7 +9,7 @@ export function getDailyOperationsReport(db: {
           FROM clinic_visits
           WHERE clinic_id = $1
             AND checked_in_at >= $2::date
-            AND checked_in_at < ($2::date + INTERVAL '1 day')
+            AND checked_in_at < ($3::date + INTERVAL '1 day')
             AND deleted_at IS NULL
         ),
         diagnosis_rows AS (
@@ -18,7 +18,7 @@ export function getDailyOperationsReport(db: {
           JOIN encounters e ON e.id = d.encounter_id
           WHERE e.patient_id IN (SELECT patient_id FROM visit_rows)
             AND d.diagnosed_at >= $2::date
-            AND d.diagnosed_at < ($2::date + INTERVAL '1 day')
+            AND d.diagnosed_at < ($3::date + INTERVAL '1 day')
             AND d.deleted_at IS NULL
         ),
         prescription_rows AS (
@@ -27,11 +27,12 @@ export function getDailyOperationsReport(db: {
           JOIN encounters e ON e.id = p.encounter_id
           WHERE e.patient_id IN (SELECT patient_id FROM visit_rows)
             AND p.created_at >= $2::date
-            AND p.created_at < ($2::date + INTERVAL '1 day')
+            AND p.created_at < ($3::date + INTERVAL '1 day')
             AND p.deleted_at IS NULL
         )
         SELECT json_build_object(
-          'date', $2,
+          'start_date', $2,
+          'end_date', $3,
           'visits_total', (SELECT COUNT(*) FROM visit_rows),
           'waiting', (SELECT COUNT(*) FROM visit_rows WHERE status = 'waiting'),
           'in_room', (SELECT COUNT(*) FROM visit_rows WHERE status = 'in_room'),
@@ -68,10 +69,19 @@ export function getDailyOperationsReport(db: {
               ORDER BY count DESC, diagnosis_name ASC
               LIMIT 10
             ) t
+          ), '[]'::json),
+          'by_prescriber', COALESCE((
+            SELECT json_agg(row_to_json(t))
+            FROM (
+              SELECT prescribed_by_practitioner_id, COUNT(*)::int AS prescriptions
+              FROM prescription_rows
+              GROUP BY prescribed_by_practitioner_id
+              ORDER BY prescriptions DESC
+            ) t
           ), '[]'::json)
         ) AS report
       `,
-      [input.clinicId, input.date]
+      [input.clinicId, input.startDate, input.endDate]
     );
 
     return (result.rows[0] as { report?: unknown } | undefined)?.report ?? null;

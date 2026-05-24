@@ -88,6 +88,7 @@ The script applies these migrations in order:
 - `0013_add_clinic_visits.up.sql`
 - `0014_add_clinical_note_templates.up.sql`
 - `0015_add_clinic_settings.up.sql`
+- `0016_add_clinic_logo_asset.up.sql`
 
 Then it runs:
 

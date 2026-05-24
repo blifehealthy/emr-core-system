@@ -34,10 +34,11 @@ and clinician usability.
   summary metrics.
 - Clinic branding settings drive prescription print headers and footers.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
-  count, provider workload, room workload, and top diagnoses.
+  count, provider workload, room workload, prescriber workload, and top
+  diagnoses, with date-range filtering and CSV export.
 
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Add date-range/export support for operations reporting.
-- Add upload/asset support for clinic logos.
+- Add an asset picker/upload UI for clinic logos.
+- Add visual report charts after operational metrics stabilize.

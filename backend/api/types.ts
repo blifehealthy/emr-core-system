@@ -218,6 +218,7 @@ export type UpsertClinicSettingsInput = {
   email?: string | null;
   website?: string | null;
   logoUrl?: string | null;
+  logoFileAssetId?: string | null;
   prescriptionFooter?: string | null;
 };
 
@@ -578,7 +579,11 @@ export type Dependencies = {
   updateClinicalNoteTemplate?: (input: UpdateClinicalNoteTemplateInput) => Promise<unknown | null>;
   getClinicSettings?: (input: { clinicId: string }) => Promise<unknown | null>;
   upsertClinicSettings?: (input: UpsertClinicSettingsInput) => Promise<unknown>;
-  getDailyOperationsReport?: (input: { clinicId: string; date: string }) => Promise<unknown | null>;
+  getDailyOperationsReport?: (input: {
+    clinicId: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<unknown | null>;
   listConsentRecordsByPatient: (input: {
     patientId: string;
     status?: ConsentStatus;
