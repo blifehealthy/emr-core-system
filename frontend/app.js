@@ -325,6 +325,7 @@ function showPatientDetail(patient, profile = {}) {
 
   patientDetailPanel.hidden = false;
   patientDetail.replaceChildren(
+    createEncounterEntryForm(patient),
     createMetricGrid([
       ['Active Flags', flags.length],
       ['Encounters', encounters.length],
@@ -352,6 +353,124 @@ function showPatientDetail(patient, profile = {}) {
       Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at']),
     }, currentProfileSection)
   );
+}
+
+function createEncounterEntryForm(patient) {
+  const form = document.createElement('form');
+  form.className = 'encounter-entry-form';
+
+  const header = document.createElement('div');
+  header.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'เริ่ม visit / SOAP';
+  const number = document.createElement('span');
+  number.textContent = nextEncounterNumber(patient.medical_record_number);
+  header.append(title, number);
+  form.append(header);
+
+  form.append(
+    createFormField('chiefComplaint', 'Chief complaint', 'input', true),
+    createFormField('subjective', 'Subjective', 'textarea'),
+    createFormField('objective', 'Objective', 'textarea'),
+    createFormField('assessment', 'Assessment', 'textarea'),
+    createFormField('plan', 'Plan', 'textarea'),
+    createFormField('diagnosisName', 'Diagnosis', 'input'),
+    createFormField('bodyTemperatureC', 'Temp C', 'input'),
+    createFormField('heartRateBpm', 'HR', 'input'),
+    createFormField('oxygenSaturationPct', 'SpO2', 'input')
+  );
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'บันทึก visit';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createEncounterFromForm(patient, form, submit);
+  });
+
+  return form;
+}
+
+function createFormField(name, labelText, type = 'input', required = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const input = type === 'textarea' ? document.createElement('textarea') : document.createElement('input');
+  input.name = name;
+  input.required = required;
+  input.autocomplete = 'off';
+  if (type === 'textarea') input.rows = 2;
+  label.append(input);
+  return label;
+}
+
+async function createEncounterFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const encounterNumber = nextEncounterNumber(patient.medical_record_number);
+  const diagnosisName = String(values.diagnosisName ?? '').trim();
+  const vitalSign = compactPayload({
+    bodyTemperatureC: values.bodyTemperatureC,
+    heartRateBpm: values.heartRateBpm,
+    oxygenSaturationPct: values.oxygenSaturationPct,
+  });
+  const hasVitalSign = Object.keys(vitalSign).length > 0;
+  const subjective = String(values.subjective ?? '').trim();
+  const objective = String(values.objective ?? '').trim();
+  const assessment = String(values.assessment ?? '').trim();
+  const plan = String(values.plan ?? '').trim();
+  const chiefComplaint = String(values.chiefComplaint ?? '').trim();
+
+  const payload = compactPayload({
+    patientId: patient.id,
+    encounterNumber,
+    status: 'in_progress',
+    encounterClass: 'outpatient',
+    chiefComplaint,
+    title: chiefComplaint ? `Visit: ${chiefComplaint}` : 'Visit SOAP',
+    subjective: subjective || chiefComplaint,
+    objective,
+    assessment,
+    plan,
+    diagnoses: diagnosisName ? [{ diagnosisName, status: 'active', diagnosisType: 'working' }] : undefined,
+    vitalSigns: hasVitalSign ? [vitalSign] : undefined,
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังบันทึก visit', '');
+
+  try {
+    const response = await fetch('/api/encounters', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    const refreshed = await fetchPatientDetail(patient.clinic_id, patient.medical_record_number, currentApiToken || readValue('apiToken'));
+    const profile = await fetchClinicalProfile(patient.id, currentApiToken || readValue('apiToken'));
+    currentProfileSection = 'Encounters';
+    showPatientDetail(refreshed, profile);
+    setStatus('บันทึก visit แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'บันทึก visit ไม่สำเร็จ';
+    setStatus('บันทึก visit ไม่สำเร็จ', 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'บันทึก visit';
+  }
+}
+
+function nextEncounterNumber(mrn) {
+  const safeMrn = String(mrn ?? 'MRN').replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'PATIENT';
+  return `ENC-${safeMrn}-${Date.now()}`;
 }
 
 function syncSearchFields(patient) {

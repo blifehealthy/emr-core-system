@@ -389,6 +389,50 @@ button:disabled {
   padding: 12px;
 }
 
+.encounter-entry-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  border-radius: 6px;
+  background: #f7fbfa;
+  padding: 12px;
+}
+
+.inline-form-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inline-form-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.inline-form-heading span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.encounter-entry-form label:nth-of-type(1),
+.encounter-entry-form label:nth-of-type(2),
+.encounter-entry-form label:nth-of-type(3),
+.encounter-entry-form label:nth-of-type(4),
+.encounter-entry-form label:nth-of-type(5),
+.encounter-entry-form label:nth-of-type(6) {
+  grid-column: 1 / -1;
+}
+
+.encounter-entry-form textarea {
+  min-height: 70px;
+}
+
 .inline-profile-form label {
   font-size: 12px;
 }
@@ -535,6 +579,10 @@ pre {
   }
 
   .inline-profile-form {
+    grid-template-columns: 1fr;
+  }
+
+  .encounter-entry-form {
     grid-template-columns: 1fr;
   }
 
