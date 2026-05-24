@@ -17,6 +17,10 @@ and clinician usability.
   - completed
   - discharged
   - cancelled
+- Queue cards can start an encounter/SOAP directly and write the encounter id
+  back to the visit record.
+- Queue cards with an encounter can open the patient record on the Encounters
+  tab.
 - Appointment check-in now creates a visit record before moving the appointment
   to `checked_in`.
 - Patient detail now includes a compact timeline panel.
@@ -25,8 +29,6 @@ and clinician usability.
 
 ## Remaining Phase 2A Follow-ups
 
-- Link visit records back to encounters automatically when starting an encounter
-  from a queued visit.
 - Add queue room/provider filters and clearer visit ownership.
 - Add real browser automation for queue and print workflows.
 - Replace client-side note templates with persisted clinic-managed templates.

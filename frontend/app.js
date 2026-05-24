@@ -703,6 +703,7 @@ function renderQueueBoard() {
       const card = createRecordCard(visit, visitSummary, [
         'queue_label',
         'medical_record_number',
+        'encounter_id',
         'room_name',
         'checked_in_at',
       ]);
@@ -726,11 +727,65 @@ function createVisitActions(visit) {
     completed: [['discharged', 'จำหน่าย']],
   };
 
+  if (visit.encounter_id) {
+    actions.append(createOpenVisitRecordButton(visit));
+  } else if (['waiting', 'in_room', 'with_doctor'].includes(visit.status)) {
+    actions.append(createStartVisitEncounterButton(visit));
+  }
+
   for (const [status, label] of transitions[visit.status] ?? []) {
     actions.append(createVisitStatusButton(visit, status, label));
   }
 
   return actions;
+}
+
+function createStartVisitEncounterButton(visit) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'primary-button small-button';
+  button.textContent = 'เริ่มตรวจ';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังเริ่ม';
+
+    try {
+      await startEncounterFromVisit(visit);
+      currentQueue = await fetchQueue(readValue('queueClinicId'), currentApiToken || readValue('apiToken'));
+      renderQueueBoard();
+      setStatus('เริ่มตรวจและผูก encounter แล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'เริ่มตรวจจากคิวไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'เริ่มตรวจ';
+    }
+  });
+  return button;
+}
+
+function createOpenVisitRecordButton(visit) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'เปิดเวชระเบียน';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังเปิด';
+
+    try {
+      await openVisitPatientRecord(visit);
+      setStatus('เปิดเวชระเบียนจากคิวแล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'เปิดเวชระเบียนจากคิวไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'เปิดเวชระเบียน';
+    }
+  });
+  return button;
 }
 
 function createVisitStatusButton(visit, status, label) {
@@ -756,6 +811,59 @@ function createVisitStatusButton(visit, status, label) {
     }
   });
   return button;
+}
+
+async function startEncounterFromVisit(visit) {
+  const patientId = visit.patient_id;
+  const medicalRecordNumber = visit.medical_record_number;
+  if (!patientId || !medicalRecordNumber) {
+    throw new Error('Visit นี้ไม่มี patient หรือ HN สำหรับเริ่มตรวจ');
+  }
+
+  const chiefComplaint = String(visit.notes ?? '').trim();
+  const queueLabel = visit.queue_label ?? visit.visit_number ?? visit.id;
+  const response = await fetch('/api/encounters', {
+    method: 'POST',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(compactPayload({
+      patientId,
+      encounterNumber: nextEncounterNumber(medicalRecordNumber),
+      appointmentId: visit.appointment_id,
+      status: 'in_progress',
+      encounterClass: 'outpatient',
+      attendingPractitionerId: visit.practitioner_id,
+      chiefComplaint: chiefComplaint || `Queue ${queueLabel}`,
+      triageSummary: `Started from queue ${queueLabel}`,
+      title: `Queue visit ${queueLabel}`,
+      subjective: chiefComplaint || `Queue ${queueLabel}`,
+    })),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  const encounterId = result.data?.encounter?.id;
+  if (!encounterId) {
+    throw new Error('สร้าง encounter แล้วแต่ไม่พบ encounter id');
+  }
+
+  await patchVisit(visit.id, { encounterId, status: 'with_doctor' });
+  await openVisitPatientRecord(visit, 'Encounters');
+  return result.data;
+}
+
+async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
+  if (!visit.clinic_id || !visit.medical_record_number) {
+    throw new Error('Visit นี้ไม่มี clinic หรือ HN สำหรับเปิดเวชระเบียน');
+  }
+
+  const apiToken = currentApiToken || readValue('apiToken');
+  const patient = await fetchPatientDetail(visit.clinic_id, visit.medical_record_number, apiToken);
+  const profile = await fetchPatientProfileBundle(patient, apiToken);
+  currentProfileSection = sectionLabel;
+  showPatientDetail(patient, profile);
 }
 
 function renderAdminWorkspace(clinicId) {

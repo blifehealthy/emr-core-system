@@ -53,6 +53,10 @@ waiting -> in_room -> with_doctor -> completed -> discharged
 waiting/in_room/with_doctor -> cancelled
 ```
 
+Starting a visit from the queue creates an `in_progress` encounter/SOAP record
+and saves the new `encounter_id` on the visit before moving it to
+`with_doctor`.
+
 ## Encounters
 
 Source enum: `encounter_status`.

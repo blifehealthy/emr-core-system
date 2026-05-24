@@ -446,7 +446,8 @@ test('clinic visit queue APIs create, list, and update visit lifecycle', async (
       async updateClinicVisit(input) {
         assert.equal(input.visitId, 'visit-1');
         assert.equal(input.status, 'with_doctor');
-        return { id: 'visit-1', status: 'with_doctor' };
+        assert.equal(input.encounterId, 'encounter-1');
+        return { id: 'visit-1', status: 'with_doctor', encounter_id: 'encounter-1' };
       },
     })
   );
@@ -478,7 +479,7 @@ test('clinic visit queue APIs create, list, and update visit lifecycle', async (
     method: 'PATCH',
     path: '/api/visits/visit-1',
     headers: { 'x-user-role': 'doctor', 'x-user-id': 'doctor-1' },
-    body: { status: 'with_doctor' },
+    body: { encounterId: 'encounter-1', status: 'with_doctor' },
   });
   assert.equal(updated.status, 200);
 });

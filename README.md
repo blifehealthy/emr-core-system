@@ -42,8 +42,9 @@ summary is available at:
 
 ## Phase 2A
 
-Phase 2A has started clinic operations and clinician usability work. Current
-scope and follow-ups are tracked in:
+Phase 2A has started clinic operations and clinician usability work, including
+queue-to-encounter linking from the clinic queue board. Current scope and
+follow-ups are tracked in:
 
 - `docs/phase-2a-plan.md`
 
