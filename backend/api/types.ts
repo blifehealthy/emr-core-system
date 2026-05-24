@@ -544,6 +544,15 @@ export type Dependencies = {
   createPatient: (input: CreatePatientInput) => Promise<unknown>;
   getConsentRecordById?: (input: { consentId: string }) => Promise<unknown | null>;
   getFileAssetById?: (input: { fileAssetId: string }) => Promise<unknown | null>;
+  listFileAssets?: (input: {
+    clinicId: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<{
+    rows: unknown[];
+    meta: { limit: number; offset: number; hasMore: boolean; nextOffset: number | null };
+  }>;
   getPatientAllergyById?: (input: { allergyId: string }) => Promise<unknown | null>;
   getPatientConditionById?: (input: { conditionId: string }) => Promise<unknown | null>;
   getPatientMedicationById?: (input: { medicationId: string }) => Promise<unknown | null>;

@@ -51,6 +51,7 @@ import {
   handleListClinicalNoteTemplates,
   handleListConsentRecordsByPatient,
   handleListDiagnosesByEncounter,
+  handleListFileAssets,
   handleListPatientAllergies,
   handleListPatientConditions,
   handleListPatientFlags,
@@ -152,6 +153,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'attachment_read');
       if (roleError) return roleError;
       return handleListAttachments(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/file-assets') {
+      const roleError = requireRole(actorAwareRequest, 'attachment_read');
+      if (roleError) return roleError;
+      return handleListFileAssets(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/users') {

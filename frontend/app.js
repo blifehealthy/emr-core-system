@@ -28,6 +28,7 @@ let currentAuditLogs = [];
 let currentQueue = [];
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
+let currentLogoAssets = [];
 let currentDailyReport = null;
 let currentAdminFilters = {
   usersSearch: '',
@@ -548,6 +549,37 @@ async function fetchDailyOperationsReport(clinicId, apiToken) {
   if (!response.ok) {
     throw new Error(result.detail || result.error || `HTTP ${response.status}`);
   }
+
+  return result.data;
+}
+
+async function fetchFileAssets(clinicId, apiToken, filters = {}) {
+  const params = new URLSearchParams({ clinicId });
+  if (filters.search) params.set('search', filters.search);
+  params.set('limit', String(filters.limit ?? 25));
+  params.set('offset', String(filters.offset ?? 0));
+
+  const response = await fetch(`/api/file-assets?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function createFileAsset(payload, apiToken) {
+  const response = await fetch('/api/file-assets', {
+    method: 'POST',
+    headers: buildHeaders(apiToken),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) throw createApiError(response, result);
 
   return result.data;
 }
@@ -1084,7 +1116,7 @@ function createClinicSettingsForm(clinicId) {
     createAdminInput('email', 'Email', currentClinicSettings?.email ?? ''),
     createAdminInput('website', 'Website', currentClinicSettings?.website ?? ''),
     createAdminInput('logoUrl', 'Logo URL', currentClinicSettings?.logo_url ?? ''),
-    createAdminInput('logoFileAssetId', 'Logo file asset ID', currentClinicSettings?.logo_file_asset_id ?? ''),
+    createLogoAssetPicker(clinicId),
     createFormField('prescriptionFooter', 'Prescription footer', 'textarea')
   );
   form.elements.address.value = currentClinicSettings?.address ?? '';
@@ -1097,6 +1129,145 @@ function createClinicSettingsForm(clinicId) {
     await saveClinicSettings(clinicId, form, submit);
   });
   return form;
+}
+
+function createLogoAssetPicker(clinicId) {
+  const panel = document.createElement('div');
+  panel.className = 'asset-picker-panel';
+  panel.dataset.workflow = 'clinic-logo-asset-picker';
+
+  const pickerLabel = document.createElement('label');
+  pickerLabel.textContent = 'Logo file asset';
+  const select = document.createElement('select');
+  select.name = 'logoFileAssetId';
+  select.dataset.workflow = 'clinic-logo-asset-select';
+  pickerLabel.append(select);
+
+  const searchField = createAdminInput('logoAssetSearch', 'Search assets', 'logo');
+  const loadButton = document.createElement('button');
+  loadButton.type = 'button';
+  loadButton.className = 'secondary-button';
+  loadButton.dataset.workflow = 'clinic-logo-asset-load';
+  loadButton.textContent = 'โหลด assets';
+  loadButton.addEventListener('click', async () => {
+    await loadClinicLogoAssets(clinicId, panel);
+  });
+
+  const storageKey = createAdminInput('logoAssetStorageKey', 'Storage key', `clinic-logo-${Date.now()}.png`);
+  const originalFilename = createAdminInput('logoAssetOriginalFilename', 'Filename', 'clinic-logo.png');
+  const mimeType = createAdminInput('logoAssetMimeType', 'MIME type', 'image/png');
+  const byteSize = createAdminInput('logoAssetByteSize', 'Byte size', '0');
+  byteSize.querySelector('input').type = 'number';
+  byteSize.querySelector('input').min = '0';
+
+  const createButton = document.createElement('button');
+  createButton.type = 'button';
+  createButton.className = 'secondary-button';
+  createButton.dataset.workflow = 'clinic-logo-asset-create';
+  createButton.textContent = 'สร้าง logo asset';
+  createButton.addEventListener('click', async () => {
+    await createClinicLogoAsset(clinicId, panel);
+  });
+
+  const status = document.createElement('div');
+  status.className = 'inline-error';
+  status.dataset.workflow = 'clinic-logo-asset-status';
+  status.hidden = true;
+
+  panel.append(
+    pickerLabel,
+    searchField,
+    loadButton,
+    storageKey,
+    originalFilename,
+    mimeType,
+    byteSize,
+    createButton,
+    status
+  );
+  refreshLogoAssetOptions(panel);
+  return panel;
+}
+
+function refreshLogoAssetOptions(panel) {
+  const select = panel.querySelector('select[name="logoFileAssetId"]');
+  if (!select) return;
+
+  const selected = currentClinicSettings?.logo_file_asset_id ?? select.value;
+  const options = [
+    ['', 'ไม่ใช้ logo asset'],
+    ...currentLogoAssets.map((asset) => [
+      asset.id,
+      `${asset.original_filename ?? asset.storage_key ?? asset.id} (${asset.mime_type ?? 'file'})`,
+    ]),
+  ];
+  select.replaceChildren(
+    ...options.map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    })
+  );
+  select.value = options.some(([value]) => value === selected) ? selected : '';
+}
+
+async function loadClinicLogoAssets(clinicId, panel) {
+  setAssetPickerStatus(panel, 'กำลังโหลด assets', '');
+
+  try {
+    currentLogoAssets = await fetchFileAssets(clinicId, currentApiToken || readValue('apiToken'), {
+      search: panel.querySelector('input[name="logoAssetSearch"]')?.value?.trim(),
+      limit: 25,
+    });
+    refreshLogoAssetOptions(panel);
+    setAssetPickerStatus(panel, `โหลด assets แล้ว ${currentLogoAssets.length} รายการ`, 'success');
+  } catch (error) {
+    setAssetPickerStatus(panel, error instanceof Error ? error.message : 'โหลด assets ไม่สำเร็จ', 'error');
+  }
+}
+
+async function createClinicLogoAsset(clinicId, panel) {
+  const storageKey = panel.querySelector('input[name="logoAssetStorageKey"]')?.value?.trim();
+  const originalFilename = panel.querySelector('input[name="logoAssetOriginalFilename"]')?.value?.trim();
+  const mimeType = panel.querySelector('input[name="logoAssetMimeType"]')?.value?.trim();
+  const byteSizeValue = panel.querySelector('input[name="logoAssetByteSize"]')?.value?.trim();
+  const byteSize = byteSizeValue ? Number(byteSizeValue) : 0;
+
+  if (!storageKey || !originalFilename || !Number.isInteger(byteSize) || byteSize < 0) {
+    setAssetPickerStatus(panel, 'กรุณากรอก storage key, filename และ byte size ให้ถูกต้อง', 'error');
+    return;
+  }
+
+  setAssetPickerStatus(panel, 'กำลังสร้าง logo asset', '');
+
+  try {
+    const asset = await createFileAsset(
+      compactPayload({
+        clinicId,
+        storageKey,
+        originalFilename,
+        mimeType,
+        byteSize,
+      }),
+      currentApiToken || readValue('apiToken')
+    );
+    currentLogoAssets = [asset, ...currentLogoAssets.filter((item) => item.id !== asset.id)];
+    refreshLogoAssetOptions(panel);
+    panel.querySelector('select[name="logoFileAssetId"]').value = asset.id;
+    setAssetPickerStatus(panel, 'สร้าง logo asset แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'สร้าง logo asset ไม่สำเร็จ';
+    setAssetPickerStatus(panel, message, 'error');
+  }
+}
+
+function setAssetPickerStatus(panel, message, mode) {
+  const status = panel.querySelector('[data-workflow="clinic-logo-asset-status"]');
+  if (!status) return;
+  status.hidden = false;
+  status.textContent = message;
+  status.className = mode === 'success' ? 'status-pill success' : mode === 'error' ? 'inline-error' : 'status-pill';
 }
 
 function createTemplateAdminSection(clinicId) {

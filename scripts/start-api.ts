@@ -42,6 +42,7 @@ import { listClinicQueue } from '../backend/services/listClinicQueue.ts';
 import { listClinicalNoteTemplates } from '../backend/services/listClinicalNoteTemplates.ts';
 import { listConsentRecordsByPatient } from '../backend/services/listConsentRecordsByPatient.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
+import { listFileAssets } from '../backend/services/listFileAssets.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
 import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
 import { listPatientFlags } from '../backend/services/listPatientFlags.ts';
@@ -106,6 +107,7 @@ const server = createNodeServer({
   listClinicQueue: listClinicQueue(db),
   listClinicalNoteTemplates: listClinicalNoteTemplates(db),
   listAttachmentsByTarget: listAttachmentsByTarget(db),
+  listFileAssets: listFileAssets(db),
   listConsentRecordsByPatient: listConsentRecordsByPatient(db),
   listPatientAllergies: listPatientAllergies(db),
   listPatientConditions: listPatientConditions(db),

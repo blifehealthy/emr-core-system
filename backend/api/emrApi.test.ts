@@ -18,6 +18,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getFileAssetById() {
       return { id: 'file-1' };
     },
+    async listFileAssets() {
+      return { rows: [], meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null } };
+    },
     async getPatientAllergyById() {
       return { id: 'allergy-1' };
     },
@@ -834,6 +837,16 @@ test('consent APIs validate bad payloads and filters', async () => {
 test('attachment APIs work and enforce roles', async () => {
   const api = createEmrApi(
     makeDeps({
+      async listFileAssets(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.search, 'logo');
+        assert.equal(input.limit, 1);
+        assert.equal(input.offset, 0);
+        return {
+          rows: [{ id: 'file-1', clinic_id: input.clinicId, original_filename: 'logo.png' }],
+          meta: { limit: 1, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
       async listAttachmentsByTarget(input) {
         assert.equal(input.targetType, 'consent_record');
         assert.equal(input.targetId, 'consent-1');
@@ -869,6 +882,18 @@ test('attachment APIs work and enforce roles', async () => {
     headers: { 'x-user-role': 'nurse' },
   });
   assert.equal(getFile.status, 200);
+
+  const fileAssets = await api({
+    method: 'GET',
+    path: '/api/file-assets',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', search: 'logo', limit: '1', offset: '0' },
+  });
+  assert.equal(fileAssets.status, 200);
+  assert.deepEqual(fileAssets.body, {
+    data: [{ id: 'file-1', clinic_id: 'clinic-1', original_filename: 'logo.png' }],
+    meta: { limit: 1, offset: 0, hasMore: false, nextOffset: null },
+  });
 
   const createFile = await api({
     method: 'POST',
@@ -906,6 +931,13 @@ test('attachment APIs validate bad payloads and filters', async () => {
     query: { targetId: 'patient-1' },
   });
   assert.equal(missingTarget.status, 400);
+
+  const missingClinic = await api({
+    method: 'GET',
+    path: '/api/file-assets',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(missingClinic.status, 400);
 
   const invalidFile = await api({
     method: 'POST',

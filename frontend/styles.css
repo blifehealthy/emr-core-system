@@ -476,6 +476,30 @@ button:disabled {
   padding: 12px;
 }
 
+.asset-picker-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.asset-picker-panel label:first-child {
+  grid-column: span 2;
+}
+
+.asset-picker-panel .secondary-button {
+  min-height: 38px;
+  align-self: end;
+}
+
+.asset-picker-panel [data-workflow="clinic-logo-asset-status"] {
+  grid-column: 1 / -1;
+}
+
 .appointment-form,
 .encounter-entry-form {
   display: grid;
@@ -539,6 +563,10 @@ button:disabled {
 
 .inline-profile-form label:first-child {
   grid-column: 1 / -1;
+}
+
+.inline-profile-form .asset-picker-panel label:first-child {
+  grid-column: span 2;
 }
 
 .inline-profile-form input,
@@ -710,6 +738,18 @@ pre {
 
   .inline-profile-form {
     grid-template-columns: 1fr;
+  }
+
+  .asset-picker-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-picker-panel label:first-child {
+    grid-column: 1;
+  }
+
+  .inline-profile-form .asset-picker-panel label:first-child {
+    grid-column: 1;
   }
 
   .admin-filter-bar {

@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Start Phase 2A clinic operations`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add clinic logo asset picker`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -47,7 +47,7 @@
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
   - clinic admin can create/update/deactivate SOAP templates
   - prescription cards include a clinic-branded print/export view
-  - clinic admin can create/update prescription print branding settings
+  - clinic admin can create/update prescription print branding settings and bind logo file assets
   - encounter status actions can sync loaded linked visits to completed/discharged/cancelled
   - create encounter/SOAP form from the patient detail panel
   - optional inline diagnosis and vital-sign capture while starting a visit
@@ -305,12 +305,13 @@ Phase 2A has started. The current slice adds dedicated visit/check-in records an
 a queue board while improving clinician usability through timeline, clinic note
 templates, prescription print/export, clinic branding, and operations reporting.
 The operations report now supports date ranges and CSV export, and clinic
-branding can link a logo file asset for printed prescription identity.
+branding can list/create logo file asset metadata and link one for printed
+prescription identity.
 
 Remaining Phase 2A follow-ups:
 
 1. Add real browser automation for queue and print workflows.
-2. Add an asset picker/upload UI for clinic logos.
+2. Add binary upload/storage integration behind the logo asset metadata flow.
 3. Add visual report charts once the report metrics settle.
 
 ## Recommended Next Task
@@ -318,7 +319,7 @@ Remaining Phase 2A follow-ups:
 If coming back fresh after this pass:
 
 1. add browser automation for queue and print workflows
-2. add logo upload/picker UI on top of the `logo_file_asset_id` setting
+2. add binary logo upload/storage behind `file_assets`
 
 The deliverables added in this worktree are:
 
@@ -339,14 +340,14 @@ The deliverables added in this worktree are:
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
-- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, daily operations reporting, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset listing, daily operations reporting, and encounter edit
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, SOAP template management, clinic branding settings, audit lookup, daily operations reporting, queue lookup/filter/update/claim/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, clinic-branded prescription print/export, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, SOAP template management, clinic branding settings with logo asset picker, audit lookup, daily operations reporting, queue lookup/filter/update/claim/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, clinic-branded prescription print/export, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -364,4 +365,4 @@ Start by reading:
 Then produce:
 
 1. Browser automation for queue and print workflows
-2. Date-range/export support for operations reporting
+2. Binary logo upload/storage integration behind `file_assets`

@@ -116,6 +116,7 @@ Not included yet:
 - `POST /api/prescriptions`
 - `PATCH /api/prescriptions/:id`
 - `DELETE /api/prescriptions/:id`
+- `GET /api/file-assets?clinicId=...&search=...&limit=...&offset=...`
 
 Run locally with:
 

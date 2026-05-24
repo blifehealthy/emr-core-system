@@ -15,6 +15,7 @@ import {
   toDiagnosisDtos,
   toEncounterDto,
   toFileAssetDto,
+  toFileAssetDtos,
   toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
@@ -950,6 +951,40 @@ export async function handleGetFileAsset(
   }
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toFileAssetDto(fileAsset) } };
+}
+
+export async function handleListFileAssets(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listFileAssets) {
+    return mapError(new Error('File asset list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const result = await dependencies.listFileAssets({
+    clinicId,
+    search: search.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toFileAssetDtos(result.rows), meta: result.meta },
+  };
 }
 
 export async function handleCreateFileAsset(

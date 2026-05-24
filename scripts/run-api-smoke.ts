@@ -602,6 +602,12 @@ async function main() {
     assert.equal(readClinicSettings.data.display_name, 'Smoke Clinic');
     assert.equal(readClinicSettings.data.logo_file_asset_id, logoAsset.data.id);
 
+    const fileAssetList = await requestJson<Array<{ id: string; original_filename: string }>>(
+      '/api/file-assets?clinicId=10000000-0000-0000-0000-000000000101&search=logo&limit=5&offset=0',
+      authHeaders
+    );
+    assert.ok(fileAssetList.data.some((asset) => asset.id === logoAsset.data.id));
+
     const smokeReportDate = new Date().toISOString().slice(0, 10);
     const dailyReport = await requestJson<{
       start_date: string;
@@ -925,6 +931,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /createClinicSettingsSection/);
   assert.match(app.body, /fetchDailyOperationsReport/);
   assert.match(app.body, /exportDailyOperationsCsv/);
+  assert.match(app.body, /fetchFileAssets/);
+  assert.match(app.body, /createClinicLogoAsset/);
+  assert.match(app.body, /clinic-logo-asset-picker/);
   assert.match(app.body, /queueReportStartDate/);
   assert.match(app.body, /logoFileAssetId/);
   assert.match(app.body, /currentClinicSettings/);
@@ -963,6 +972,12 @@ async function assertFrontendProxySmoke(input: {
     input.authHeaders
   );
   assert.ok(queue.data.some((item) => item.id === input.createdVisitId));
+
+  const logoAssets = await requestFrontendJson<Array<{ id: string }>>(
+    '/api/file-assets?clinicId=10000000-0000-0000-0000-000000000101&search=logo&limit=5&offset=0',
+    input.authHeaders
+  );
+  assert.ok(logoAssets.data.length >= 1);
 
   const encounter = await requestFrontendJson<{ id: string; triage_summary: string | null }>(
     '/api/encounters/10000000-0000-0000-0000-000000002001',

@@ -432,6 +432,10 @@ export function toFileAssetDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...FILE_ASSET_KEYS]);
 }
 
+export function toFileAssetDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toFileAssetDto(row));
+}
+
 export function toAttachmentLinkDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...ATTACHMENT_LINK_KEYS]);
 }
