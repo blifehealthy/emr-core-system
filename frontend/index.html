@@ -29,7 +29,7 @@
             <h2 id="access-heading">การเชื่อมต่อ</h2>
             <span>Dev</span>
           </div>
-          <div class="field-grid three">
+          <div class="field-grid">
             <label>
               API Token
               <input id="apiToken" name="apiToken" autocomplete="off" />
@@ -45,6 +45,10 @@
             <label>
               User ID
               <input id="userId" name="userId" autocomplete="off" />
+            </label>
+            <label>
+              Practitioner ID
+              <input id="actorPractitionerId" name="actorPractitionerId" autocomplete="off" />
             </label>
           </div>
         </section>
@@ -169,7 +173,7 @@
                 <h2 id="queue-heading">Queue Board</h2>
                 <span>Phase 2A</span>
               </div>
-              <div class="field-grid three">
+              <div class="field-grid">
                 <label>
                   Clinic ID
                   <input id="queueClinicId" name="queueClinicId" autocomplete="off" required />
@@ -189,6 +193,14 @@
                 <label>
                   Limit
                   <input id="queueLimit" name="queueLimit" type="number" min="1" max="200" value="50" />
+                </label>
+                <label>
+                  Practitioner ID
+                  <input id="queuePractitionerId" name="queuePractitionerId" autocomplete="off" />
+                </label>
+                <label>
+                  Room
+                  <input id="queueRoomName" name="queueRoomName" autocomplete="off" />
                 </label>
               </div>
             </section>

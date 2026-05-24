@@ -31,6 +31,9 @@
   - appointment status controls wired to `PATCH /api/appointments/:id`
   - dedicated visit/check-in records added with `clinic_visits`
   - queue board loaded with `GET /api/queue?clinicId=...`
+  - queue board supports status, practitioner, room, and limit filters
+  - queue cards show practitioner ownership and can claim/reassign a visit to
+    the current practitioner actor
   - visit lifecycle controls wired to `POST /api/visits` and `PATCH /api/visits/:id`
   - check-in creates a visit record and then marks the appointment `checked_in`
   - queue cards can start an encounter/SOAP and write the created `encounter_id`
@@ -298,17 +301,16 @@ templates, and prescription print/export.
 
 Remaining Phase 2A follow-ups:
 
-1. Add queue filters for room/provider and better visit ownership.
-2. Persist note templates as clinic-managed data instead of client-side presets.
-3. Expand prescription print/export into a clinic-branded document format.
-4. Add real browser automation for queue and print workflows.
+1. Persist note templates as clinic-managed data instead of client-side presets.
+2. Expand prescription print/export into a clinic-branded document format.
+3. Add real browser automation for queue and print workflows.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add queue room/provider filters and clearer visit ownership
-2. add persisted note templates and clinic-branded prescription print/export
+1. add persisted note templates and clinic-branded prescription print/export
+2. add browser automation for queue and print workflows
 
 The deliverables added in this worktree are:
 
@@ -322,18 +324,18 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, audit log lookup, queue board, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, prescription print/export, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, audit log lookup, queue board with practitioner/room filters and claim controls, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, prescription print/export, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
-- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue encounter linking, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, and encounter edit
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, audit lookup, queue lookup/update/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, prescription print/export, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, audit lookup, queue lookup/filter/update/claim/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, prescription print/export, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -350,5 +352,5 @@ Start by reading:
 
 Then produce:
 
-1. Queue room/provider filters and clearer visit ownership
-2. Persisted note templates and branded prescription output
+1. Persisted note templates and branded prescription output
+2. Browser automation for queue and print workflows

@@ -530,6 +530,7 @@ export type Dependencies = {
     clinicId: string;
     status?: ClinicVisitStatus;
     practitionerId?: string;
+    roomName?: string;
     limit?: number;
   }) => Promise<unknown[]>;
   createClinicVisit?: (input: CreateClinicVisitInput) => Promise<unknown>;

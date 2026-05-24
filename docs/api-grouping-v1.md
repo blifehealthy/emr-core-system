@@ -50,7 +50,7 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/appointments/:appointmentId` | Read one appointment. |
 | `POST` | `/api/appointments` | Create appointment. |
 | `PATCH` | `/api/appointments/:appointmentId` | Update appointment. |
-| `GET` | `/api/queue` | Read clinic queue / visit board. |
+| `GET` | `/api/queue` | Read clinic queue / visit board with status, practitioner, room, and limit filters. |
 | `POST` | `/api/visits` | Create dedicated check-in visit record. |
 | `PATCH` | `/api/visits/:visitId` | Update visit lifecycle status, linked encounter, room, practitioner, or notes. |
 | `POST` | `/api/encounters` | Create encounter with SOAP note and optional clinical children. |

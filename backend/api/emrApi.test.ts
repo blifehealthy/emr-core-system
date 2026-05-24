@@ -435,6 +435,8 @@ test('clinic visit queue APIs create, list, and update visit lifecycle', async (
       async listClinicQueue(input) {
         assert.equal(input.clinicId, 'clinic-1');
         assert.equal(input.status, 'waiting');
+        assert.equal(input.practitionerId, 'practitioner-1');
+        assert.equal(input.roomName, 'Room 1');
         assert.equal(input.limit, 10);
         return [{ id: 'visit-1', status: 'waiting' }];
       },
@@ -456,7 +458,13 @@ test('clinic visit queue APIs create, list, and update visit lifecycle', async (
     method: 'GET',
     path: '/api/queue',
     headers: { 'x-user-role': 'nurse' },
-    query: { clinicId: 'clinic-1', status: 'waiting', limit: '10' },
+    query: {
+      clinicId: 'clinic-1',
+      status: 'waiting',
+      practitionerId: 'practitioner-1',
+      roomName: 'Room 1',
+      limit: '10',
+    },
   });
   assert.equal(list.status, 200);
   assert.deepEqual(list.body, { data: [{ id: 'visit-1', status: 'waiting' }] });

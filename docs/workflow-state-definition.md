@@ -57,6 +57,10 @@ Starting a visit from the queue creates an `in_progress` encounter/SOAP record
 and saves the new `encounter_id` on the visit before moving it to
 `with_doctor`.
 
+Queue ownership is tracked on `clinic_visits.practitioner_id`; the queue API can
+filter by practitioner and room so a clinic can view an individual provider or
+exam-room workload.
+
 ## Encounters
 
 Source enum: `encounter_status`.

@@ -21,6 +21,8 @@ and clinician usability.
   back to the visit record.
 - Queue cards with an encounter can open the patient record on the Encounters
   tab.
+- Queue filtering supports practitioner and room, and queue cards show/claim
+  practitioner ownership.
 - Appointment check-in now creates a visit record before moving the appointment
   to `checked_in`.
 - Patient detail now includes a compact timeline panel.
@@ -29,7 +31,6 @@ and clinician usability.
 
 ## Remaining Phase 2A Follow-ups
 
-- Add queue room/provider filters and clearer visit ownership.
 - Add real browser automation for queue and print workflows.
 - Replace client-side note templates with persisted clinic-managed templates.
 - Expand prescription print/export into a clinic-branded document format.

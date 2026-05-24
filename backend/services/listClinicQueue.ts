@@ -7,6 +7,7 @@ export function listClinicQueue(db: {
     clinicId: string;
     status?: ClinicVisitStatus;
     practitionerId?: string;
+    roomName?: string;
     limit?: number;
   }) {
     const conditions = ['cv.clinic_id = $1', 'cv.deleted_at IS NULL'];
@@ -20,6 +21,11 @@ export function listClinicQueue(db: {
     if (input.practitionerId) {
       params.push(input.practitionerId);
       conditions.push(`cv.practitioner_id = $${params.length}`);
+    }
+
+    if (input.roomName) {
+      params.push(input.roomName);
+      conditions.push(`LOWER(cv.room_name) = LOWER($${params.length})`);
     }
 
     params.push(input.limit ?? 100);

@@ -333,6 +333,9 @@ export async function handleListClinicQueue(
   const practitionerId = readOptionalQueryString(request, 'practitionerId');
   if (!practitionerId.ok) return validationError(practitionerId.error);
 
+  const roomName = readOptionalQueryString(request, 'roomName');
+  if (!roomName.ok) return validationError(roomName.error);
+
   const limit = readOptionalLimitQuery(request);
   if (!limit.ok) return validationError(limit.error);
 
@@ -340,6 +343,7 @@ export async function handleListClinicQueue(
     clinicId,
     status: status.value,
     practitionerId: practitionerId.value,
+    roomName: roomName.value,
     limit: limit.value,
   });
 

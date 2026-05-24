@@ -301,6 +301,8 @@ function buildQueueRequest() {
   return compactPayload({
     clinicId: readValue('queueClinicId'),
     status: readValue('queueStatus'),
+    practitionerId: readValue('queuePractitionerId'),
+    roomName: readValue('queueRoomName'),
     limit: readValue('queueLimit'),
   });
 }
@@ -312,7 +314,9 @@ function buildHeaders(apiToken) {
   };
 
   const userId = readValue('userId');
+  const practitionerId = readValue('actorPractitionerId');
   if (userId) headers['x-user-id'] = userId;
+  if (practitionerId) headers['x-practitioner-id'] = practitionerId;
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
 
   return headers;
@@ -400,6 +404,8 @@ async function fetchPatientProfileBundle(patient, apiToken) {
 async function fetchQueue(clinicId, apiToken) {
   const params = new URLSearchParams({ clinicId });
   if (readValue('queueStatus')) params.set('status', readValue('queueStatus'));
+  if (readValue('queuePractitionerId')) params.set('practitionerId', readValue('queuePractitionerId'));
+  if (readValue('queueRoomName')) params.set('roomName', readValue('queueRoomName'));
   if (readValue('queueLimit')) params.set('limit', readValue('queueLimit'));
 
   const response = await fetch(`/api/queue?${params.toString()}`, {
@@ -704,6 +710,9 @@ function renderQueueBoard() {
         'queue_label',
         'medical_record_number',
         'encounter_id',
+        'practitioner_id',
+        'practitioner_first_name',
+        'practitioner_last_name',
         'room_name',
         'checked_in_at',
       ]);
@@ -727,6 +736,15 @@ function createVisitActions(visit) {
     completed: [['discharged', 'จำหน่าย']],
   };
 
+  const actorPractitionerId = readValue('actorPractitionerId');
+  if (
+    actorPractitionerId &&
+    visit.practitioner_id !== actorPractitionerId &&
+    ['waiting', 'in_room', 'with_doctor'].includes(visit.status)
+  ) {
+    actions.append(createClaimVisitButton(visit, actorPractitionerId));
+  }
+
   if (visit.encounter_id) {
     actions.append(createOpenVisitRecordButton(visit));
   } else if (['waiting', 'in_room', 'with_doctor'].includes(visit.status)) {
@@ -738,6 +756,31 @@ function createVisitActions(visit) {
   }
 
   return actions;
+}
+
+function createClaimVisitButton(visit, practitionerId) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = visit.practitioner_id ? 'รับเคสแทน' : 'รับเคส';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังรับ';
+
+    try {
+      await patchVisit(visit.id, { practitionerId });
+      currentQueue = await fetchQueue(readValue('queueClinicId'), currentApiToken || readValue('apiToken'));
+      renderQueueBoard();
+      setStatus('รับเคสแล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'รับเคสไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = visit.practitioner_id ? 'รับเคสแทน' : 'รับเคส';
+    }
+  });
+  return button;
 }
 
 function createStartVisitEncounterButton(visit) {
@@ -2689,7 +2732,9 @@ function appointmentSummary(item) {
 
 function visitSummary(item) {
   const name = [item.patient_first_name, item.patient_last_name].filter(Boolean).join(' ');
-  return `${item.queue_label ?? item.visit_number ?? item.id} · ${name || item.medical_record_number || 'patient'}`;
+  const owner = [item.practitioner_first_name, item.practitioner_last_name].filter(Boolean).join(' ');
+  const ownerText = owner || item.practitioner_id || 'unassigned';
+  return `${item.queue_label ?? item.visit_number ?? item.id} · ${name || item.medical_record_number || 'patient'} · ${ownerText}`;
 }
 
 function practitionerSummary(item) {

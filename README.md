@@ -43,8 +43,8 @@ summary is available at:
 ## Phase 2A
 
 Phase 2A has started clinic operations and clinician usability work, including
-queue-to-encounter linking from the clinic queue board. Current scope and
-follow-ups are tracked in:
+queue-to-encounter linking plus practitioner/room queue ownership from the
+clinic queue board. Current scope and follow-ups are tracked in:
 
 - `docs/phase-2a-plan.md`
 
@@ -97,7 +97,7 @@ Not included yet:
 - `GET /api/practitioners?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/practitioners`
 - `PATCH /api/practitioners/:id`
-- `GET /api/queue?clinicId=...&status=...&limit=...`
+- `GET /api/queue?clinicId=...&status=...&practitionerId=...&roomName=...&limit=...`
 - `POST /api/visits`
 - `PATCH /api/visits/:id`
 - `GET /api/encounters/:id/diagnoses?clinicalNoteId=...&status=...&limit=...&offset=...`

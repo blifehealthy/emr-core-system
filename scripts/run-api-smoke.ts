@@ -519,6 +519,12 @@ async function main() {
     assert.equal(visitWithDoctor.data.status, 'with_doctor');
     assert.equal(visitWithDoctor.data.room_name, 'Room Smoke');
 
+    const ownedRoomQueue = await requestJson<Array<{ id: string }>>(
+      `/api/queue?clinicId=10000000-0000-0000-0000-000000000101&status=with_doctor&practitionerId=${createdPractitioner.data.id}&roomName=Room%20Smoke&limit=10`,
+      authHeaders
+    );
+    assert.ok(ownedRoomQueue.data.some((item) => item.id === visit.data.id));
+
     const updatedEncounter = await requestJson<{
       id: string;
       status: string;
@@ -811,6 +817,8 @@ async function assertFrontendProxySmoke(input: {
   assert.match(styles.body, /\.admin-pagination/);
   assert.match(app.body, /renderQueueBoard/);
   assert.match(app.body, /startEncounterFromVisit/);
+  assert.match(app.body, /createClaimVisitButton/);
+  assert.match(app.body, /queueRoomName/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
     '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',
@@ -842,7 +850,7 @@ async function assertFrontendProxySmoke(input: {
   assert.equal(appointment.data.notes, 'Updated through frontend proxy smoke');
 
   const queue = await requestFrontendJson<Array<{ id: string }>>(
-    '/api/queue?clinicId=10000000-0000-0000-0000-000000000101&limit=10',
+    `/api/queue?clinicId=10000000-0000-0000-0000-000000000101&practitionerId=${input.createdPractitionerId}&roomName=Room%20Smoke&limit=10`,
     input.authHeaders
   );
   assert.ok(queue.data.some((item) => item.id === input.createdVisitId));
