@@ -1,5 +1,6 @@
 import type { PatientWithEncountersAndSOAP } from '../repositories/getPatientWithEncountersAndSOAP.ts';
 
+export type PatientSexAtBirth = 'female' | 'male' | 'intersex' | 'unknown';
 export type EncounterStatus = 'draft' | 'in_progress' | 'completed' | 'signed' | 'cancelled';
 export type EncounterClass = 'outpatient' | 'inpatient' | 'emergency' | 'other';
 export type AppointmentStatus =
@@ -125,6 +126,22 @@ export type CreateAppointmentInput = {
   scheduledStartAt: string;
   scheduledEndAt?: string | null;
   reason?: string | null;
+  notes?: string | null;
+};
+
+export type CreatePatientInput = {
+  clinicId: string;
+  medicalRecordNumber: string;
+  nationalId?: string | null;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  preferredName?: string | null;
+  dateOfBirth?: string | null;
+  sexAtBirth?: PatientSexAtBirth;
+  phoneNumber?: string | null;
+  email?: string | null;
+  bloodType?: string | null;
   notes?: string | null;
 };
 
@@ -446,6 +463,7 @@ export type Dependencies = {
     clinicId: string;
     medicalRecordNumber: string;
   }) => Promise<PatientWithEncountersAndSOAP | null>;
+  createPatient: (input: CreatePatientInput) => Promise<unknown>;
   getConsentRecordById?: (input: { consentId: string }) => Promise<unknown | null>;
   getFileAssetById?: (input: { fileAssetId: string }) => Promise<unknown | null>;
   getPatientAllergyById?: (input: { allergyId: string }) => Promise<unknown | null>;

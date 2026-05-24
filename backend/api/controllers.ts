@@ -9,6 +9,7 @@ import {
   toDiagnosisDto,
   toDiagnosisDtos,
   toFileAssetDto,
+  toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
   toPatientConditionDto,
@@ -42,6 +43,7 @@ import {
   validateCreateVitalSignBody,
   validateCreateEncounterBody,
   validateCreateFileAssetBody,
+  validateCreatePatientBody,
   validateFinalizeClinicalNoteBody,
   validateSignClinicalNoteBody,
   validateUpdateAppointmentBody,
@@ -102,6 +104,35 @@ export async function handleGetPatientDetail(
       headers: JSON_HEADERS,
       body: { data: patient },
     };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCreatePatient(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreatePatientBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const patient = await dependencies.createPatient(validation.value);
+    const actor = getActorContext(request);
+
+    await dependencies.createAuditLog({
+      entityType: 'patient',
+      entityId: (patient as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        clinicId: validation.value.clinicId,
+        medicalRecordNumber: validation.value.medicalRecordNumber,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toPatientDto(patient) } };
   } catch (error) {
     return mapError(error);
   }

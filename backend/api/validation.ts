@@ -8,10 +8,12 @@ import type {
   PatientFlagSeverity,
   PatientFlagStatus,
   PatientMedicationStatus,
+  PatientSexAtBirth,
   CreateAttachmentLinkInput,
   CreateAppointmentInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
+  CreatePatientInput,
   CreatePatientAllergyInput,
   CreatePatientConditionInput,
   CreatePatientFlagInput,
@@ -196,6 +198,81 @@ export function validateCreateEncounterBody(body: unknown):
       plan: readOptionalNullableString(candidate.plan),
       diagnoses: diagnoses as CreateEncounterInput['diagnoses'],
       vitalSigns: vitalSigns as CreateEncounterInput['vitalSigns'],
+    },
+  };
+}
+
+export function validateCreatePatientBody(body: unknown):
+  | { ok: true; value: CreatePatientInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const medicalRecordNumber = readRequiredString(
+    candidate.medicalRecordNumber,
+    'medicalRecordNumber'
+  );
+  if (!medicalRecordNumber.ok) return medicalRecordNumber;
+
+  const firstName = readRequiredString(candidate.firstName, 'firstName');
+  if (!firstName.ok) return firstName;
+
+  const lastName = readRequiredString(candidate.lastName, 'lastName');
+  if (!lastName.ok) return lastName;
+
+  const nationalId = readOptionalNullableStringField(candidate, 'nationalId');
+  if (!nationalId.ok) return nationalId;
+
+  const middleName = readOptionalNullableStringField(candidate, 'middleName');
+  if (!middleName.ok) return middleName;
+
+  const preferredName = readOptionalNullableStringField(candidate, 'preferredName');
+  if (!preferredName.ok) return preferredName;
+
+  const dateOfBirth = readOptionalNullableStringField(candidate, 'dateOfBirth');
+  if (!dateOfBirth.ok) return dateOfBirth;
+
+  const sexAtBirth = readEnumValue<PatientSexAtBirth>(candidate.sexAtBirth, 'sexAtBirth', [
+    'female',
+    'male',
+    'intersex',
+    'unknown',
+  ]);
+  if (!sexAtBirth.ok) return sexAtBirth;
+
+  const phoneNumber = readOptionalNullableStringField(candidate, 'phoneNumber');
+  if (!phoneNumber.ok) return phoneNumber;
+
+  const email = readOptionalNullableStringField(candidate, 'email');
+  if (!email.ok) return email;
+
+  const bloodType = readOptionalNullableStringField(candidate, 'bloodType');
+  if (!bloodType.ok) return bloodType;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      medicalRecordNumber: medicalRecordNumber.value,
+      nationalId: nationalId.value,
+      firstName: firstName.value,
+      middleName: middleName.value,
+      lastName: lastName.value,
+      preferredName: preferredName.value,
+      dateOfBirth: dateOfBirth.value,
+      sexAtBirth: sexAtBirth.value,
+      phoneNumber: phoneNumber.value,
+      email: email.value,
+      bloodType: bloodType.value,
+      notes: notes.value,
     },
   };
 }

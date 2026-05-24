@@ -35,6 +35,26 @@ const DIAGNOSIS_KEYS = [
   'deleted_at',
 ] as const;
 
+const PATIENT_KEYS = [
+  'id',
+  'clinic_id',
+  'medical_record_number',
+  'national_id',
+  'first_name',
+  'middle_name',
+  'last_name',
+  'preferred_name',
+  'date_of_birth',
+  'sex_at_birth',
+  'phone_number',
+  'email',
+  'blood_type',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const VITAL_SIGN_KEYS = [
   'id',
   'encounter_id',
@@ -251,6 +271,10 @@ const SOAP_NOTE_KEYS = [
 
 export function toDiagnosisDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...DIAGNOSIS_KEYS]);
+}
+
+export function toPatientDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PATIENT_KEYS]);
 }
 
 export function toDiagnosisDtos(rows: unknown[]): Record<string, unknown>[] {

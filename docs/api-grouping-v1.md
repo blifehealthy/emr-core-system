@@ -19,6 +19,7 @@ All routes except `GET /health` can be protected by bearer token when
 
 | Method | Route | Purpose |
 | --- | --- | --- |
+| `POST` | `/api/patients` | Register a new patient profile. |
 | `GET` | `/api/patients/detail` | Read patient detail with active flags, encounters, and clinical children. |
 | `GET` | `/api/patients/:patientId/allergies` | List patient allergies. |
 | `GET` | `/api/patient-allergies/:allergyId` | Read one patient allergy. |

@@ -21,6 +21,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | Permission | Doctor | Nurse | Admin | Notes |
 | --- | --- | --- | --- | --- |
 | `patient_read` | Yes | Yes | Yes | Patient detail with flags, clinical child reads, SOAP read |
+| `patient_write` | Yes | Yes | Yes | Patient registration |
 | `audit_read` | Yes | Yes | Yes | Audit log and patient timeline reads |
 | `appointment_read` | Yes | Yes | Yes | Appointment list and detail |
 | `appointment_write` | Yes | Yes | Yes | Appointment create/update |
@@ -54,6 +55,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | Method | Route | Permission |
 | --- | --- | --- |
 | `GET` | `/health` | Public health check |
+| `POST` | `/api/patients` | `patient_write` |
 | `GET` | `/api/patients/detail` | `patient_read` |
 | `GET` | `/api/patients/:patientId/timeline` | `audit_read` |
 | `GET` | `/api/patients/:patientId/consents` | `consent_read` |

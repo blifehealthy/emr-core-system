@@ -9,6 +9,7 @@ import {
   handleCreatePatientCondition,
   handleCreatePatientFlag,
   handleCreatePatientMedication,
+  handleCreatePatient,
   handleCreatePractitioner,
   handleCreatePrescription,
   handleCreateEncounter,
@@ -115,6 +116,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'patient_read');
       if (roleError) return roleError;
       return handleGetPatientDetail(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/patients') {
+      const roleError = requireRole(actorAwareRequest, 'patient_write');
+      if (roleError) return roleError;
+      return handleCreatePatient(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/appointments') {

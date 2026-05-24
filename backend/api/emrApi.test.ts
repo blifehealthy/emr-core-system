@@ -9,6 +9,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientWithEncountersAndSOAP() {
       return null;
     },
+    async createPatient() {
+      return { id: 'patient-1' };
+    },
     async getConsentRecordById() {
       return { id: 'consent-1' };
     },
@@ -256,6 +259,79 @@ test('GET /api/patients/detail returns patient data', async () => {
   });
 
   assert.equal(response.status, 200);
+});
+
+test('POST /api/patients registers a new patient', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async createPatient(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.medicalRecordNumber, 'MRN-002');
+        assert.equal(input.firstName, 'John');
+        assert.equal(input.lastName, 'Doe');
+        assert.equal(input.sexAtBirth, 'male');
+        return {
+          id: 'patient-2',
+          clinic_id: input.clinicId,
+          medical_record_number: input.medicalRecordNumber,
+          first_name: input.firstName,
+          last_name: input.lastName,
+          sex_at_birth: input.sexAtBirth,
+        };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'POST',
+    path: '/api/patients',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: {
+      clinicId: 'clinic-1',
+      medicalRecordNumber: 'MRN-002',
+      firstName: 'John',
+      lastName: 'Doe',
+      sexAtBirth: 'male',
+    },
+  });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(response.body, {
+    data: {
+      id: 'patient-2',
+      clinic_id: 'clinic-1',
+      medical_record_number: 'MRN-002',
+      first_name: 'John',
+      last_name: 'Doe',
+      sex_at_birth: 'male',
+    },
+  });
+});
+
+test('POST /api/patients validates required registration fields', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const missingName = await api({
+    method: 'POST',
+    path: '/api/patients',
+    headers: { 'x-user-role': 'nurse' },
+    body: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-002', firstName: 'John' },
+  });
+  assert.equal(missingName.status, 400);
+
+  const invalidSex = await api({
+    method: 'POST',
+    path: '/api/patients',
+    headers: { 'x-user-role': 'nurse' },
+    body: {
+      clinicId: 'clinic-1',
+      medicalRecordNumber: 'MRN-002',
+      firstName: 'John',
+      lastName: 'Doe',
+      sexAtBirth: 'other',
+    },
+  });
+  assert.equal(invalidSex.status, 400);
 });
 
 test('POST /api/encounters validates and creates encounter', async () => {

@@ -33,6 +33,7 @@ export function requireBearerAuth(
 
 const permissions: Record<string, UserRole[]> = {
   patient_read: ['doctor', 'nurse', 'admin'],
+  patient_write: ['doctor', 'nurse', 'admin'],
   audit_read: ['doctor', 'nurse', 'admin'],
   appointment_read: ['doctor', 'nurse', 'admin'],
   appointment_write: ['doctor', 'nurse', 'admin'],

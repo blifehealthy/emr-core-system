@@ -3,21 +3,29 @@
 ## Current State
 
 - Current branch: `main`
-- Latest local and remote commit before this worktree: `de00066` (`Refresh Phase 1 handoff next steps`)
-- Working tree now has active patient flags added to the patient detail response
+- Latest local and remote commit before this worktree: `21b8cb0` (`Include patient flags in patient detail`)
+- Working tree now has a verified patient registration API:
+  - `POST /api/patients`
+  - service: `backend/services/createPatient.ts`
+  - validation + DTO + route + audit log
+  - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `71/71` passing
+  - current result: `72/72` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - `npm run db:test`
   - current result: passing via Docker Postgres fallback
   - command used on this machine:
-    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_phase1_close POSTGRES_USER=postgres npm run db:test`
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_registration POSTGRES_USER=postgres npm run db:test`
   - `npm run api:smoke`
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
+  - targeted patient registration tests
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/createPatient.test.ts backend/api/emrApi.test.ts`
 
 ## Local Tooling
 
@@ -53,6 +61,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient medications API flow
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
+- patient registration API added with `POST /api/patients`
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -101,13 +110,14 @@ handoff references the project plan that was present in the transfer snapshot.
 1. Review the new Phase 1 documentation deliverables against product intent.
 2. Decide whether `patient_flags` needs more predefined `flag_type` policy or should remain flexible text for Phase 1.
 3. Decide whether permission/state transition rules should move from documentation into code-level guards before frontend work.
+4. Review whether registration should collect additional demographics before frontend work.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. review the Phase 1 documentation and patient flags implementation
-2. rerun verification with the local Node path if more changes are made
+1. commit/push the patient registration API if accepted
+2. start the frontend patient registration form against `POST /api/patients`
 3. begin Phase 1 frontend MVP planning or scaffold work
 
 The deliverables added in this worktree are:
@@ -118,12 +128,13 @@ The deliverables added in this worktree are:
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
+- patient registration API with unit, DB, and API smoke coverage
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
-- Phase 1 is now closer to a “definition of done” problem than a missing-core-entity problem
-- documenting the rules will make Phase 2 work safer and faster
+- patient registration is the front door for clinical workflows
+- frontend MVP work needs a stable way to create patients before encounter/SOAP flows
 
 ## Concrete Guidance For The Next Session
 
@@ -140,6 +151,5 @@ Start by reading:
 
 Then produce:
 
-1. any corrections needed after review
-2. a fresh verification run if code changes are made
-3. a frontend MVP plan/scaffold if Phase 1 backend is accepted
+1. commit/push if accepted
+2. a frontend MVP plan/scaffold if Phase 1 backend is accepted

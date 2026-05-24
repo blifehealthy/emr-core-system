@@ -7,6 +7,7 @@ import { createConsentRecord } from '../backend/services/createConsentRecord.ts'
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
+import { createPatient } from '../backend/services/createPatient.ts';
 import { createPatientAllergy } from '../backend/services/createPatientAllergy.ts';
 import { createPatientCondition } from '../backend/services/createPatientCondition.ts';
 import { createPatientFlag } from '../backend/services/createPatientFlag.ts';
@@ -75,6 +76,7 @@ const db = createPostgresDb(databaseUrl);
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
+  createPatient: createPatient(db),
   getConsentRecordById: getConsentRecordById(db),
   getFileAssetById: getFileAssetById(db),
   getPatientAllergyById: getPatientAllergyById(db),

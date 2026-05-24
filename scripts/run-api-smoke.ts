@@ -76,6 +76,32 @@ async function main() {
       'x-user-id': '10000000-0000-0000-0000-000000000201',
     };
 
+    const registeredPatient = await requestJson<{
+      id: string;
+      clinic_id: string;
+      medical_record_number: string;
+      first_name: string;
+      last_name: string;
+      sex_at_birth: string;
+    }>(
+      '/api/patients',
+      authHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        medicalRecordNumber: 'MRN-SMOKE-002',
+        firstName: 'John',
+        lastName: 'Register',
+        sexAtBirth: 'male',
+        phoneNumber: '+66123456789',
+      }
+    );
+    assert.equal(registeredPatient.data.clinic_id, '10000000-0000-0000-0000-000000000101');
+    assert.equal(registeredPatient.data.medical_record_number, 'MRN-SMOKE-002');
+    assert.equal(registeredPatient.data.first_name, 'John');
+    assert.equal(registeredPatient.data.sex_at_birth, 'male');
+
     const patientDetail = await requestJson<{
       id: string;
       flags: Array<{ id: string; severity: string; status: string }>;
