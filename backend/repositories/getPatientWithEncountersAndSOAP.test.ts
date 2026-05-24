@@ -27,6 +27,25 @@ function buildRow(
     patient_notes: null,
     patient_created_at: '2026-01-01T00:00:00.000Z',
     patient_updated_at: '2026-01-01T00:00:00.000Z',
+    patient_flags: [
+      {
+        id: 'flag-1',
+        patient_id: 'patient-1',
+        flag_type: 'fall_risk',
+        label: 'Fall risk',
+        description: null,
+        severity: 'critical',
+        status: 'active',
+        source: null,
+        starts_at: null,
+        ends_at: null,
+        created_by_user_id: null,
+        notes: 'Needs assistance when walking',
+        created_at: '2026-01-01T00:01:00.000Z',
+        updated_at: '2026-01-01T00:01:00.000Z',
+        deleted_at: null,
+      },
+    ],
     encounter_id: 'encounter-1',
     encounter_number: 'ENC-001',
     encounter_patient_id: 'patient-1',
@@ -192,6 +211,8 @@ test('mapPatientWithEncountersAndSOAP keeps patient with no encounters', () => {
 
   assert.ok(patient);
   assert.equal(patient.encounters.length, 0);
+  assert.equal(patient.flags.length, 1);
+  assert.equal(patient.flags[0].label, 'Fall risk');
 });
 
 test('mapPatientWithEncountersAndSOAP groups multiple notes under one encounter', () => {
@@ -218,6 +239,7 @@ test('mapPatientWithEncountersAndSOAP groups multiple notes under one encounter'
   assert.equal(patient.encounters[0].prescriptions.length, 1);
   assert.equal(patient.encounters[0].clinical_notes[0].soap_note?.clinical_note_id, 'clinical-note-1');
   assert.equal(patient.encounters[0].clinical_notes[1].soap_note, null);
+  assert.equal(patient.flags.length, 1);
 });
 
 test('mapPatientWithEncountersAndSOAP de-duplicates diagnoses, vital signs, and prescriptions across joined rows', () => {
@@ -292,6 +314,37 @@ test('mapPatientWithEncountersAndSOAP de-duplicates diagnoses, vital signs, and 
   assert.equal(patient.encounters[0].diagnoses[1].id, 'diagnosis-2');
   assert.equal(patient.encounters[0].vital_signs[1].id, 'vital-sign-2');
   assert.equal(patient.encounters[0].prescriptions[1].id, 'prescription-2');
+  assert.equal(patient.flags.length, 1);
+});
+
+test('mapPatientWithEncountersAndSOAP parses patient flags from JSON strings', () => {
+  const patient = mapPatientWithEncountersAndSOAP([
+    buildRow({
+      patient_flags: JSON.stringify([
+        {
+          id: 'flag-json',
+          patient_id: 'patient-1',
+          flag_type: 'high_risk',
+          label: 'High risk',
+          description: null,
+          severity: 'critical',
+          status: 'active',
+          source: null,
+          starts_at: null,
+          ends_at: null,
+          created_by_user_id: null,
+          notes: null,
+          created_at: '2026-01-01T00:01:00.000Z',
+          updated_at: '2026-01-01T00:01:00.000Z',
+          deleted_at: null,
+        },
+      ]),
+    }),
+  ]);
+
+  assert.ok(patient);
+  assert.equal(patient.flags.length, 1);
+  assert.equal(patient.flags[0].id, 'flag-json');
 });
 
 test('getPatientWithEncountersAndSOAP executes the SQL query with expected params', async () => {

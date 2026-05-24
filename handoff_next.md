@@ -4,7 +4,7 @@
 
 - Current branch: `main`
 - Latest local and remote commit before this worktree: `de00066` (`Refresh Phase 1 handoff next steps`)
-- Working tree now has Phase 1 documentation deliverables and patient flags in progress
+- Working tree now has active patient flags added to the patient detail response
 - Latest verification:
   - `npm test`
   - current result: `71/71` passing
@@ -13,7 +13,7 @@
   - `npm run db:test`
   - current result: passing via Docker Postgres fallback
   - command used on this machine:
-    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_integration_flags POSTGRES_USER=postgres npm run db:test`
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_phase1_close POSTGRES_USER=postgres npm run db:test`
   - `npm run api:smoke`
   - current result: passing
   - command used on this machine:
@@ -52,6 +52,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient conditions API flow
 - patient medications API flow
 - patient flags API flow
+- active patient flags included in `GET /api/patients/detail`
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -107,7 +108,7 @@ If coming back fresh after this pass:
 
 1. review the Phase 1 documentation and patient flags implementation
 2. rerun verification with the local Node path if more changes are made
-3. commit and push the Phase 1 close work
+3. begin Phase 1 frontend MVP planning or scaffold work
 
 The deliverables added in this worktree are:
 
@@ -116,6 +117,7 @@ The deliverables added in this worktree are:
 - `docs/api-grouping-v1.md`
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
+- active patient flag aggregation in patient detail
 
 This was the highest-leverage next move because:
 
@@ -140,4 +142,4 @@ Then produce:
 
 1. any corrections needed after review
 2. a fresh verification run if code changes are made
-3. a commit for the Phase 1 documentation and patient flags foundation
+3. a frontend MVP plan/scaffold if Phase 1 backend is accepted

@@ -20,7 +20,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 
 | Permission | Doctor | Nurse | Admin | Notes |
 | --- | --- | --- | --- | --- |
-| `patient_read` | Yes | Yes | Yes | Patient detail, clinical child reads, SOAP read |
+| `patient_read` | Yes | Yes | Yes | Patient detail with flags, clinical child reads, SOAP read |
 | `audit_read` | Yes | Yes | Yes | Audit log and patient timeline reads |
 | `appointment_read` | Yes | Yes | Yes | Appointment list and detail |
 | `appointment_write` | Yes | Yes | Yes | Appointment create/update |

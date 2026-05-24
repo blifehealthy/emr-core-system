@@ -60,6 +60,23 @@ VALUES (
     'Doe'
 );
 
+INSERT INTO patient_flags (
+    id,
+    patient_id,
+    flag_type,
+    label,
+    severity,
+    status
+)
+VALUES (
+    '00000000-0000-0000-0000-000000012001',
+    '00000000-0000-0000-0000-000000001001',
+    'high_risk',
+    'High risk',
+    'critical',
+    'active'
+);
+
 INSERT INTO encounters (
     id,
     encounter_number,

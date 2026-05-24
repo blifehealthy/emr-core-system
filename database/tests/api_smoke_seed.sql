@@ -58,6 +58,25 @@ VALUES (
     'Smoke'
 );
 
+INSERT INTO patient_flags (
+    id,
+    patient_id,
+    flag_type,
+    label,
+    severity,
+    status,
+    notes
+)
+VALUES (
+    '10000000-0000-0000-0000-000000012001',
+    '10000000-0000-0000-0000-000000001001',
+    'fall_risk',
+    'Fall risk',
+    'critical',
+    'active',
+    'Needs assistance when walking'
+);
+
 INSERT INTO encounters (
     id,
     encounter_number,

@@ -28,6 +28,7 @@ test('createGetPatientWithEncountersAndSOAPService delegates to the repository q
             patient_notes: null,
             patient_created_at: '2026-01-01T00:00:00.000Z',
             patient_updated_at: '2026-01-01T00:00:00.000Z',
+            patient_flags: [],
             encounter_id: null,
             encounter_number: null,
             encounter_patient_id: null,
@@ -122,6 +123,7 @@ test('createGetPatientWithEncountersAndSOAPService delegates to the repository q
 
   assert.ok(result);
   assert.equal(result.id, 'patient-1');
+  assert.deepEqual(result.flags, []);
   assert.equal(result.encounters.length, 0);
   assert.equal(calls.length, 1);
   assert.match(calls[0].sql, /FROM patients p/);

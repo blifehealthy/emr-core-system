@@ -15,6 +15,7 @@ SELECT
     p.notes AS patient_notes,
     p.created_at AS patient_created_at,
     p.updated_at AS patient_updated_at,
+    pf.patient_flags,
 
     e.id AS encounter_id,
     e.encounter_number,
@@ -103,6 +104,41 @@ SELECT
     pr.created_at AS prescription_created_at,
     pr.updated_at AS prescription_updated_at
 FROM patients p
+LEFT JOIN LATERAL (
+    SELECT COALESCE(
+        jsonb_agg(
+            jsonb_build_object(
+                'id', patient_flags.id,
+                'patient_id', patient_flags.patient_id,
+                'flag_type', patient_flags.flag_type,
+                'label', patient_flags.label,
+                'description', patient_flags.description,
+                'severity', patient_flags.severity,
+                'status', patient_flags.status,
+                'source', patient_flags.source,
+                'starts_at', patient_flags.starts_at,
+                'ends_at', patient_flags.ends_at,
+                'created_by_user_id', patient_flags.created_by_user_id,
+                'notes', patient_flags.notes,
+                'created_at', patient_flags.created_at,
+                'updated_at', patient_flags.updated_at,
+                'deleted_at', patient_flags.deleted_at
+            )
+            ORDER BY
+                CASE patient_flags.severity
+                    WHEN 'critical' THEN 0
+                    WHEN 'caution' THEN 1
+                    ELSE 2
+                END,
+                patient_flags.created_at DESC
+        ),
+        '[]'::jsonb
+    ) AS patient_flags
+    FROM patient_flags
+    WHERE patient_flags.patient_id = p.id
+      AND patient_flags.deleted_at IS NULL
+      AND patient_flags.status = 'active'
+) pf ON TRUE
 LEFT JOIN encounters e
     ON e.patient_id = p.id
    AND e.deleted_at IS NULL

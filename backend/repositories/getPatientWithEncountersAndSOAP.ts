@@ -22,6 +22,7 @@ export type PatientEncounterSOAPRow = {
   patient_notes: string | null;
   patient_created_at: string;
   patient_updated_at: string;
+  patient_flags: PatientFlagRow[] | string | null;
   encounter_id: string | null;
   encounter_number: string | null;
   encounter_patient_id: string | null;
@@ -122,6 +123,7 @@ export type PatientWithEncountersAndSOAP = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  flags: PatientFlagRow[];
   encounters: Array<{
     id: string;
     encounter_number: string;
@@ -217,6 +219,24 @@ export type PatientWithEncountersAndSOAP = {
   }>;
 };
 
+export type PatientFlagRow = {
+  id: string;
+  patient_id: string;
+  flag_type: string;
+  label: string;
+  description: string | null;
+  severity: string;
+  status: string;
+  source: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_by_user_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
 const queryText = readFileSync(
   join(process.cwd(), 'backend', 'queries', 'getPatientWithEncountersAndSOAP.sql'),
   'utf8'
@@ -247,6 +267,7 @@ export function mapPatientWithEncountersAndSOAP(
     notes: firstRow.patient_notes,
     created_at: firstRow.patient_created_at,
     updated_at: firstRow.patient_updated_at,
+    flags: parsePatientFlags(firstRow.patient_flags),
     encounters: [],
   };
 
@@ -397,6 +418,19 @@ export function mapPatientWithEncountersAndSOAP(
   }
 
   return patient;
+}
+
+function parsePatientFlags(flags: PatientEncounterSOAPRow['patient_flags']): PatientFlagRow[] {
+  if (!flags) {
+    return [];
+  }
+
+  if (Array.isArray(flags)) {
+    return flags;
+  }
+
+  const parsed = JSON.parse(flags) as PatientFlagRow[];
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 export function getPatientWithEncountersAndSOAP(db: Queryable) {

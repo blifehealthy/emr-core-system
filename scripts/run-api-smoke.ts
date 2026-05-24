@@ -78,6 +78,7 @@ async function main() {
 
     const patientDetail = await requestJson<{
       id: string;
+      flags: Array<{ id: string; severity: string; status: string }>;
       encounters: Array<{
         prescriptions: Array<{ id: string }>;
       }>;
@@ -86,6 +87,9 @@ async function main() {
       authHeaders
     );
     assert.equal(patientDetail.data.id, '10000000-0000-0000-0000-000000001001');
+    assert.equal(patientDetail.data.flags.length, 1);
+    assert.equal(patientDetail.data.flags[0].id, '10000000-0000-0000-0000-000000012001');
+    assert.equal(patientDetail.data.flags[0].severity, 'critical');
     assert.equal(patientDetail.data.encounters[0].prescriptions.length, 3);
     assert.equal(patientDetail.data.encounters[0].prescriptions[0].id, '10000000-0000-0000-0000-000000006003');
 
@@ -366,8 +370,7 @@ async function main() {
       '/api/patients/10000000-0000-0000-0000-000000001001/flags?status=active&severity=critical',
       authHeaders
     );
-    assert.equal(flags.data.length, 1);
-    assert.equal(flags.data[0].id, createdFlag.data.id);
+    assert.ok(flags.data.some((flag) => flag.id === createdFlag.data.id));
 
     const updatedFlag = await requestJson<{
       id: string;

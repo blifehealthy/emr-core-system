@@ -241,6 +241,7 @@ test('GET /api/patients/detail returns patient data', async () => {
           notes: null,
           created_at: '2026-01-01T00:00:00.000Z',
           updated_at: '2026-01-01T00:00:00.000Z',
+          flags: [],
           encounters: [],
         };
       },
@@ -1248,6 +1249,7 @@ test('API can resolve role and practitioner context from user id', async () => {
           notes: null,
           created_at: '2026-01-01T00:00:00.000Z',
           updated_at: '2026-01-01T00:00:00.000Z',
+          flags: [],
           encounters: [],
         };
       },
