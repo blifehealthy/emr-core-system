@@ -220,6 +220,24 @@ const PATIENT_MEDICATION_KEYS = [
   'deleted_at',
 ] as const;
 
+const PATIENT_FLAG_KEYS = [
+  'id',
+  'patient_id',
+  'flag_type',
+  'label',
+  'description',
+  'severity',
+  'status',
+  'source',
+  'starts_at',
+  'ends_at',
+  'created_by_user_id',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const SOAP_NOTE_KEYS = [
   'clinical_note_id',
   'subjective',
@@ -321,6 +339,14 @@ export function toPatientMedicationDto(row: unknown): Record<string, unknown> {
 
 export function toPatientMedicationDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPatientMedicationDto(row));
+}
+
+export function toPatientFlagDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PATIENT_FLAG_KEYS]);
+}
+
+export function toPatientFlagDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPatientFlagDto(row));
 }
 
 export function toSoapNoteDto(row: unknown): Record<string, unknown> {

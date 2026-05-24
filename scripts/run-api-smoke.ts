@@ -31,6 +31,7 @@ const migrations = [
   '0009_add_file_attachments.up.sql',
   '0010_add_patient_conditions.up.sql',
   '0011_add_patient_medications.up.sql',
+  '0012_add_patient_flags.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -335,6 +336,68 @@ async function main() {
         '10000000-0000-0000-0000-000000006001',
       ]
     );
+
+    const createdFlag = await requestJson<{
+      id: string;
+      patient_id: string;
+      flag_type: string;
+      label: string;
+      severity: string;
+      status: string;
+    }>(
+      '/api/patient-flags',
+      authHeaders,
+      'POST',
+      201,
+      {
+        patientId: '10000000-0000-0000-0000-000000001001',
+        flagType: 'fall_risk',
+        label: 'Fall risk',
+        severity: 'critical',
+        notes: 'Needs assistance when walking',
+      }
+    );
+    assert.equal(createdFlag.data.patient_id, '10000000-0000-0000-0000-000000001001');
+    assert.equal(createdFlag.data.flag_type, 'fall_risk');
+    assert.equal(createdFlag.data.severity, 'critical');
+    assert.equal(createdFlag.data.status, 'active');
+
+    const flags = await requestJson<Array<{ id: string }>>(
+      '/api/patients/10000000-0000-0000-0000-000000001001/flags?status=active&severity=critical',
+      authHeaders
+    );
+    assert.equal(flags.data.length, 1);
+    assert.equal(flags.data[0].id, createdFlag.data.id);
+
+    const updatedFlag = await requestJson<{
+      id: string;
+      status: string;
+      notes: string | null;
+    }>(
+      `/api/patient-flags/${createdFlag.data.id}`,
+      authHeaders,
+      'PATCH',
+      200,
+      {
+        status: 'resolved',
+        notes: 'Risk resolved after reassessment',
+      }
+    );
+    assert.equal(updatedFlag.data.id, createdFlag.data.id);
+    assert.equal(updatedFlag.data.status, 'resolved');
+    assert.equal(updatedFlag.data.notes, 'Risk resolved after reassessment');
+
+    const deletedFlag = await requestJson<{
+      id: string;
+      deleted_at: string | null;
+    }>(
+      `/api/patient-flags/${createdFlag.data.id}`,
+      authHeaders,
+      'DELETE',
+      200
+    );
+    assert.equal(deletedFlag.data.id, createdFlag.data.id);
+    assert.ok(deletedFlag.data.deleted_at);
 
     console.log('API smoke test passed');
   } finally {

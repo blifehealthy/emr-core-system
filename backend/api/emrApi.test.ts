@@ -24,6 +24,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientMedicationById() {
       return { id: 'medication-1' };
     },
+    async getPatientFlagById() {
+      return { id: 'flag-1' };
+    },
     async getSoapNoteByClinicalNoteId() {
       return { clinical_note_id: 'clinical-note-1' };
     },
@@ -78,11 +81,20 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async listPatientMedications() {
       return [];
     },
+    async listPatientFlags() {
+      return [];
+    },
     async createPatientMedication() {
       return { id: 'medication-1' };
     },
+    async createPatientFlag() {
+      return { id: 'flag-1' };
+    },
     async updatePatientMedication() {
       return { id: 'medication-1' };
+    },
+    async updatePatientFlag() {
+      return { id: 'flag-1' };
     },
     async updatePatientAllergy() {
       return { id: 'allergy-1' };
@@ -179,6 +191,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async softDeletePatientMedication() {
       return { id: 'medication-1', deleted_at: '2026-01-01T00:00:00.000Z' };
+    },
+    async softDeletePatientFlag() {
+      return { id: 'flag-1', deleted_at: '2026-01-01T00:00:00.000Z' };
     },
     async finalizeClinicalNote() {
       return { id: 'clinical-note-1', status: 'final' };
@@ -803,6 +818,114 @@ test('patient medication APIs validate bad payloads and filters', async () => {
   const invalidPatch = await api({
     method: 'PATCH',
     path: '/api/patient-medications/medication-1',
+    headers: { 'x-user-role': 'doctor' },
+    body: {},
+  });
+  assert.equal(invalidPatch.status, 400);
+});
+
+test('patient flag APIs work and enforce roles', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listPatientFlags(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.status, 'active');
+        assert.equal(input.severity, 'critical');
+        return [{ id: 'flag-1', label: 'Fall risk' }];
+      },
+      async getPatientFlagById(input) {
+        assert.equal(input.flagId, 'flag-1');
+        return { id: 'flag-1', label: 'Fall risk' };
+      },
+      async createPatientFlag(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.flagType, 'fall_risk');
+        assert.equal(input.label, 'Fall risk');
+        assert.equal(input.createdByUserId, 'user-1');
+        return { id: 'flag-1', label: 'Fall risk' };
+      },
+      async updatePatientFlag(input) {
+        assert.equal(input.flagId, 'flag-1');
+        assert.equal(input.status, 'resolved');
+        return { id: 'flag-1', status: 'resolved' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/flags',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'active', severity: 'critical' },
+  });
+  assert.equal(list.status, 200);
+
+  const getOne = await api({
+    method: 'GET',
+    path: '/api/patient-flags/flag-1',
+    headers: { 'x-user-role': 'nurse' },
+  });
+  assert.equal(getOne.status, 200);
+
+  const create = await api({
+    method: 'POST',
+    path: '/api/patient-flags',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'user-1' },
+    body: {
+      patientId: 'patient-1',
+      flagType: 'fall_risk',
+      label: 'Fall risk',
+      severity: 'critical',
+    },
+  });
+  assert.equal(create.status, 201);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/patient-flags/flag-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'resolved' },
+  });
+  assert.equal(update.status, 200);
+
+  const remove = await api({
+    method: 'DELETE',
+    path: '/api/patient-flags/flag-1',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+  });
+  assert.equal(remove.status, 200);
+});
+
+test('patient flag APIs validate bad payloads and filters', async () => {
+  const api = createEmrApi(makeDeps());
+
+  const invalidListStatus = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/flags',
+    headers: { 'x-user-role': 'doctor' },
+    query: { status: 'pending' },
+  });
+  assert.equal(invalidListStatus.status, 400);
+
+  const invalidListSeverity = await api({
+    method: 'GET',
+    path: '/api/patients/patient-1/flags',
+    headers: { 'x-user-role': 'doctor' },
+    query: { severity: 'emergency' },
+  });
+  assert.equal(invalidListSeverity.status, 400);
+
+  const invalidCreate = await api({
+    method: 'POST',
+    path: '/api/patient-flags',
+    headers: { 'x-user-role': 'doctor' },
+    body: { patientId: 'patient-1', label: 'Missing type' },
+  });
+  assert.equal(invalidCreate.status, 400);
+
+  const invalidPatch = await api({
+    method: 'PATCH',
+    path: '/api/patient-flags/flag-1',
     headers: { 'x-user-role': 'doctor' },
     body: {},
   });

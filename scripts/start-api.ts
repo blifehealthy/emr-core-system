@@ -9,6 +9,7 @@ import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPatientAllergy } from '../backend/services/createPatientAllergy.ts';
 import { createPatientCondition } from '../backend/services/createPatientCondition.ts';
+import { createPatientFlag } from '../backend/services/createPatientFlag.ts';
 import { createPatientMedication } from '../backend/services/createPatientMedication.ts';
 import { createPractitioner } from '../backend/services/createPractitioner.ts';
 import { createPrescription } from '../backend/services/createPrescription.ts';
@@ -22,6 +23,7 @@ import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
 import { getFileAssetById } from '../backend/services/getFileAssetById.ts';
 import { getPatientAllergyById } from '../backend/services/getPatientAllergyById.ts';
 import { getPatientConditionById } from '../backend/services/getPatientConditionById.ts';
+import { getPatientFlagById } from '../backend/services/getPatientFlagById.ts';
 import { getPatientMedicationById } from '../backend/services/getPatientMedicationById.ts';
 import { createGetPatientWithEncountersAndSOAPService } from '../backend/services/getPatientWithEncountersAndSOAP.ts';
 import { getPatientTimeline } from '../backend/services/getPatientTimeline.ts';
@@ -34,6 +36,7 @@ import { listConsentRecordsByPatient } from '../backend/services/listConsentReco
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
 import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
+import { listPatientFlags } from '../backend/services/listPatientFlags.ts';
 import { listPatientMedications } from '../backend/services/listPatientMedications.ts';
 import { listPractitioners } from '../backend/services/listPractitioners.ts';
 import { listPrescriptionsByEncounter } from '../backend/services/listPrescriptionsByEncounter.ts';
@@ -43,6 +46,7 @@ import { signClinicalNote } from '../backend/services/signClinicalNote.ts';
 import { softDeleteDiagnosis } from '../backend/services/softDeleteDiagnosis.ts';
 import { softDeletePatientAllergy } from '../backend/services/softDeletePatientAllergy.ts';
 import { softDeletePatientCondition } from '../backend/services/softDeletePatientCondition.ts';
+import { softDeletePatientFlag } from '../backend/services/softDeletePatientFlag.ts';
 import { softDeletePatientMedication } from '../backend/services/softDeletePatientMedication.ts';
 import { softDeletePrescription } from '../backend/services/softDeletePrescription.ts';
 import { softDeleteSoapNote } from '../backend/services/softDeleteSoapNote.ts';
@@ -52,6 +56,7 @@ import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts'
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
 import { updatePatientAllergy } from '../backend/services/updatePatientAllergy.ts';
 import { updatePatientCondition } from '../backend/services/updatePatientCondition.ts';
+import { updatePatientFlag } from '../backend/services/updatePatientFlag.ts';
 import { updatePatientMedication } from '../backend/services/updatePatientMedication.ts';
 import { updatePractitioner } from '../backend/services/updatePractitioner.ts';
 import { updatePrescription } from '../backend/services/updatePrescription.ts';
@@ -74,6 +79,7 @@ const server = createNodeServer({
   getFileAssetById: getFileAssetById(db),
   getPatientAllergyById: getPatientAllergyById(db),
   getPatientConditionById: getPatientConditionById(db),
+  getPatientFlagById: getPatientFlagById(db),
   getPatientMedicationById: getPatientMedicationById(db),
   getAppointmentById: getAppointmentById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
@@ -85,6 +91,7 @@ const server = createNodeServer({
   listConsentRecordsByPatient: listConsentRecordsByPatient(db),
   listPatientAllergies: listPatientAllergies(db),
   listPatientConditions: listPatientConditions(db),
+  listPatientFlags: listPatientFlags(db),
   listPatientMedications: listPatientMedications(db),
   listDiagnosesByEncounter: listDiagnosesByEncounter(db),
   listVitalSignsByEncounter: listVitalSignsByEncounter(db),
@@ -94,6 +101,7 @@ const server = createNodeServer({
   createFileAsset: createFileAsset(db),
   createPatientAllergy: createPatientAllergy(db),
   createPatientCondition: createPatientCondition(db),
+  createPatientFlag: createPatientFlag(db),
   createPatientMedication: createPatientMedication(db),
   listUsers: listUsers(db),
   createUser: createUser(db),
@@ -101,6 +109,7 @@ const server = createNodeServer({
   updateConsentRecord: updateConsentRecord(db),
   updatePatientAllergy: updatePatientAllergy(db),
   updatePatientCondition: updatePatientCondition(db),
+  updatePatientFlag: updatePatientFlag(db),
   updatePatientMedication: updatePatientMedication(db),
   updateUser: updateUser(db),
   listPractitioners: listPractitioners(db),
@@ -118,6 +127,7 @@ const server = createNodeServer({
   softDeleteSoapNote: softDeleteSoapNote(db),
   softDeletePatientAllergy: softDeletePatientAllergy(db),
   softDeletePatientCondition: softDeletePatientCondition(db),
+  softDeletePatientFlag: softDeletePatientFlag(db),
   softDeletePatientMedication: softDeletePatientMedication(db),
   softDeleteDiagnosis: softDeleteDiagnosis(db),
   softDeleteVitalSign: softDeleteVitalSign(db),

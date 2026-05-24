@@ -13,6 +13,8 @@ import {
   toPatientAllergyDtos,
   toPatientConditionDto,
   toPatientConditionDtos,
+  toPatientFlagDto,
+  toPatientFlagDtos,
   toPatientMedicationDto,
   toPatientMedicationDtos,
   toPractitionerDto,
@@ -32,6 +34,7 @@ import {
   validateCreateDiagnosisBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
+  validateCreatePatientFlagBody,
   validateCreatePatientMedicationBody,
   validateCreatePractitionerBody,
   validateCreatePrescriptionBody,
@@ -45,6 +48,7 @@ import {
   validateUpdateConsentRecordBody,
   validateUpdatePatientAllergyBody,
   validateUpdatePatientConditionBody,
+  validateUpdatePatientFlagBody,
   validateUpdatePatientMedicationBody,
   validateUpdatePractitionerBody,
   validateUpdatePrescriptionBody,
@@ -768,6 +772,107 @@ export async function handleUpdatePatientMedication(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
+}
+
+export async function handleListPatientFlags(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  patientId: string
+): Promise<HttpResponse> {
+  const status = readOptionalEnumQuery(request, 'status', [
+    'active',
+    'inactive',
+    'resolved',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const severity = readOptionalEnumQuery(request, 'severity', ['info', 'caution', 'critical']);
+  if (!severity.ok) return validationError(severity.error);
+
+  const flags = await dependencies.listPatientFlags({
+    patientId,
+    status: status.value,
+    severity: severity.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPatientFlagDtos(flags) },
+  };
+}
+
+export async function handleGetPatientFlag(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  flagId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getPatientFlagById) {
+    return mapError(new Error('Patient flag read dependency is not configured'));
+  }
+
+  const flag = await dependencies.getPatientFlagById({ flagId });
+  if (!flag) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient flag not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientFlagDto(flag) } };
+}
+
+export async function handleCreatePatientFlag(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreatePatientFlagBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const flag = await dependencies.createPatientFlag({
+    ...validation.value,
+    createdByUserId: validation.value.createdByUserId ?? actor.userId,
+  });
+
+  await dependencies.createAuditLog({
+    entityType: 'patient_flag',
+    entityId: (flag as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      patientId: validation.value.patientId,
+      flagType: validation.value.flagType,
+      severity: validation.value.severity ?? 'caution',
+    },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toPatientFlagDto(flag) } };
+}
+
+export async function handleUpdatePatientFlag(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  flagId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdatePatientFlagBody(request.body, flagId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const flag = await dependencies.updatePatientFlag(validation.value);
+  if (!flag) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient flag not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'patient_flag',
+    entityId: flagId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toPatientFlagDto(flag) } };
 }
 
 export async function handleListUsers(
@@ -1549,6 +1654,36 @@ export async function handleDeletePatientMedication(
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toPatientMedicationDto(medication) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleDeletePatientFlag(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  flagId: string
+): Promise<HttpResponse> {
+  if (!dependencies.softDeletePatientFlag) {
+    return mapError(new Error('Patient flag delete dependency is not configured'));
+  }
+
+  try {
+    const flag = await dependencies.softDeletePatientFlag({ flagId });
+    if (!flag) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Patient flag not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'patient_flag',
+      entityId: flagId,
+      action: 'deleted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPatientFlagDto(flag) } };
   } catch (error) {
     return mapError(error);
   }

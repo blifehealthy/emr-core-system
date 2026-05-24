@@ -24,6 +24,8 @@ export type PatientMedicationStatus =
   | 'stopped'
   | 'on_hold'
   | 'entered_in_error';
+export type PatientFlagStatus = 'active' | 'inactive' | 'resolved' | 'entered_in_error';
+export type PatientFlagSeverity = 'info' | 'caution' | 'critical';
 export type DiagnosisType = 'working' | 'final' | 'differential' | 'ruled_out';
 export type DiagnosisStatus = 'active' | 'resolved' | 'entered_in_error';
 export type UserRole = 'doctor' | 'nurse' | 'admin';
@@ -244,6 +246,33 @@ export type UpdatePatientMedicationInput = {
   notes?: string | null;
 };
 
+export type CreatePatientFlagInput = {
+  patientId: string;
+  flagType: string;
+  label: string;
+  description?: string | null;
+  severity?: PatientFlagSeverity;
+  status?: PatientFlagStatus;
+  source?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  createdByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type UpdatePatientFlagInput = {
+  flagId: string;
+  flagType?: string;
+  label?: string;
+  description?: string | null;
+  severity?: PatientFlagSeverity;
+  status?: PatientFlagStatus;
+  source?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  notes?: string | null;
+};
+
 export type UpdateConsentRecordInput = {
   consentId: string;
   consentType?: string;
@@ -422,6 +451,7 @@ export type Dependencies = {
   getPatientAllergyById?: (input: { allergyId: string }) => Promise<unknown | null>;
   getPatientConditionById?: (input: { conditionId: string }) => Promise<unknown | null>;
   getPatientMedicationById?: (input: { medicationId: string }) => Promise<unknown | null>;
+  getPatientFlagById?: (input: { flagId: string }) => Promise<unknown | null>;
   getSoapNoteByClinicalNoteId?: (input: { clinicalNoteId: string }) => Promise<unknown | null>;
   getAppointmentById?: (input: { appointmentId: string }) => Promise<unknown | null>;
   getDiagnosisById?: (input: { diagnosisId: string }) => Promise<unknown | null>;
@@ -468,6 +498,14 @@ export type Dependencies = {
   createPatientMedication: (input: CreatePatientMedicationInput) => Promise<unknown>;
   updatePatientMedication: (input: UpdatePatientMedicationInput) => Promise<unknown | null>;
   softDeletePatientMedication?: (input: { medicationId: string }) => Promise<unknown | null>;
+  listPatientFlags: (input: {
+    patientId: string;
+    status?: PatientFlagStatus;
+    severity?: PatientFlagSeverity;
+  }) => Promise<unknown[]>;
+  createPatientFlag: (input: CreatePatientFlagInput) => Promise<unknown>;
+  updatePatientFlag: (input: UpdatePatientFlagInput) => Promise<unknown | null>;
+  softDeletePatientFlag?: (input: { flagId: string }) => Promise<unknown | null>;
   listDiagnosesByEncounter?: (input: {
     encounterId: string;
     clinicalNoteId?: string;

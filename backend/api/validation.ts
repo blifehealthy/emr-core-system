@@ -5,6 +5,8 @@ import type {
   AppointmentStatus,
   ConsentStatus,
   PatientConditionStatus,
+  PatientFlagSeverity,
+  PatientFlagStatus,
   PatientMedicationStatus,
   CreateAttachmentLinkInput,
   CreateAppointmentInput,
@@ -12,6 +14,7 @@ import type {
   CreateFileAssetInput,
   CreatePatientAllergyInput,
   CreatePatientConditionInput,
+  CreatePatientFlagInput,
   CreatePatientMedicationInput,
   CreateDiagnosisInput,
   CreateEncounterInput,
@@ -30,6 +33,7 @@ import type {
   UpdateConsentRecordInput,
   UpdatePatientAllergyInput,
   UpdatePatientConditionInput,
+  UpdatePatientFlagInput,
   UpdatePatientMedicationInput,
   UpdateSoapNoteInput,
   UpdatePractitionerValidatedInput,
@@ -1695,6 +1699,152 @@ export function validateUpdatePatientMedicationBody(body: unknown, medicationId:
       ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
       ...(Object.hasOwn(candidate, 'startDate') ? { startDate: startDate.value } : {}),
       ...(Object.hasOwn(candidate, 'endDate') ? { endDate: endDate.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreatePatientFlagBody(body: unknown):
+  | { ok: true; value: CreatePatientFlagInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const flagType = readRequiredString(candidate.flagType, 'flagType');
+  if (!flagType.ok) return flagType;
+
+  const label = readRequiredString(candidate.label, 'label');
+  if (!label.ok) return label;
+
+  const description = readOptionalNullableStringField(candidate, 'description');
+  if (!description.ok) return description;
+
+  const severity = readEnumValue<PatientFlagSeverity>(candidate.severity, 'severity', [
+    'info',
+    'caution',
+    'critical',
+  ]);
+  if (!severity.ok) return severity;
+
+  const status = readEnumValue<PatientFlagStatus>(candidate.status, 'status', [
+    'active',
+    'inactive',
+    'resolved',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const source = readOptionalNullableStringField(candidate, 'source');
+  if (!source.ok) return source;
+
+  const startsAt = readOptionalNullableStringField(candidate, 'startsAt');
+  if (!startsAt.ok) return startsAt;
+
+  const endsAt = readOptionalNullableStringField(candidate, 'endsAt');
+  if (!endsAt.ok) return endsAt;
+
+  const createdByUserId = readOptionalNullableStringField(candidate, 'createdByUserId');
+  if (!createdByUserId.ok) return createdByUserId;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      patientId: patientId.value,
+      flagType: flagType.value,
+      label: label.value,
+      description: description.value,
+      severity: severity.value,
+      status: status.value,
+      source: source.value,
+      startsAt: startsAt.value,
+      endsAt: endsAt.value,
+      createdByUserId: createdByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdatePatientFlagBody(body: unknown, flagId: string):
+  | { ok: true; value: UpdatePatientFlagInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'flagType',
+    'label',
+    'description',
+    'severity',
+    'status',
+    'source',
+    'startsAt',
+    'endsAt',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one patient flag field must be provided for update' };
+  }
+
+  const flagType = readOptionalTrimmedStringField(candidate, 'flagType');
+  if (!flagType.ok) return flagType;
+
+  const label = readOptionalTrimmedStringField(candidate, 'label');
+  if (!label.ok) return label;
+
+  const description = readOptionalNullableStringField(candidate, 'description');
+  if (!description.ok) return description;
+
+  const severity = readEnumValue<PatientFlagSeverity>(candidate.severity, 'severity', [
+    'info',
+    'caution',
+    'critical',
+  ]);
+  if (!severity.ok) return severity;
+
+  const status = readEnumValue<PatientFlagStatus>(candidate.status, 'status', [
+    'active',
+    'inactive',
+    'resolved',
+    'entered_in_error',
+  ]);
+  if (!status.ok) return status;
+
+  const source = readOptionalNullableStringField(candidate, 'source');
+  if (!source.ok) return source;
+
+  const startsAt = readOptionalNullableStringField(candidate, 'startsAt');
+  if (!startsAt.ok) return startsAt;
+
+  const endsAt = readOptionalNullableStringField(candidate, 'endsAt');
+  if (!endsAt.ok) return endsAt;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      flagId,
+      ...(Object.hasOwn(candidate, 'flagType') ? { flagType: flagType.value } : {}),
+      ...(Object.hasOwn(candidate, 'label') ? { label: label.value } : {}),
+      ...(Object.hasOwn(candidate, 'description')
+        ? { description: description.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'severity') ? { severity: severity.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'source') ? { source: source.value } : {}),
+      ...(Object.hasOwn(candidate, 'startsAt') ? { startsAt: startsAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'endsAt') ? { endsAt: endsAt.value } : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
