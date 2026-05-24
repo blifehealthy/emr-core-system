@@ -3,8 +3,8 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add phase 1 admin audit and UX hardening`)
-- Previous checkpoint before this worktree: `5a373c3` (`Add admin API pagination and frontend smoke coverage`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Close Phase 1 with clinician summary`)
+- Previous checkpoint before this worktree: `2ef14d4` (`Add phase 1 admin audit and UX hardening`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
   - `npm run start:frontend`
@@ -199,10 +199,13 @@ Core EMR Phase 1 entity/API work is now substantially in place:
   - role/permission matrix
   - workflow state definition
   - API grouping v1
+- Phase 1 doctor-facing review document:
+  - `docs/phase-1-clinician-summary-th.md`
 
 Recent commits on `main`:
 
-- current `HEAD` Add phase 1 admin audit and UX hardening
+- current `HEAD` Close Phase 1 with clinician summary
+- `2ef14d4` Add phase 1 admin audit and UX hardening
 - `5a373c3` Add admin API pagination and frontend smoke coverage
 - `3f848df` Add admin filters and workflow smoke coverage
 - `1fee16c` Add clinic admin and encounter edit frontend
@@ -221,7 +224,10 @@ Recent commits on `main`:
 
 ## Phase 1 Assessment
 
-Phase 1 is no longer blocked on the major clinical entities.
+Phase 1 is closed for clinician/product-owner review. The major clinical
+entities, core clinic workflow, governance foundation, frontend MVP, and smoke
+coverage are in place. Remaining items are signoff decisions or Phase 2
+planning, not Phase 1 implementation blockers.
 
 ### Largely Done
 
@@ -252,12 +258,10 @@ Phase 1 is no longer blocked on the major clinical entities.
   - duplicate/conflict UX for user and practitioner forms
   - role-gated API checks
 
-### Remaining Follow-ups For A Strong Phase 1 Close
+### Signoff Questions Before Phase 2
 
-These are the most visible follow-ups versus `project_plan.md` Phase 1 deliverables:
-
-Note: `project_plan.md` is not currently tracked in this cloned repository. The
-handoff references the project plan that was present in the transfer snapshot.
+The doctor-facing review document is now the preferred artifact for signoff:
+`docs/phase-1-clinician-summary-th.md`.
 
 1. Review the new Phase 1 documentation deliverables against product intent.
 2. Decide whether `patient_flags` needs more predefined `flag_type` policy or should remain flexible text for Phase 1.
@@ -276,6 +280,7 @@ The deliverables added in this worktree are:
 - `docs/role-permission-matrix.md`
 - `docs/workflow-state-definition.md`
 - `docs/api-grouping-v1.md`
+- `docs/phase-1-clinician-summary-th.md`
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail

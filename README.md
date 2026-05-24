@@ -33,6 +33,13 @@ The goal of this phase is to establish the project structure, architecture direc
 - Files, consent, and audit
 - Future integration layer
 
+## Phase 1 Clinician Review
+
+Phase 1 is closed for clinician/product-owner review. The doctor-facing Thai
+summary is available at:
+
+- `docs/phase-1-clinician-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:
