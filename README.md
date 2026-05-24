@@ -44,7 +44,8 @@ summary is available at:
 
 Phase 2A has started clinic operations and clinician usability work, including
 queue-to-encounter linking plus practitioner/room queue ownership from the
-clinic queue board. Current scope and follow-ups are tracked in:
+clinic queue board, persisted SOAP templates, and branded prescription output.
+Current scope and follow-ups are tracked in:
 
 - `docs/phase-2a-plan.md`
 
@@ -100,6 +101,9 @@ Not included yet:
 - `GET /api/queue?clinicId=...&status=...&practitionerId=...&roomName=...&limit=...`
 - `POST /api/visits`
 - `PATCH /api/visits/:id`
+- `GET /api/clinical-note-templates?clinicId=...&active=true`
+- `POST /api/clinical-note-templates`
+- `PATCH /api/clinical-note-templates/:id`
 - `GET /api/encounters/:id/diagnoses?clinicalNoteId=...&status=...&limit=...&offset=...`
 - `GET /api/encounters/:id/vital-signs?clinicalNoteId=...&limit=...&offset=...`
 - `GET /api/encounters/:id/prescriptions?clinicalNoteId=...&status=...&limit=...&offset=...`

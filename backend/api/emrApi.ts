@@ -3,6 +3,7 @@ import {
   handleCreateAttachmentLink,
   handleCreateAppointment,
   handleCreateClinicVisit,
+  handleCreateClinicalNoteTemplate,
   handleCreateConsentRecord,
   handleCreateFileAsset,
   handleCreateDiagnosis,
@@ -44,6 +45,7 @@ import {
   handleListAttachments,
   handleListAppointments,
   handleListClinicQueue,
+  handleListClinicalNoteTemplates,
   handleListConsentRecordsByPatient,
   handleListDiagnosesByEncounter,
   handleListPatientAllergies,
@@ -57,6 +59,7 @@ import {
   handleSignClinicalNote,
   handleUpdateAppointment,
   handleUpdateClinicVisit,
+  handleUpdateClinicalNoteTemplate,
   handleUpdateConsentRecord,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
@@ -157,6 +160,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'practitioner_read');
       if (roleError) return roleError;
       return handleListPractitioners(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/clinical-note-templates') {
+      const roleError = requireRole(actorAwareRequest, 'patient_read');
+      if (roleError) return roleError;
+      return handleListClinicalNoteTemplates(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/audit-logs') {
@@ -373,6 +382,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreateClinicVisit(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/clinical-note-templates') {
+      const roleError = requireRole(actorAwareRequest, 'soap_update');
+      if (roleError) return roleError;
+      return handleCreateClinicalNoteTemplate(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/users') {
       const roleError = requireRole(actorAwareRequest, 'user_write');
       if (roleError) return roleError;
@@ -514,6 +529,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'flag_write');
         if (roleError) return roleError;
         return handleUpdatePatientFlag(actorAwareRequest, dependencies, flagMatch[1]);
+      }
+
+      const templateMatch = request.path.match(/^\/api\/clinical-note-templates\/([^/]+)$/);
+      if (templateMatch) {
+        const roleError = requireRole(actorAwareRequest, 'soap_update');
+        if (roleError) return roleError;
+        return handleUpdateClinicalNoteTemplate(actorAwareRequest, dependencies, templateMatch[1]);
       }
 
       const soapMatch = request.path.match(/^\/api\/clinical-notes\/([^/]+)\/soap$/);

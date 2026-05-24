@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS trg_clinical_note_templates_set_updated_at ON clinical_note_templates;
+DROP TABLE IF EXISTS clinical_note_templates;

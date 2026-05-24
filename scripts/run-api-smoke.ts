@@ -34,6 +34,7 @@ const migrations = [
   '0011_add_patient_medications.up.sql',
   '0012_add_patient_flags.up.sql',
   '0013_add_clinic_visits.up.sql',
+  '0014_add_clinical_note_templates.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -525,6 +526,38 @@ async function main() {
     );
     assert.ok(ownedRoomQueue.data.some((item) => item.id === visit.data.id));
 
+    const template = await requestJson<{ id: string; template_key: string; is_active: boolean }>(
+      '/api/clinical-note-templates',
+      authHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        templateKey: 'smoke_uri',
+        title: 'Smoke URI',
+        subjective: 'Cough from smoke template',
+        objective: 'Stable',
+        assessment: 'URI',
+        plan: 'Supportive care',
+      }
+    );
+    assert.equal(template.data.template_key, 'smoke_uri');
+
+    const templates = await requestJson<Array<{ id: string }>>(
+      '/api/clinical-note-templates?clinicId=10000000-0000-0000-0000-000000000101&active=true',
+      authHeaders
+    );
+    assert.ok(templates.data.some((item) => item.id === template.data.id));
+
+    const inactiveTemplate = await requestJson<{ id: string; is_active: boolean }>(
+      `/api/clinical-note-templates/${template.data.id}`,
+      authHeaders,
+      'PATCH',
+      200,
+      { isActive: false }
+    );
+    assert.equal(inactiveTemplate.data.is_active, false);
+
     const updatedEncounter = await requestJson<{
       id: string;
       status: string;
@@ -819,6 +852,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /startEncounterFromVisit/);
   assert.match(app.body, /createClaimVisitButton/);
   assert.match(app.body, /queueRoomName/);
+  assert.match(app.body, /createTemplateAdminSection/);
+  assert.match(app.body, /getAvailableNoteTemplates/);
+  assert.match(app.body, /syncVisitStatusForEncounter/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
     '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',

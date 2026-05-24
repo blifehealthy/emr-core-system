@@ -25,6 +25,7 @@ let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
+let currentClinicalNoteTemplates = [];
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -41,7 +42,7 @@ let currentAdminMeta = {
   users: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
   practitioners: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
 };
-const noteTemplates = {
+const fallbackNoteTemplates = {
   general_follow_up: {
     subjective: 'มาติดตามอาการ อาการโดยรวมเปลี่ยนแปลงตามที่แจ้ง',
     objective: 'สัญญาณชีพและการตรวจร่างกายตามบันทึก',
@@ -250,6 +251,7 @@ searchForm.addEventListener('submit', async (event) => {
   try {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
     const profile = await fetchPatientProfileBundle(patient, apiToken);
+    currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
     setStatus('เปิดเวชระเบียนแล้ว', 'success');
@@ -464,7 +466,7 @@ function buildAdminSearchParams(clinicId, filters = {}) {
 }
 
 async function fetchAdminBundle(clinicId, apiToken) {
-  const [usersPage, practitionersPage] = await Promise.all([
+  const [usersPage, practitionersPage, templates] = await Promise.all([
     fetchUsers(clinicId, apiToken, {
       search: currentAdminFilters.usersSearch.trim(),
       active: currentAdminFilters.usersActive,
@@ -477,13 +479,31 @@ async function fetchAdminBundle(clinicId, apiToken) {
       limit: currentAdminPagination.practitionersLimit,
       offset: currentAdminPagination.practitionersOffset,
     }),
+    fetchClinicalNoteTemplates(clinicId, apiToken, false),
   ]);
   currentAdminMeta = {
     users: usersPage.meta,
     practitioners: practitionersPage.meta,
   };
 
-  return { users: usersPage.items, practitioners: practitionersPage.items };
+  currentClinicalNoteTemplates = templates;
+  return { users: usersPage.items, practitioners: practitionersPage.items, templates };
+}
+
+async function fetchClinicalNoteTemplates(clinicId, apiToken, activeOnly = true) {
+  const params = new URLSearchParams({ clinicId });
+  if (activeOnly) params.set('active', 'true');
+
+  const response = await fetch(`/api/clinical-note-templates?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
 }
 
 function compactPayload(payload) {
@@ -694,6 +714,8 @@ function createTimelinePanel(timeline) {
 function renderQueueBoard() {
   queueBoard.hidden = false;
   const groups = ['waiting', 'in_room', 'with_doctor', 'completed', 'discharged', 'cancelled'];
+  const fragment = document.createDocumentFragment();
+  fragment.append(createQueueSummary());
   const columns = document.createElement('div');
   columns.className = 'queue-board';
 
@@ -723,7 +745,22 @@ function renderQueueBoard() {
     columns.append(column);
   }
 
-  queueBoard.replaceChildren(columns);
+  fragment.append(columns);
+  queueBoard.replaceChildren(fragment);
+}
+
+function createQueueSummary() {
+  const activeVisits = currentQueue.filter((visit) => !['discharged', 'cancelled'].includes(visit.status));
+  const providerCount = new Set(activeVisits.map((visit) => visit.practitioner_id).filter(Boolean)).size;
+  const roomCount = new Set(activeVisits.map((visit) => visit.room_name).filter(Boolean)).size;
+
+  return createMetricGrid([
+    ['Active Queue', activeVisits.length],
+    ['Waiting', currentQueue.filter((visit) => visit.status === 'waiting').length],
+    ['With Doctor', currentQueue.filter((visit) => visit.status === 'with_doctor').length],
+    ['Providers', providerCount],
+    ['Rooms', roomCount],
+  ]);
 }
 
 function createVisitActions(visit) {
@@ -905,6 +942,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   const apiToken = currentApiToken || readValue('apiToken');
   const patient = await fetchPatientDetail(visit.clinic_id, visit.medical_record_number, apiToken);
   const profile = await fetchPatientProfileBundle(patient, apiToken);
+  currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -927,8 +965,90 @@ function renderAdminWorkspace(clinicId) {
       ['practitioner_code', 'specialty', 'is_active'],
       createPractitionerActions
     ),
+    createTemplateAdminSection(clinicId),
     createAuditSection()
   );
+}
+
+function createTemplateAdminSection(clinicId) {
+  const section = document.createElement('div');
+  section.className = 'admin-section';
+  const title = document.createElement('h3');
+  title.textContent = 'SOAP Templates';
+  section.append(title, createTemplateAdminForm(clinicId));
+
+  const list = document.createElement('div');
+  list.className = 'record-list';
+  for (const template of currentClinicalNoteTemplates) {
+    const card = createRecordCard(template, templateSummary, [
+      'template_key',
+      'category',
+      'is_active',
+      'updated_at',
+    ]);
+    card.append(createTemplateAdminActions(card, template, clinicId));
+    list.append(card);
+  }
+  section.append(list);
+  return section;
+}
+
+function createTemplateAdminForm(clinicId, template = null) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+  form.append(
+    createAdminInput('templateKey', 'Key', template?.template_key ?? '', true),
+    createAdminInput('title', 'Title', template?.title ?? '', true),
+    createAdminInput('category', 'Category', template?.category ?? ''),
+    createFormField('subjective', 'Subjective', 'textarea'),
+    createFormField('objective', 'Objective', 'textarea'),
+    createFormField('assessment', 'Assessment', 'textarea'),
+    createFormField('plan', 'Plan', 'textarea'),
+    createAdminSelect('isActive', 'Active', ['true', 'false'], String(template?.is_active ?? true))
+  );
+  form.elements.subjective.value = template?.subjective ?? '';
+  form.elements.objective.value = template?.objective ?? '';
+  form.elements.assessment.value = template?.assessment ?? '';
+  form.elements.plan.value = template?.plan ?? '';
+
+  const submit = createAdminSubmit(template ? 'บันทึก template' : 'เพิ่ม template');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveClinicalNoteTemplate(clinicId, template?.id, form, submit);
+  });
+  return form;
+}
+
+function createTemplateAdminActions(card, template, clinicId) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'secondary-button small-button';
+  editButton.textContent = 'แก้ template';
+  editButton.addEventListener('click', () => {
+    card.querySelector('.inline-profile-form')?.remove();
+    card.append(createTemplateAdminForm(clinicId, template));
+  });
+  const activeButton = document.createElement('button');
+  activeButton.type = 'button';
+  activeButton.className = template.is_active ? 'secondary-button danger-button small-button' : 'secondary-button small-button';
+  activeButton.textContent = template.is_active ? 'ปิดใช้' : 'เปิดใช้';
+  activeButton.addEventListener('click', async () => {
+    activeButton.disabled = true;
+    try {
+      await patchClinicalNoteTemplate(template.id, { isActive: !template.is_active });
+      currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(clinicId, currentApiToken || readValue('apiToken'), false);
+      renderAdminWorkspace(clinicId);
+      setStatus('อัปเดต template แล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดต template ไม่สำเร็จ';
+      setStatus(message, 'error');
+    }
+  });
+  actions.append(editButton, activeButton);
+  return actions;
 }
 
 function createAuditSection() {
@@ -1309,6 +1429,47 @@ async function savePractitioner(clinicId, practitionerId, form, submit) {
   });
 }
 
+async function saveClinicalNoteTemplate(clinicId, templateId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId,
+    templateKey: values.templateKey,
+    title: values.title,
+    category: values.category,
+    subjective: values.subjective,
+    objective: values.objective,
+    assessment: values.assessment,
+    plan: values.plan,
+    isActive: parseOptionalBoolean(values.isActive),
+  });
+
+  await saveAdminRecord({
+    form,
+    submit,
+    payload,
+    url: templateId ? `/api/clinical-note-templates/${templateId}` : '/api/clinical-note-templates',
+    method: templateId ? 'PATCH' : 'POST',
+    busyText: 'กำลังบันทึก template',
+    successText: templateId ? 'แก้ template แล้ว' : 'เพิ่ม template แล้ว',
+    resetAfterSave: !templateId,
+  });
+}
+
+async function patchClinicalNoteTemplate(templateId, payload) {
+  const response = await fetch(`/api/clinical-note-templates/${templateId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw createApiError(response, result);
+  }
+
+  return result.data;
+}
+
 async function saveAdminRecord({
   form,
   submit,
@@ -1533,23 +1694,58 @@ function createEncounterEntryForm(patient, appointment = null) {
 }
 
 function createTemplateField() {
-  return createAdminSelect('noteTemplate', 'Template', [
-    '',
-    'general_follow_up',
-    'uri',
-    'chronic_follow_up',
-  ], '');
+  const label = document.createElement('label');
+  label.textContent = 'Template';
+  const select = document.createElement('select');
+  select.name = 'noteTemplate';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่ใช้ template';
+  select.append(empty);
+
+  for (const template of getAvailableNoteTemplates()) {
+    const option = document.createElement('option');
+    option.value = template.key;
+    option.textContent = template.title;
+    select.append(option);
+  }
+
+  label.append(select);
+  return label;
 }
 
 function applyNoteTemplate(form, templateKey) {
-  const template = noteTemplates[templateKey];
+  const template = getAvailableNoteTemplates().find((item) => item.key === templateKey);
   if (!template) return;
 
-  for (const [field, value] of Object.entries(template)) {
+  for (const field of ['subjective', 'objective', 'assessment', 'plan']) {
+    const value = template[field];
     if (form.elements[field] && !form.elements[field].value) {
       form.elements[field].value = value;
     }
   }
+}
+
+function getAvailableNoteTemplates() {
+  const persisted = currentClinicalNoteTemplates
+    .filter((template) => template.is_active !== false)
+    .map((template) => ({
+      key: `persisted:${template.id}`,
+      title: template.title ?? template.template_key,
+      subjective: template.subjective ?? '',
+      objective: template.objective ?? '',
+      assessment: template.assessment ?? '',
+      plan: template.plan ?? '',
+    }));
+
+  return [
+    ...persisted,
+    ...Object.entries(fallbackNoteTemplates).map(([key, template]) => ({
+      key,
+      title: key.replaceAll('_', ' '),
+      ...template,
+    })),
+  ];
 }
 
 function createFormField(name, labelText, type = 'input', required = false) {
@@ -1817,6 +2013,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
     apiToken
   );
   const profile = await fetchPatientProfileBundle(refreshed, apiToken);
+  currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(refreshed.clinic_id, apiToken);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -2220,6 +2417,12 @@ function openPrescriptionPrint(prescription) {
   if (!printWindow) return;
 
   const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '';
+  const practitioner = (currentProfile?.practitioners ?? []).find(
+    (item) => item.id === prescription.prescribed_by_practitioner_id
+  );
+  const practitionerName = practitioner ? practitionerSummary(practitioner) : prescription.prescribed_by_practitioner_id ?? '';
+  const documentNumber = `RX-${String(prescription.id ?? Date.now()).slice(0, 8).toUpperCase()}`;
+  const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
   printWindow.document.write(`
     <!doctype html>
     <html lang="th">
@@ -2227,25 +2430,53 @@ function openPrescriptionPrint(prescription) {
         <title>Prescription</title>
         <style>
           body { font-family: system-ui, sans-serif; margin: 32px; color: #111827; }
-          h1 { font-size: 22px; margin: 0 0 16px; }
-          dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; }
-          dt { font-weight: 700; color: #475569; }
+          .header { border-bottom: 2px solid #111827; padding-bottom: 16px; margin-bottom: 20px; }
+          .clinic { font-size: 22px; font-weight: 800; }
+          .doc-meta { color: #475569; margin-top: 4px; }
+          h1 { font-size: 20px; margin: 0 0 12px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+          dl { display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px; }
+          dt { font-weight: 700; color: #334155; }
           dd { margin: 0; }
-          .footer { margin-top: 48px; border-top: 1px solid #cbd5e1; padding-top: 16px; }
+          .medicine { border: 1px solid #cbd5e1; padding: 18px; margin-top: 20px; }
+          .medicine-name { font-size: 19px; font-weight: 800; margin-bottom: 10px; }
+          .footer { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+          .signature { border-top: 1px solid #111827; padding-top: 10px; text-align: center; }
         </style>
       </head>
       <body>
-        <h1>ใบสั่งยา</h1>
-        <dl>
-          <dt>ผู้ป่วย</dt><dd>${escapeHtml(patientName)}</dd>
-          <dt>HN</dt><dd>${escapeHtml(currentPatient?.medical_record_number ?? '')}</dd>
-          <dt>ยา</dt><dd>${escapeHtml(prescription.medication_name ?? '')}</dd>
-          <dt>ขนาดยา</dt><dd>${escapeHtml(prescription.dosage ?? '')}</dd>
-          <dt>ความถี่</dt><dd>${escapeHtml(prescription.frequency ?? '')}</dd>
-          <dt>วิธีใช้</dt><dd>${escapeHtml(prescription.instructions ?? '')}</dd>
-          <dt>สถานะ</dt><dd>${escapeHtml(prescription.status ?? '')}</dd>
-        </dl>
-        <div class="footer">ลงชื่อแพทย์ __________________________</div>
+        <div class="header">
+          <div class="clinic">EMR Core Clinic</div>
+          <div class="doc-meta">Clinic ID: ${escapeHtml(currentPatient?.clinic_id ?? '')}</div>
+        </div>
+        <h1>ใบสั่งยา / Prescription</h1>
+        <div class="grid">
+          <dl>
+            <dt>เลขที่เอกสาร</dt><dd>${escapeHtml(documentNumber)}</dd>
+            <dt>วันที่พิมพ์</dt><dd>${escapeHtml(printedAt)}</dd>
+            <dt>Encounter</dt><dd>${escapeHtml(prescription.encounter_id ?? '')}</dd>
+          </dl>
+          <dl>
+            <dt>ผู้ป่วย</dt><dd>${escapeHtml(patientName)}</dd>
+            <dt>HN</dt><dd>${escapeHtml(currentPatient?.medical_record_number ?? '')}</dd>
+            <dt>แพทย์</dt><dd>${escapeHtml(practitionerName)}</dd>
+          </dl>
+        </div>
+        <div class="medicine">
+          <div class="medicine-name">${escapeHtml(prescription.medication_name ?? '')}</div>
+          <dl>
+            <dt>ขนาดยา</dt><dd>${escapeHtml(prescription.dosage ?? '')}</dd>
+            <dt>วิถีทาง</dt><dd>${escapeHtml(prescription.route ?? '')}</dd>
+            <dt>ความถี่</dt><dd>${escapeHtml(prescription.frequency ?? '')}</dd>
+            <dt>ระยะเวลา</dt><dd>${escapeHtml(prescription.duration_text ?? '')}</dd>
+            <dt>วิธีใช้</dt><dd>${escapeHtml(prescription.instructions ?? '')}</dd>
+            <dt>สถานะ</dt><dd>${escapeHtml(prescription.status ?? '')}</dd>
+          </dl>
+        </div>
+        <div class="footer">
+          <div></div>
+          <div class="signature">ลงชื่อแพทย์ / Pharmacist verification</div>
+        </div>
       </body>
     </html>
   `);
@@ -2436,6 +2667,7 @@ function createEncounterStatusButton(encounter, status, label) {
       if (status === 'completed') payload.endedAt = new Date().toISOString();
       if (status === 'in_progress') payload.startedAt = encounter.started_at ?? new Date().toISOString();
       await patchEncounter(encounter.id, payload);
+      await syncVisitStatusForEncounter(encounter.id, status);
       await refreshPatientWorkspace('Encounters');
       setStatus(`Encounter: ${status}`, 'success');
     } catch (error) {
@@ -2448,6 +2680,22 @@ function createEncounterStatusButton(encounter, status, label) {
   });
 
   return button;
+}
+
+async function syncVisitStatusForEncounter(encounterId, encounterStatus) {
+  const visit = currentQueue.find((item) => item.encounter_id === encounterId);
+  if (!visit) return;
+
+  const statusMap = {
+    completed: 'completed',
+    signed: 'discharged',
+    cancelled: 'cancelled',
+  };
+  const visitStatus = statusMap[encounterStatus];
+  if (!visitStatus || visit.status === visitStatus) return;
+
+  await patchVisit(visit.id, { status: visitStatus });
+  currentQueue = await fetchQueue(readValue('queueClinicId') || visit.clinic_id, currentApiToken || readValue('apiToken'));
 }
 
 async function patchEncounter(encounterId, payload) {
@@ -2740,6 +2988,10 @@ function visitSummary(item) {
 function practitionerSummary(item) {
   const name = [item.first_name, item.last_name].filter(Boolean).join(' ');
   return `${name || item.practitioner_code || item.id}${item.specialty ? ` · ${item.specialty}` : ''}`;
+}
+
+function templateSummary(item) {
+  return item.title ?? item.template_key ?? item.id;
 }
 
 function encounterSummary(item) {

@@ -26,11 +26,13 @@ and clinician usability.
 - Appointment check-in now creates a visit record before moving the appointment
   to `checked_in`.
 - Patient detail now includes a compact timeline panel.
-- SOAP entry includes starter note templates.
-- Prescription cards include a simple print/export view.
+- SOAP entry uses persisted clinic-managed templates with starter fallbacks.
+- Prescription cards include a clinic-branded print/export view.
+- Encounter completion/sign/cancel actions can synchronize an already-loaded
+  linked queue visit status.
+- Queue board shows active queue, waiting, with-doctor, provider, and room
+  summary metrics.
 
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Replace client-side note templates with persisted clinic-managed templates.
-- Expand prescription print/export into a clinic-branded document format.

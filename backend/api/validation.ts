@@ -13,6 +13,7 @@ import type {
   CreateAttachmentLinkInput,
   CreateAppointmentInput,
   CreateClinicVisitInput,
+  CreateClinicalNoteTemplateInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
   CreatePatientInput,
@@ -36,6 +37,7 @@ import type {
   SignClinicalNoteInput,
   UpdateAppointmentInput,
   UpdateClinicVisitInput,
+  UpdateClinicalNoteTemplateInput,
   UpdateConsentRecordInput,
   UpdatePatientAllergyInput,
   UpdatePatientConditionInput,
@@ -671,6 +673,104 @@ export function validateUpdateClinicVisitBody(body: unknown, visitId: string):
       ...(Object.hasOwn(candidate, 'queueLabel') ? { queueLabel: queueLabel.value } : {}),
       ...(Object.hasOwn(candidate, 'roomName') ? { roomName: roomName.value } : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreateClinicalNoteTemplateBody(body: unknown):
+  | { ok: true; value: CreateClinicalNoteTemplateInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const templateKey = readRequiredString(candidate.templateKey, 'templateKey');
+  if (!templateKey.ok) return templateKey;
+  const title = readRequiredString(candidate.title, 'title');
+  if (!title.ok) return title;
+  const category = readOptionalNullableStringField(candidate, 'category');
+  if (!category.ok) return category;
+  const subjective = readOptionalNullableStringField(candidate, 'subjective');
+  if (!subjective.ok) return subjective;
+  const objective = readOptionalNullableStringField(candidate, 'objective');
+  if (!objective.ok) return objective;
+  const assessment = readOptionalNullableStringField(candidate, 'assessment');
+  if (!assessment.ok) return assessment;
+  const plan = readOptionalNullableStringField(candidate, 'plan');
+  if (!plan.ok) return plan;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      templateKey: templateKey.value,
+      title: title.value,
+      category: category.value,
+      subjective: subjective.value,
+      objective: objective.value,
+      assessment: assessment.value,
+      plan: plan.value,
+      isActive: isActive.value,
+    },
+  };
+}
+
+export function validateUpdateClinicalNoteTemplateBody(body: unknown, templateId: string):
+  | { ok: true; value: UpdateClinicalNoteTemplateInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const hasChanges = [
+    'templateKey',
+    'title',
+    'category',
+    'subjective',
+    'objective',
+    'assessment',
+    'plan',
+    'isActive',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one template field must be provided for update' };
+  }
+
+  const templateKey = Object.hasOwn(candidate, 'templateKey')
+    ? readRequiredString(candidate.templateKey, 'templateKey')
+    : { ok: true as const, value: undefined };
+  if (!templateKey.ok) return templateKey;
+  const title = Object.hasOwn(candidate, 'title')
+    ? readRequiredString(candidate.title, 'title')
+    : { ok: true as const, value: undefined };
+  if (!title.ok) return title;
+  const category = readOptionalNullableStringField(candidate, 'category');
+  if (!category.ok) return category;
+  const subjective = readOptionalNullableStringField(candidate, 'subjective');
+  if (!subjective.ok) return subjective;
+  const objective = readOptionalNullableStringField(candidate, 'objective');
+  if (!objective.ok) return objective;
+  const assessment = readOptionalNullableStringField(candidate, 'assessment');
+  if (!assessment.ok) return assessment;
+  const plan = readOptionalNullableStringField(candidate, 'plan');
+  if (!plan.ok) return plan;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      templateId,
+      ...(Object.hasOwn(candidate, 'templateKey') ? { templateKey: templateKey.value } : {}),
+      ...(Object.hasOwn(candidate, 'title') ? { title: title.value } : {}),
+      ...(Object.hasOwn(candidate, 'category') ? { category: category.value } : {}),
+      ...(Object.hasOwn(candidate, 'subjective') ? { subjective: subjective.value } : {}),
+      ...(Object.hasOwn(candidate, 'objective') ? { objective: objective.value } : {}),
+      ...(Object.hasOwn(candidate, 'assessment') ? { assessment: assessment.value } : {}),
+      ...(Object.hasOwn(candidate, 'plan') ? { plan: plan.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
     },
   };
 }

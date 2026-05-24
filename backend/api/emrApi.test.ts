@@ -69,6 +69,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async updateClinicVisit() {
       return { id: 'visit-1' };
     },
+    async listClinicalNoteTemplates() {
+      return [];
+    },
+    async createClinicalNoteTemplate() {
+      return { id: 'template-1' };
+    },
+    async updateClinicalNoteTemplate() {
+      return { id: 'template-1' };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -488,6 +497,60 @@ test('clinic visit queue APIs create, list, and update visit lifecycle', async (
     path: '/api/visits/visit-1',
     headers: { 'x-user-role': 'doctor', 'x-user-id': 'doctor-1' },
     body: { encounterId: 'encounter-1', status: 'with_doctor' },
+  });
+  assert.equal(updated.status, 200);
+});
+
+test('clinical note template APIs list, create, and update clinic templates', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listClinicalNoteTemplates(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.active, true);
+        return [{ id: 'template-1', title: 'URI', is_active: true }];
+      },
+      async createClinicalNoteTemplate(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.templateKey, 'uri');
+        return { id: 'template-1', template_key: 'uri', title: input.title };
+      },
+      async updateClinicalNoteTemplate(input) {
+        assert.equal(input.templateId, 'template-1');
+        assert.equal(input.isActive, false);
+        return { id: 'template-1', title: 'URI', is_active: false };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/clinical-note-templates',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', active: 'true' },
+  });
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.body, {
+    data: [{ id: 'template-1', title: 'URI', is_active: true }],
+  });
+
+  const created = await api({
+    method: 'POST',
+    path: '/api/clinical-note-templates',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'doctor-1' },
+    body: {
+      clinicId: 'clinic-1',
+      templateKey: 'uri',
+      title: 'URI',
+      subjective: 'Cough',
+    },
+  });
+  assert.equal(created.status, 201);
+
+  const updated = await api({
+    method: 'PATCH',
+    path: '/api/clinical-note-templates/template-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'doctor-1' },
+    body: { isActive: false },
   });
   assert.equal(updated.status, 200);
 });

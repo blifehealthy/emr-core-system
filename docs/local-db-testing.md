@@ -84,6 +84,9 @@ The script applies these migrations in order:
 - `0009_add_file_attachments.up.sql`
 - `0010_add_patient_conditions.up.sql`
 - `0011_add_patient_medications.up.sql`
+- `0012_add_patient_flags.up.sql`
+- `0013_add_clinic_visits.up.sql`
+- `0014_add_clinical_note_templates.up.sql`
 
 Then it runs:
 

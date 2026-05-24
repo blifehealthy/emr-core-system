@@ -61,6 +61,16 @@ Queue ownership is tracked on `clinic_visits.practitioner_id`; the queue API can
 filter by practitioner and room so a clinic can view an individual provider or
 exam-room workload.
 
+When an encounter status action is performed from a loaded patient workspace,
+the frontend also updates the linked queue visit when it is present in the
+current queue board:
+
+```text
+encounter completed -> visit completed
+encounter signed -> visit discharged
+encounter cancelled -> visit cancelled
+```
+
 ## Encounters
 
 Source enum: `encounter_status`.

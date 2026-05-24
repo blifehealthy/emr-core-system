@@ -39,10 +39,13 @@
   - queue cards can start an encounter/SOAP and write the created `encounter_id`
     back to the visit
   - linked queue cards can open the patient record directly on `Encounters`
+  - queue board shows active queue/provider/room summary metrics
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
-  - SOAP entry includes starter note templates
-  - prescription cards include a simple print/export view
+  - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
+  - clinic admin can create/update/deactivate SOAP templates
+  - prescription cards include a clinic-branded print/export view
+  - encounter status actions can sync loaded linked visits to completed/discharged/cancelled
   - create encounter/SOAP form from the patient detail panel
   - optional inline diagnosis and vital-sign capture while starting a visit
   - open SOAP notes from the Notes subview
@@ -296,21 +299,21 @@ The doctor-facing review document is now the preferred artifact for signoff:
 ## Phase 2A Assessment
 
 Phase 2A has started. The first slice adds dedicated visit/check-in records and
-a queue board while improving clinician usability through timeline, note
-templates, and prescription print/export.
+a queue board while improving clinician usability through timeline, clinic note
+templates, prescription print/export, and operations summary metrics.
 
 Remaining Phase 2A follow-ups:
 
-1. Persist note templates as clinic-managed data instead of client-side presets.
-2. Expand prescription print/export into a clinic-branded document format.
-3. Add real browser automation for queue and print workflows.
+1. Add real browser automation for queue and print workflows.
+2. Add richer daily operations reporting by practitioner, room, diagnosis, and prescription.
+3. Add clinic branding configuration instead of the current static print header.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add persisted note templates and clinic-branded prescription print/export
-2. add browser automation for queue and print workflows
+1. add browser automation for queue and print workflows
+2. add clinic branding configuration and daily operations reporting
 
 The deliverables added in this worktree are:
 
@@ -320,22 +323,23 @@ The deliverables added in this worktree are:
 - `docs/phase-1-clinician-summary-th.md`
 - `docs/phase-2a-plan.md`
 - `database/migrations/0013_add_clinic_visits.*`
+- `database/migrations/0014_add_clinical_note_templates.*`
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, audit log lookup, queue board with practitioner/room filters and claim controls, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, prescription print/export, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, SOAP template management, audit log lookup, queue board with practitioner/room filters, claim controls, and operations summary, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow with loaded queue sync, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, clinic-branded prescription print/export, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
-- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, and encounter edit
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, audit lookup, queue lookup/filter/update/claim/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, prescription print/export, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, SOAP template management, audit lookup, queue lookup/filter/update/claim/encounter-linking, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, clinic-branded prescription print/export, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -352,5 +356,5 @@ Start by reading:
 
 Then produce:
 
-1. Persisted note templates and branded prescription output
-2. Browser automation for queue and print workflows
+1. Browser automation for queue and print workflows
+2. Clinic branding configuration and daily operations reporting

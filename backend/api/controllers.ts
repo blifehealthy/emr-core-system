@@ -6,6 +6,8 @@ import {
   toAppointmentDtos,
   toClinicVisitDto,
   toClinicVisitDtos,
+  toClinicalNoteTemplateDto,
+  toClinicalNoteTemplateDtos,
   toConsentRecordDto,
   toConsentRecordDtos,
   toDiagnosisDto,
@@ -35,6 +37,7 @@ import {
   validateCreateAttachmentLinkBody,
   validateCreateAppointmentBody,
   validateCreateClinicVisitBody,
+  validateCreateClinicalNoteTemplateBody,
   validateCreateConsentRecordBody,
   validateCreateDiagnosisBody,
   validateCreatePatientAllergyBody,
@@ -52,6 +55,7 @@ import {
   validateSignClinicalNoteBody,
   validateUpdateAppointmentBody,
   validateUpdateClinicVisitBody,
+  validateUpdateClinicalNoteTemplateBody,
   validateUpdateConsentRecordBody,
   validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
@@ -407,6 +411,87 @@ export async function handleUpdateClinicVisit(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toClinicVisitDto(visit) } };
+}
+
+export async function handleListClinicalNoteTemplates(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listClinicalNoteTemplates) {
+    return mapError(new Error('Clinical note template dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+
+  const active = readOptionalEnumQuery(request, 'active', ['true', 'false']);
+  if (!active.ok) return validationError(active.error);
+
+  const templates = await dependencies.listClinicalNoteTemplates({
+    clinicId,
+    active: active.value === undefined ? undefined : active.value === 'true',
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicalNoteTemplateDtos(templates) } };
+}
+
+export async function handleCreateClinicalNoteTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createClinicalNoteTemplate) {
+    return mapError(new Error('Clinical note template create dependency is not configured'));
+  }
+
+  const validation = validateCreateClinicalNoteTemplateBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const template = await dependencies.createClinicalNoteTemplate(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'clinical_note_template',
+      entityId: (template as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { clinicId: validation.value.clinicId },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toClinicalNoteTemplateDto(template) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateClinicalNoteTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  templateId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateClinicalNoteTemplate) {
+    return mapError(new Error('Clinical note template update dependency is not configured'));
+  }
+
+  const validation = validateUpdateClinicalNoteTemplateBody(request.body, templateId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const template = await dependencies.updateClinicalNoteTemplate(validation.value);
+  if (!template) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Clinical note template not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'clinical_note_template',
+    entityId: templateId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicalNoteTemplateDto(template) } };
 }
 
 export async function handleCreateAppointment(

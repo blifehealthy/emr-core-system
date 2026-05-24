@@ -78,6 +78,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `DELETE` | `/api/clinical-notes/:clinicalNoteId/soap` | `soap_update` |
 | `PATCH` | `/api/clinical-notes/:clinicalNoteId/finalize` | `clinical_note_finalize` |
 | `PATCH` | `/api/clinical-notes/:clinicalNoteId/sign` | `clinical_note_sign` |
+| `GET` | `/api/clinical-note-templates` | `patient_read` |
+| `POST` | `/api/clinical-note-templates` | `soap_update` |
+| `PATCH` | `/api/clinical-note-templates/:templateId` | `soap_update` |
 | `GET` | `/api/diagnoses/:diagnosisId` | `patient_read` |
 | `GET` | `/api/encounters/:encounterId/diagnoses` | `patient_read` |
 | `POST` | `/api/diagnoses` | `diagnosis_update` |

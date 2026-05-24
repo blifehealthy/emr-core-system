@@ -66,6 +66,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `DELETE` | `/api/clinical-notes/:clinicalNoteId/soap` | Soft delete SOAP note. |
 | `PATCH` | `/api/clinical-notes/:clinicalNoteId/finalize` | Finalize clinical note. |
 | `PATCH` | `/api/clinical-notes/:clinicalNoteId/sign` | Sign clinical note. |
+| `GET` | `/api/clinical-note-templates` | List clinic-managed SOAP templates. |
+| `POST` | `/api/clinical-note-templates` | Create clinic-managed SOAP template. |
+| `PATCH` | `/api/clinical-note-templates/:templateId` | Update or deactivate clinic-managed SOAP template. |
 | `GET` | `/api/encounters/:encounterId/diagnoses` | List diagnoses for an encounter. |
 | `GET` | `/api/diagnoses/:diagnosisId` | Read one diagnosis. |
 | `POST` | `/api/diagnoses` | Create diagnosis. |
@@ -113,8 +116,9 @@ All routes except `GET /health` can be protected by bearer token when
 - Dedicated `clinic_visits` records now represent check-in and queue lifecycle.
 - The frontend includes a Queue Board tab for waiting, in-room, with-doctor,
   completed, discharged, and cancelled visits.
-- SOAP entry includes starter note templates.
-- Prescription cards include a simple print/export view.
+- SOAP entry uses clinic-managed templates with starter fallbacks.
+- Prescription cards include a clinic-branded print/export view.
+- Queue board includes operations summary metrics.
 - Patient detail includes a compact timeline panel.
 
 ## Historical Phase 1 Mismatches and Follow-ups

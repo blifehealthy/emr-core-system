@@ -186,6 +186,30 @@ export type UpdateClinicVisitInput = {
   notes?: string | null;
 };
 
+export type CreateClinicalNoteTemplateInput = {
+  clinicId: string;
+  templateKey: string;
+  title: string;
+  category?: string | null;
+  subjective?: string | null;
+  objective?: string | null;
+  assessment?: string | null;
+  plan?: string | null;
+  isActive?: boolean;
+};
+
+export type UpdateClinicalNoteTemplateInput = {
+  templateId: string;
+  templateKey?: string;
+  title?: string;
+  category?: string | null;
+  subjective?: string | null;
+  objective?: string | null;
+  assessment?: string | null;
+  plan?: string | null;
+  isActive?: boolean;
+};
+
 export type UpdateEncounterInput = {
   encounterId: string;
   status?: EncounterStatus;
@@ -535,6 +559,12 @@ export type Dependencies = {
   }) => Promise<unknown[]>;
   createClinicVisit?: (input: CreateClinicVisitInput) => Promise<unknown>;
   updateClinicVisit?: (input: UpdateClinicVisitInput) => Promise<unknown | null>;
+  listClinicalNoteTemplates?: (input: {
+    clinicId: string;
+    active?: boolean;
+  }) => Promise<unknown[]>;
+  createClinicalNoteTemplate?: (input: CreateClinicalNoteTemplateInput) => Promise<unknown>;
+  updateClinicalNoteTemplate?: (input: UpdateClinicalNoteTemplateInput) => Promise<unknown | null>;
   listConsentRecordsByPatient: (input: {
     patientId: string;
     status?: ConsentStatus;
