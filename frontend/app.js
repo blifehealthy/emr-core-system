@@ -385,7 +385,13 @@ function showPatientDetail(patient, profile = {}) {
         'dosage',
         'frequency',
       ]),
-      Notes: records(derived.clinicalNotes, noteSummary, ['status', 'note_type', 'authored_at'], 'Notes'),
+      Notes: records(derived.clinicalNotes, noteSummary, [
+        'status',
+        'note_type',
+        'authored_at',
+        'finalized_at',
+        'signed_at',
+      ], 'Notes'),
     }, currentProfileSection)
   );
 }
@@ -944,7 +950,7 @@ function createRecordCard(item, summary, fields, sectionLabel) {
   }
 
   if (sectionLabel === 'Notes' && item.id && (item.note_type === 'soap' || item.soap_note)) {
-    card.append(createSoapActions(card, item));
+    card.append(createClinicalNoteActions(card, item));
   }
 
   if (sectionLabel === 'Appointments' && item.id) {
@@ -988,7 +994,7 @@ function createAppointmentActions(card, appointment) {
     actions.append(createAppointmentStatusButton(appointment, 'confirmed', 'ยืนยันนัด'));
   }
 
-  if (appointment.status === 'pending' || appointment.status === 'confirmed') {
+  if (appointment.status === 'confirmed') {
     actions.append(createAppointmentStatusButton(appointment, 'checked_in', 'เช็กอิน'));
   }
 
@@ -1056,7 +1062,7 @@ async function patchAppointment(appointmentId, payload) {
   return result.data;
 }
 
-function createSoapActions(card, note) {
+function createClinicalNoteActions(card, note) {
   const actions = document.createElement('div');
   actions.className = 'record-actions';
   const openButton = document.createElement('button');
@@ -1083,7 +1089,57 @@ function createSoapActions(card, note) {
   });
 
   actions.append(openButton);
+
+  if (note.status !== 'final') {
+    actions.append(createClinicalNoteStatusButton(note, 'finalize', 'Finalize'));
+  }
+
+  if (!note.signed_at) {
+    actions.append(createClinicalNoteStatusButton(note, 'sign', 'Sign'));
+  }
+
   return actions;
+}
+
+function createClinicalNoteStatusButton(note, action, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = action === 'sign' ? 'primary-button small-button' : 'secondary-button small-button';
+  button.textContent = label;
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังบันทึก';
+
+    try {
+      await patchClinicalNoteStatus(note.id, action);
+      await refreshPatientWorkspace('Notes');
+      setStatus(action === 'sign' ? 'ลงนาม note แล้ว' : 'finalize note แล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดต note ไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+
+  return button;
+}
+
+async function patchClinicalNoteStatus(clinicalNoteId, action) {
+  const response = await fetch(`/api/clinical-notes/${clinicalNoteId}/${action}`, {
+    method: 'PATCH',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify({}),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 async function fetchSoapNote(clinicalNoteId) {

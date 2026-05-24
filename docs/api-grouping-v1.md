@@ -109,6 +109,7 @@ All routes except `GET /health` can be protected by bearer token when
   `checked_in` appointment status. The frontend patient workspace now uses the
   appointments API to create appointments, move them through check-in, and start
   an encounter with the appointment id.
-- Permission and workflow definitions now exist as documentation, but the
-  implementation still keeps permissions in code and does not enforce a central
-  state transition graph.
+- Permission and workflow definitions now exist as documentation, while
+  permissions are still kept in code. Appointment status updates enforce the
+  documented transition graph; other workflow state machines are not yet
+  centrally enforced.

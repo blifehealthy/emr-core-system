@@ -34,7 +34,7 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
       return { clinical_note_id: 'clinical-note-1' };
     },
     async getAppointmentById() {
-      return { id: 'appointment-1' };
+      return { id: 'appointment-1', status: 'confirmed' };
     },
     async getDiagnosisById() {
       return { id: 'diagnosis-1' };
@@ -356,7 +356,7 @@ test('appointments APIs work and enforce roles', async () => {
       },
       async getAppointmentById(input) {
         assert.equal(input.appointmentId, 'appointment-1');
-        return { id: 'appointment-1' };
+        return { id: 'appointment-1', status: 'confirmed' };
       },
       async createAppointment(input) {
         assert.equal(input.appointmentNumber, 'APT-001');
@@ -406,6 +406,32 @@ test('appointments APIs work and enforce roles', async () => {
     body: { status: 'checked_in' },
   });
   assert.equal(updateAppointment.status, 200);
+});
+
+test('appointments API rejects unsupported status transitions', async () => {
+  let updateCalled = false;
+  const api = createEmrApi(
+    makeDeps({
+      async getAppointmentById(input) {
+        assert.equal(input.appointmentId, 'appointment-1');
+        return { id: 'appointment-1', status: 'pending' };
+      },
+      async updateAppointment() {
+        updateCalled = true;
+        return { id: 'appointment-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'PATCH',
+    path: '/api/appointments/appointment-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'checked_in' },
+  });
+
+  assert.equal(response.status, 409);
+  assert.equal(updateCalled, false);
 });
 
 test('appointments APIs validate bad payloads and filters', async () => {

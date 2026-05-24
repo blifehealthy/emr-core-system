@@ -60,9 +60,17 @@ import {
   validateUpdateVitalSignBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
-import type { Dependencies, HttpRequest, HttpResponse } from './types.ts';
+import type { AppointmentStatus, Dependencies, HttpRequest, HttpResponse } from './types.ts';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
+const appointmentTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['checked_in', 'cancelled', 'no_show'],
+  checked_in: ['completed'],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+};
 
 export async function handleHealthCheck(dependencies: Dependencies): Promise<HttpResponse> {
   await dependencies.healthCheck();
@@ -308,6 +316,32 @@ export async function handleUpdateAppointment(
   const validation = validateUpdateAppointmentBody(request.body, appointmentId);
   if (!validation.ok) return validationError(validation.error);
 
+  if (validation.value.status) {
+    if (!dependencies.getAppointmentById) {
+      return mapError(new Error('Appointment read dependency is not configured'));
+    }
+
+    const currentAppointment = await dependencies.getAppointmentById({ appointmentId });
+    if (!currentAppointment) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Appointment not found' } };
+    }
+
+    const currentStatus = readAppointmentStatus(currentAppointment);
+    if (!currentStatus) {
+      return mapError(new Error('Appointment status is not available'));
+    }
+
+    if (!isAllowedAppointmentTransition(currentStatus, validation.value.status)) {
+      return {
+        status: 409,
+        headers: JSON_HEADERS,
+        body: {
+          error: `Appointment cannot transition from ${currentStatus} to ${validation.value.status}`,
+        },
+      };
+    }
+  }
+
   const appointment = await dependencies.updateAppointment(validation.value);
 
   if (!appointment) {
@@ -329,6 +363,33 @@ export async function handleUpdateAppointment(
     headers: JSON_HEADERS,
     body: { data: toAppointmentDto(appointment) },
   };
+}
+
+function readAppointmentStatus(row: unknown): AppointmentStatus | null {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    return null;
+  }
+
+  const status = (row as { status?: unknown }).status;
+  return isAppointmentStatus(status) ? status : null;
+}
+
+function isAppointmentStatus(value: unknown): value is AppointmentStatus {
+  return (
+    value === 'pending' ||
+    value === 'confirmed' ||
+    value === 'checked_in' ||
+    value === 'completed' ||
+    value === 'cancelled' ||
+    value === 'no_show'
+  );
+}
+
+function isAllowedAppointmentTransition(
+  currentStatus: AppointmentStatus,
+  nextStatus: AppointmentStatus
+) {
+  return currentStatus === nextStatus || appointmentTransitions[currentStatus].includes(nextStatus);
 }
 
 export async function handleListConsentRecordsByPatient(
