@@ -106,7 +106,9 @@ All routes except `GET /health` can be protected by bearer token when
 ## Phase 1 Mismatches and Follow-ups
 
 - A dedicated check-in table is not implemented; check-in is represented by the
-  `checked_in` appointment status.
+  `checked_in` appointment status. The frontend patient workspace now uses the
+  appointments API to create appointments, move them through check-in, and start
+  an encounter with the appointment id.
 - Permission and workflow definitions now exist as documentation, but the
   implementation still keeps permissions in code and does not enforce a central
   state transition graph.

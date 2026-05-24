@@ -3,15 +3,20 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `dab1082` (`Add encounter SOAP entry frontend`)
-- This stretch extends the patient detail frontend with SOAP read/update:
+- Latest completed checkpoint before this worktree: `f5a3b3f` (`Add SOAP note editing frontend`)
+- This stretch extends the patient detail frontend with appointment/check-in workflow:
   - static frontend under `frontend/`
   - `npm run start:frontend`
   - patient registration form wired to `POST /api/patients`
   - patient lookup/detail form wired to `GET /api/patients/detail`
-  - patient detail subviews for flags, allergies, conditions, medications, encounters, diagnoses, vitals, prescriptions, and notes
+  - patient detail subviews for flags, allergies, conditions, medications, appointments, encounters, diagnoses, vitals, prescriptions, and notes
   - create forms for flags, allergies, conditions, and medications
   - edit and soft-delete controls for flags, allergies, conditions, and medications
+  - appointment list loaded with `GET /api/appointments?clinicId=...&patientId=...`
+  - appointment create form wired to `POST /api/appointments`
+  - appointment status controls wired to `PATCH /api/appointments/:id`
+  - check-in represented by the `checked_in` appointment status
+  - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - create encounter/SOAP form from the patient detail panel
   - optional inline diagnosis and vital-sign capture while starting a visit
   - open SOAP notes from the Notes subview
@@ -78,6 +83,14 @@
   - URLs checked:
     - `GET http://127.0.0.1:5173/api/clinical-notes/:id/soap`
     - `PATCH http://127.0.0.1:5173/api/clinical-notes/:id/soap`
+  - frontend appointment/check-in asset verification
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
+  - frontend static server check for this stretch
+  - current result: `200 OK`
+  - URL checked:
+    `http://127.0.0.1:5174/`
 
 ## Local Tooling
 
@@ -114,7 +127,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, encounter/SOAP entry, and SOAP read/update started
+- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, encounter/SOAP entry, and SOAP read/update
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -122,6 +135,9 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 
 Recent commits on `main`:
 
+- `f5a3b3f` Add SOAP note editing frontend
+- `dab1082` Add encounter SOAP entry frontend
+- `e568e28` Add patient profile update controls
 - `72819d7` Add patient registration API
 - `21b8cb0` Include patient flags in patient detail
 - `53eb843` Add patient flags and Phase 1 docs
@@ -143,6 +159,7 @@ Phase 1 is no longer blocked on the major clinical entities.
   - consent records
 - scheduling/documentation core:
   - appointments
+  - frontend check-in workflow through appointment status
   - encounters
   - SOAP
   - diagnoses
@@ -172,8 +189,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add appointment/check-in workflow to connect registration to encounters
-2. add encounter finalize/sign workflow after SOAP editing is comfortable
+1. add encounter finalize/sign workflow after SOAP editing is comfortable
+2. harden appointment state transitions in code if Phase 1 should enforce workflow rules server-side
 
 The deliverables added in this worktree are:
 
@@ -184,14 +201,14 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, encounter/SOAP entry, SOAP read/update, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, encounter/SOAP entry, SOAP read/update, and dev proxy
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, encounter/SOAP create, and SOAP read/update APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, appointment create/update/list, encounter/SOAP create, and SOAP read/update APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -208,5 +225,5 @@ Start by reading:
 
 Then produce:
 
-1. appointment/check-in workflow to connect registration to encounters
-2. encounter finalize/sign workflow after SOAP editing is comfortable
+1. encounter finalize/sign workflow after SOAP editing is comfortable
+2. code-level appointment state transition guards if the documented workflow should become enforceable API policy

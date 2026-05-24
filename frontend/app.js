@@ -156,7 +156,7 @@ searchForm.addEventListener('submit', async (event) => {
 
   try {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
-    const profile = await fetchClinicalProfile(patient.id, apiToken);
+    const profile = await fetchPatientProfileBundle(patient, apiToken);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
     setStatus('เปิดเวชระเบียนแล้ว', 'success');
@@ -249,6 +249,32 @@ async function fetchClinicalProfile(patientId, apiToken) {
   return Object.fromEntries(entries);
 }
 
+async function fetchPatientAppointments(patient, apiToken) {
+  const searchParams = new URLSearchParams({
+    clinicId: patient.clinic_id,
+    patientId: patient.id,
+  });
+  const response = await fetch(`/api/appointments?${searchParams.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchPatientProfileBundle(patient, apiToken) {
+  const [profile, appointments] = await Promise.all([
+    fetchClinicalProfile(patient.id, apiToken),
+    fetchPatientAppointments(patient, apiToken),
+  ]);
+
+  return { ...profile, appointments };
+}
+
 function compactPayload(payload) {
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined && value !== '')
@@ -312,6 +338,7 @@ function showPatientDetail(patient, profile = {}) {
   const allergies = profile.allergies ?? [];
   const conditions = profile.conditions ?? [];
   const medications = profile.medications ?? [];
+  const appointments = profile.appointments ?? [];
 
   resultTitle.textContent = `${patient.first_name} ${patient.last_name}`;
   renderResultRows({
@@ -325,9 +352,11 @@ function showPatientDetail(patient, profile = {}) {
 
   patientDetailPanel.hidden = false;
   patientDetail.replaceChildren(
+    createAppointmentForm(patient),
     createEncounterEntryForm(patient),
     createMetricGrid([
       ['Active Flags', flags.length],
+      ['Appointments', appointments.length],
       ['Encounters', encounters.length],
       ['Allergies', allergies.length],
       ['Conditions', conditions.length],
@@ -338,6 +367,12 @@ function showPatientDetail(patient, profile = {}) {
       Allergies: records(allergies, allergySummary, ['severity', 'status', 'reaction'], 'Allergies'),
       Conditions: records(conditions, conditionSummary, ['clinical_status', 'onset_date', 'notes'], 'Conditions'),
       Medications: records(medications, medicationSummary, ['status', 'dosage', 'frequency'], 'Medications'),
+      Appointments: records(appointments, appointmentSummary, [
+        'status',
+        'scheduled_start_at',
+        'scheduled_end_at',
+        'reason',
+      ], 'Appointments'),
       Encounters: records(encounters, encounterSummary, ['status', 'encounter_class', 'started_at']),
       Diagnoses: records(derived.diagnoses, diagnosisSummary, ['status', 'diagnosis_type', 'diagnosed_at']),
       Vitals: records(derived.vitalSigns, vitalSummary, [
@@ -355,16 +390,60 @@ function showPatientDetail(patient, profile = {}) {
   );
 }
 
-function createEncounterEntryForm(patient) {
+function createAppointmentForm(patient) {
+  const form = document.createElement('form');
+  form.className = 'appointment-form';
+  const appointmentNumber = nextAppointmentNumber(patient.medical_record_number);
+  form.dataset.appointmentNumber = appointmentNumber;
+
+  const header = document.createElement('div');
+  header.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'นัดหมาย / check-in';
+  const number = document.createElement('span');
+  number.textContent = appointmentNumber;
+  header.append(title, number);
+  form.append(header);
+
+  const startField = createFormField('scheduledStartAt', 'Start', 'input', true);
+  startField.querySelector('input').type = 'datetime-local';
+  startField.querySelector('input').value = defaultDateTimeLocal(15);
+  const endField = createFormField('scheduledEndAt', 'End', 'input');
+  endField.querySelector('input').type = 'datetime-local';
+  endField.querySelector('input').value = defaultDateTimeLocal(45);
+
+  form.append(
+    startField,
+    endField,
+    createFormField('practitionerId', 'Practitioner ID', 'input'),
+    createFormField('reason', 'Reason', 'input'),
+    createFormField('notes', 'Notes', 'textarea')
+  );
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'บันทึกนัด';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createAppointmentFromForm(patient, form, submit);
+  });
+
+  return form;
+}
+
+function createEncounterEntryForm(patient, appointment = null) {
   const form = document.createElement('form');
   form.className = 'encounter-entry-form';
 
   const header = document.createElement('div');
   header.className = 'inline-form-heading';
   const title = document.createElement('h3');
-  title.textContent = 'เริ่ม visit / SOAP';
+  title.textContent = appointment ? 'เริ่มตรวจจากนัดหมาย' : 'เริ่ม visit / SOAP';
   const number = document.createElement('span');
-  number.textContent = nextEncounterNumber(patient.medical_record_number);
+  number.textContent = appointment?.appointment_number ?? nextEncounterNumber(patient.medical_record_number);
   header.append(title, number);
   form.append(header);
 
@@ -388,7 +467,7 @@ function createEncounterEntryForm(patient) {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    await createEncounterFromForm(patient, form, submit);
+    await createEncounterFromForm(patient, form, submit, appointment);
   });
 
   return form;
@@ -406,7 +485,50 @@ function createFormField(name, labelText, type = 'input', required = false) {
   return label;
 }
 
-async function createEncounterFromForm(patient, form, submit) {
+async function createAppointmentFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId: patient.clinic_id,
+    patientId: patient.id,
+    practitionerId: values.practitionerId,
+    appointmentNumber: form.dataset.appointmentNumber || nextAppointmentNumber(patient.medical_record_number),
+    status: 'confirmed',
+    scheduledStartAt: toIsoDateTime(values.scheduledStartAt),
+    scheduledEndAt: toIsoDateTime(values.scheduledEndAt),
+    reason: values.reason,
+    notes: values.notes,
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังบันทึกนัด', '');
+
+  try {
+    const response = await fetch('/api/appointments', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    form.reset();
+    await refreshPatientWorkspace('Appointments');
+    setStatus('บันทึกนัดแล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'บันทึกนัดไม่สำเร็จ';
+    setStatus('บันทึกนัดไม่สำเร็จ', 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'บันทึกนัด';
+  }
+}
+
+async function createEncounterFromForm(patient, form, submit, appointment = null) {
   const values = Object.fromEntries(new FormData(form).entries());
   const encounterNumber = nextEncounterNumber(patient.medical_record_number);
   const diagnosisName = String(values.diagnosisName ?? '').trim();
@@ -425,6 +547,7 @@ async function createEncounterFromForm(patient, form, submit) {
   const payload = compactPayload({
     patientId: patient.id,
     encounterNumber,
+    appointmentId: appointment?.id,
     status: 'in_progress',
     encounterClass: 'outpatient',
     chiefComplaint,
@@ -453,10 +576,12 @@ async function createEncounterFromForm(patient, form, submit) {
       throw new Error(result.detail || result.error || `HTTP ${response.status}`);
     }
 
-    const refreshed = await fetchPatientDetail(patient.clinic_id, patient.medical_record_number, currentApiToken || readValue('apiToken'));
-    const profile = await fetchClinicalProfile(patient.id, currentApiToken || readValue('apiToken'));
+    if (appointment?.id) {
+      await patchAppointment(appointment.id, { status: 'completed' });
+    }
+
     currentProfileSection = 'Encounters';
-    showPatientDetail(refreshed, profile);
+    await refreshPatientWorkspace('Encounters');
     setStatus('บันทึก visit แล้ว', 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'บันทึก visit ไม่สำเร็จ';
@@ -468,9 +593,41 @@ async function createEncounterFromForm(patient, form, submit) {
   }
 }
 
+async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
+  if (!currentPatient) return;
+
+  const apiToken = currentApiToken || readValue('apiToken');
+  const refreshed = await fetchPatientDetail(
+    currentPatient.clinic_id,
+    currentPatient.medical_record_number,
+    apiToken
+  );
+  const profile = await fetchPatientProfileBundle(refreshed, apiToken);
+  currentProfileSection = sectionLabel;
+  showPatientDetail(refreshed, profile);
+}
+
 function nextEncounterNumber(mrn) {
   const safeMrn = String(mrn ?? 'MRN').replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'PATIENT';
   return `ENC-${safeMrn}-${Date.now()}`;
+}
+
+function nextAppointmentNumber(mrn) {
+  const safeMrn = String(mrn ?? 'MRN').replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'PATIENT';
+  return `APT-${safeMrn}-${Date.now()}`;
+}
+
+function defaultDateTimeLocal(minutesFromNow) {
+  const date = new Date(Date.now() + minutesFromNow * 60 * 1000);
+  date.setSeconds(0, 0);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function toIsoDateTime(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  return new Date(text).toISOString();
 }
 
 function syncSearchFields(patient) {
@@ -676,9 +833,8 @@ async function createProfileRecord(sectionLabel, config, form, submit) {
     }
 
     form.reset();
-    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
     currentProfileSection = sectionLabel;
-    showPatientDetail(currentPatient, currentProfile);
+    await refreshPatientWorkspace(sectionLabel);
     setStatus(`${sectionLabel} บันทึกแล้ว`, 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'บันทึก profile ไม่สำเร็จ';
@@ -709,9 +865,8 @@ async function updateProfileRecord(sectionLabel, config, recordId, form, submit)
       throw new Error(result.detail || result.error || `HTTP ${response.status}`);
     }
 
-    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
     currentProfileSection = sectionLabel;
-    showPatientDetail(currentPatient, currentProfile);
+    await refreshPatientWorkspace(sectionLabel);
     setStatus(`${sectionLabel} แก้ไขแล้ว`, 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'แก้ไข profile ไม่สำเร็จ';
@@ -739,9 +894,8 @@ async function deleteProfileRecord(sectionLabel, config, recordId, button) {
       throw new Error(result.detail || result.error || `HTTP ${response.status}`);
     }
 
-    currentProfile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
     currentProfileSection = sectionLabel;
-    showPatientDetail(currentPatient, currentProfile);
+    await refreshPatientWorkspace(sectionLabel);
     setStatus(`${sectionLabel} ปิดรายการแล้ว`, 'success');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'ปิดรายการไม่สำเร็จ';
@@ -793,6 +947,10 @@ function createRecordCard(item, summary, fields, sectionLabel) {
     card.append(createSoapActions(card, item));
   }
 
+  if (sectionLabel === 'Appointments' && item.id) {
+    card.append(createAppointmentActions(card, item));
+  }
+
   return card;
 }
 
@@ -820,6 +978,82 @@ function createRecordActions(card, item, sectionLabel, config) {
 
   actions.append(editButton, deleteButton);
   return actions;
+}
+
+function createAppointmentActions(card, appointment) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+
+  if (appointment.status === 'pending') {
+    actions.append(createAppointmentStatusButton(appointment, 'confirmed', 'ยืนยันนัด'));
+  }
+
+  if (appointment.status === 'pending' || appointment.status === 'confirmed') {
+    actions.append(createAppointmentStatusButton(appointment, 'checked_in', 'เช็กอิน'));
+  }
+
+  if (appointment.status === 'checked_in') {
+    const startButton = document.createElement('button');
+    startButton.type = 'button';
+    startButton.className = 'primary-button small-button';
+    startButton.textContent = 'เริ่มตรวจ';
+    startButton.addEventListener('click', () => {
+      card.querySelector('.encounter-entry-form')?.remove();
+      card.append(createEncounterEntryForm(currentPatient, appointment));
+    });
+    actions.append(startButton);
+  }
+
+  if (!['completed', 'cancelled', 'no_show'].includes(appointment.status)) {
+    actions.append(
+      createAppointmentStatusButton(appointment, 'cancelled', 'ยกเลิก'),
+      createAppointmentStatusButton(appointment, 'no_show', 'No-show')
+    );
+  }
+
+  return actions;
+}
+
+function createAppointmentStatusButton(appointment, status, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className =
+    status === 'cancelled' || status === 'no_show'
+      ? 'secondary-button danger-button small-button'
+      : 'secondary-button small-button';
+  button.textContent = label;
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังบันทึก';
+
+    try {
+      await patchAppointment(appointment.id, { status });
+      await refreshPatientWorkspace('Appointments');
+      setStatus(`Appointment: ${status}`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดตนัดไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+  return button;
+}
+
+async function patchAppointment(appointmentId, payload) {
+  const response = await fetch(`/api/appointments/${appointmentId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 function createSoapActions(card, note) {
@@ -917,14 +1151,7 @@ async function updateSoapNote(clinicalNoteId, form, submit) {
     }
 
     if (currentPatient) {
-      const refreshed = await fetchPatientDetail(
-        currentPatient.clinic_id,
-        currentPatient.medical_record_number,
-        currentApiToken || readValue('apiToken')
-      );
-      const profile = await fetchClinicalProfile(currentPatient.id, currentApiToken || readValue('apiToken'));
-      currentProfileSection = 'Notes';
-      showPatientDetail(refreshed, profile);
+      await refreshPatientWorkspace('Notes');
     }
     setStatus('บันทึก SOAP แล้ว', 'success');
   } catch (error) {
@@ -981,6 +1208,10 @@ function conditionSummary(item) {
 
 function medicationSummary(item) {
   return item.medication_name ?? item.rxnorm_code ?? item.id;
+}
+
+function appointmentSummary(item) {
+  return `${item.appointment_number ?? item.id} · ${item.status ?? 'pending'}`;
 }
 
 function encounterSummary(item) {

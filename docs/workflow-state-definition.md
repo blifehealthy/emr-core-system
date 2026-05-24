@@ -172,4 +172,5 @@ Diagnosis type is tracked separately as `working`, `final`, `differential`, or
 - Encounter signing and clinical note signing are represented separately and
   should be aligned before deeper workflow automation.
 - Check-in is represented through appointment status, not a separate `check_ins`
-  table.
+  table. The frontend check-in workflow currently patches appointments to
+  `checked_in` and starts encounters by passing `appointmentId`.
