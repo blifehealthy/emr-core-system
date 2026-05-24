@@ -2,6 +2,7 @@ import { getActorContext, requireBearerAuth, withResolvedActor } from './auth.ts
 import {
   handleCreateAttachmentLink,
   handleCreateAppointment,
+  handleCreateClinicVisit,
   handleCreateConsentRecord,
   handleCreateFileAsset,
   handleCreateDiagnosis,
@@ -42,6 +43,7 @@ import {
   handleHealthCheck,
   handleListAttachments,
   handleListAppointments,
+  handleListClinicQueue,
   handleListConsentRecordsByPatient,
   handleListDiagnosesByEncounter,
   handleListPatientAllergies,
@@ -54,6 +56,7 @@ import {
   handleListVitalSignsByEncounter,
   handleSignClinicalNote,
   handleUpdateAppointment,
+  handleUpdateClinicVisit,
   handleUpdateConsentRecord,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
@@ -130,6 +133,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'appointment_read');
       if (roleError) return roleError;
       return handleListAppointments(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/queue') {
+      const roleError = requireRole(actorAwareRequest, 'appointment_read');
+      if (roleError) return roleError;
+      return handleListClinicQueue(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/attachments') {
@@ -358,6 +367,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreateAppointment(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/visits') {
+      const roleError = requireRole(actorAwareRequest, 'appointment_write');
+      if (roleError) return roleError;
+      return handleCreateClinicVisit(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/users') {
       const roleError = requireRole(actorAwareRequest, 'user_write');
       if (roleError) return roleError;
@@ -450,6 +465,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'appointment_write');
         if (roleError) return roleError;
         return handleUpdateAppointment(actorAwareRequest, dependencies, appointmentMatch[1]);
+      }
+
+      const visitMatch = request.path.match(/^\/api\/visits\/([^/]+)$/);
+      if (visitMatch) {
+        const roleError = requireRole(actorAwareRequest, 'appointment_write');
+        if (roleError) return roleError;
+        return handleUpdateClinicVisit(actorAwareRequest, dependencies, visitMatch[1]);
       }
 
       const encounterMatch = request.path.match(/^\/api\/encounters\/([^/]+)$/);

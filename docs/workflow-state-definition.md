@@ -33,6 +33,26 @@ confirmed -> no_show
 The appointment update API enforces these status transitions and returns `409`
 when a request attempts to skip or leave a terminal state.
 
+## Clinic Visits
+
+Source enum: `clinic_visit_status`.
+
+| State | Meaning |
+| --- | --- |
+| `waiting` | Patient is checked in and waiting. |
+| `in_room` | Patient has been called into a room. |
+| `with_doctor` | Patient is actively with the practitioner. |
+| `completed` | Clinical visit activity is complete. |
+| `discharged` | Patient has left the clinic workflow. |
+| `cancelled` | Visit/check-in was cancelled. |
+
+Expected common flow:
+
+```text
+waiting -> in_room -> with_doctor -> completed -> discharged
+waiting/in_room/with_doctor -> cancelled
+```
+
 ## Encounters
 
 Source enum: `encounter_status`.

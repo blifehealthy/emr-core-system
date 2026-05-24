@@ -50,6 +50,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/appointments/:appointmentId` | Read one appointment. |
 | `POST` | `/api/appointments` | Create appointment. |
 | `PATCH` | `/api/appointments/:appointmentId` | Update appointment. |
+| `GET` | `/api/queue` | Read clinic queue / visit board. |
+| `POST` | `/api/visits` | Create dedicated check-in visit record. |
+| `PATCH` | `/api/visits/:visitId` | Update visit lifecycle status, room, practitioner, or notes. |
 | `POST` | `/api/encounters` | Create encounter with SOAP note and optional clinical children. |
 | `GET` | `/api/encounters/:encounterId` | Read one encounter. |
 | `PATCH` | `/api/encounters/:encounterId` | Update encounter metadata and status. |
@@ -105,12 +108,17 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/practitioners` | Create practitioner. |
 | `PATCH` | `/api/practitioners/:practitionerId` | Update practitioner. |
 
-## Phase 1 Mismatches and Follow-ups
+## Phase 2A Additions
 
-- A dedicated check-in table is not implemented; check-in is represented by the
-  `checked_in` appointment status. The frontend patient workspace now uses the
-  appointments API to create appointments, move them through check-in, and start
-  an encounter with the appointment id.
+- Dedicated `clinic_visits` records now represent check-in and queue lifecycle.
+- The frontend includes a Queue Board tab for waiting, in-room, with-doctor,
+  completed, discharged, and cancelled visits.
+- SOAP entry includes starter note templates.
+- Prescription cards include a simple print/export view.
+- Patient detail includes a compact timeline panel.
+
+## Historical Phase 1 Mismatches and Follow-ups
+
 - Permission and workflow definitions now exist as documentation, while
   permissions are still kept in code. Appointment and encounter status updates
   enforce the documented transition graphs; other workflow state machines are

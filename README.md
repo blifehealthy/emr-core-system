@@ -40,6 +40,13 @@ summary is available at:
 
 - `docs/phase-1-clinician-summary-th.md`
 
+## Phase 2A
+
+Phase 2A has started clinic operations and clinician usability work. Current
+scope and follow-ups are tracked in:
+
+- `docs/phase-2a-plan.md`
+
 ## Current Scope
 
 Included in this initialization phase:
@@ -89,6 +96,9 @@ Not included yet:
 - `GET /api/practitioners?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/practitioners`
 - `PATCH /api/practitioners/:id`
+- `GET /api/queue?clinicId=...&status=...&limit=...`
+- `POST /api/visits`
+- `PATCH /api/visits/:id`
 - `GET /api/encounters/:id/diagnoses?clinicalNoteId=...&status=...&limit=...&offset=...`
 - `GET /api/encounters/:id/vital-signs?clinicalNoteId=...&limit=...&offset=...`
 - `GET /api/encounters/:id/prescriptions?clinicalNoteId=...&status=...&limit=...&offset=...`

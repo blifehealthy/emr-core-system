@@ -4,6 +4,8 @@ import {
   toAttachmentLinkDtos,
   toAppointmentDto,
   toAppointmentDtos,
+  toClinicVisitDto,
+  toClinicVisitDtos,
   toConsentRecordDto,
   toConsentRecordDtos,
   toDiagnosisDto,
@@ -32,6 +34,7 @@ import {
 import {
   validateCreateAttachmentLinkBody,
   validateCreateAppointmentBody,
+  validateCreateClinicVisitBody,
   validateCreateConsentRecordBody,
   validateCreateDiagnosisBody,
   validateCreatePatientAllergyBody,
@@ -48,6 +51,7 @@ import {
   validateFinalizeClinicalNoteBody,
   validateSignClinicalNoteBody,
   validateUpdateAppointmentBody,
+  validateUpdateClinicVisitBody,
   validateUpdateConsentRecordBody,
   validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
@@ -64,6 +68,7 @@ import {
 import { getActorContext } from './auth.ts';
 import type {
   AppointmentStatus,
+  ClinicVisitStatus,
   Dependencies,
   EncounterStatus,
   HttpRequest,
@@ -84,6 +89,14 @@ const encounterTransitions: Record<EncounterStatus, EncounterStatus[]> = {
   in_progress: ['completed', 'cancelled'],
   completed: ['signed'],
   signed: [],
+  cancelled: [],
+};
+const clinicVisitTransitions: Record<ClinicVisitStatus, ClinicVisitStatus[]> = {
+  waiting: ['in_room', 'with_doctor', 'cancelled'],
+  in_room: ['with_doctor', 'cancelled'],
+  with_doctor: ['completed', 'cancelled'],
+  completed: ['discharged'],
+  discharged: [],
   cancelled: [],
 };
 
@@ -294,6 +307,102 @@ export async function handleGetAppointment(
   } catch (error) {
     return mapError(error);
   }
+}
+
+export async function handleListClinicQueue(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listClinicQueue) {
+    return mapError(new Error('Clinic queue dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+
+  const status = readOptionalEnumQuery(request, 'status', [
+    'waiting',
+    'in_room',
+    'with_doctor',
+    'completed',
+    'discharged',
+    'cancelled',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const practitionerId = readOptionalQueryString(request, 'practitionerId');
+  if (!practitionerId.ok) return validationError(practitionerId.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const visits = await dependencies.listClinicQueue({
+    clinicId,
+    status: status.value,
+    practitionerId: practitionerId.value,
+    limit: limit.value,
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicVisitDtos(visits) } };
+}
+
+export async function handleCreateClinicVisit(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createClinicVisit) {
+    return mapError(new Error('Clinic visit create dependency is not configured'));
+  }
+
+  const validation = validateCreateClinicVisitBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const visit = await dependencies.createClinicVisit(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'clinic_visit',
+      entityId: (visit as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { appointmentId: validation.value.appointmentId },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toClinicVisitDto(visit) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateClinicVisit(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  visitId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateClinicVisit) {
+    return mapError(new Error('Clinic visit update dependency is not configured'));
+  }
+
+  const validation = validateUpdateClinicVisitBody(request.body, visitId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const visit = await dependencies.updateClinicVisit(validation.value);
+  if (!visit) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Clinic visit not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'clinic_visit',
+    entityId: visitId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toClinicVisitDto(visit) } };
 }
 
 export async function handleCreateAppointment(

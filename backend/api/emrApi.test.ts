@@ -60,6 +60,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async createAppointment() {
       return { id: 'appointment-1' };
     },
+    async listClinicQueue() {
+      return [];
+    },
+    async createClinicVisit() {
+      return { id: 'visit-1' };
+    },
+    async updateClinicVisit() {
+      return { id: 'visit-1' };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -418,6 +427,60 @@ test('appointments APIs work and enforce roles', async () => {
     body: { status: 'checked_in' },
   });
   assert.equal(updateAppointment.status, 200);
+});
+
+test('clinic visit queue APIs create, list, and update visit lifecycle', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listClinicQueue(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.status, 'waiting');
+        assert.equal(input.limit, 10);
+        return [{ id: 'visit-1', status: 'waiting' }];
+      },
+      async createClinicVisit(input) {
+        assert.equal(input.visitNumber, 'VIS-001');
+        assert.equal(input.status, 'waiting');
+        return { id: 'visit-1', status: 'waiting' };
+      },
+      async updateClinicVisit(input) {
+        assert.equal(input.visitId, 'visit-1');
+        assert.equal(input.status, 'with_doctor');
+        return { id: 'visit-1', status: 'with_doctor' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/queue',
+    headers: { 'x-user-role': 'nurse' },
+    query: { clinicId: 'clinic-1', status: 'waiting', limit: '10' },
+  });
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.body, { data: [{ id: 'visit-1', status: 'waiting' }] });
+
+  const created = await api({
+    method: 'POST',
+    path: '/api/visits',
+    headers: { 'x-user-role': 'nurse', 'x-user-id': 'nurse-1' },
+    body: {
+      clinicId: 'clinic-1',
+      patientId: 'patient-1',
+      appointmentId: 'appointment-1',
+      visitNumber: 'VIS-001',
+      status: 'waiting',
+    },
+  });
+  assert.equal(created.status, 201);
+
+  const updated = await api({
+    method: 'PATCH',
+    path: '/api/visits/visit-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'doctor-1' },
+    body: { status: 'with_doctor' },
+  });
+  assert.equal(updated.status, 200);
 });
 
 test('appointments API rejects unsupported status transitions', async () => {

@@ -3,8 +3,8 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Close Phase 1 with clinician summary`)
-- Previous checkpoint before this worktree: `2ef14d4` (`Add phase 1 admin audit and UX hardening`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Start Phase 2A clinic operations`)
+- Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
   - `npm run start:frontend`
@@ -29,8 +29,14 @@
     - audit log lookup with `GET /api/audit-logs?entityType=...&entityId=...&limit=...`
     - friendly duplicate/conflict messages for user and practitioner forms
   - appointment status controls wired to `PATCH /api/appointments/:id`
-  - check-in represented by the `checked_in` appointment status
+  - dedicated visit/check-in records added with `clinic_visits`
+  - queue board loaded with `GET /api/queue?clinicId=...`
+  - visit lifecycle controls wired to `POST /api/visits` and `PATCH /api/visits/:id`
+  - check-in creates a visit record and then marks the appointment `checked_in`
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
+  - patient detail includes compact timeline panel
+  - SOAP entry includes starter note templates
+  - prescription cards include a simple print/export view
   - create encounter/SOAP form from the patient detail panel
   - optional inline diagnosis and vital-sign capture while starting a visit
   - open SOAP notes from the Notes subview
@@ -58,7 +64,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `75/75` passing
+  - current result: `79/79` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - `npm run db:test`
@@ -134,7 +140,7 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npx tsc --noEmit`
   - API smoke workflow coverage
   - current result: passing
-  - now covers clinic setup user/practitioner create-update-list, duplicate conflict mapping, admin search/status pagination, audit log lookup, appointment reschedule, encounter edit, frontend asset loading, and frontend proxy API flows
+  - now covers clinic setup user/practitioner create-update-list, duplicate conflict mapping, admin search/status pagination, audit log lookup, appointment reschedule, visit lifecycle/queue board, encounter edit, frontend asset loading, and frontend proxy API flows
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted admin list pagination/filter tests
@@ -149,6 +155,10 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/updateUser.test.ts`
+  - targeted Phase 2A queue/visit tests
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/createClinicVisit.test.ts backend/services/updateClinicVisit.test.ts backend/services/listClinicQueue.test.ts database/migrations/0013_add_clinic_visits.test.ts database/migrations/migration_order.test.ts`
 
 ## Local Tooling
 
@@ -201,10 +211,19 @@ Core EMR Phase 1 entity/API work is now substantially in place:
   - API grouping v1
 - Phase 1 doctor-facing review document:
   - `docs/phase-1-clinician-summary-th.md`
+- Phase 2A clinic operations/usability foundation:
+  - `clinic_visits` migration
+  - queue board API and frontend tab
+  - visit lifecycle controls
+  - patient timeline panel
+  - starter SOAP templates
+  - prescription print/export view
+  - `docs/phase-2a-plan.md`
 
 Recent commits on `main`:
 
-- current `HEAD` Close Phase 1 with clinician summary
+- current `HEAD` Start Phase 2A clinic operations
+- `4d7e01f` Close Phase 1 with clinician summary
 - `2ef14d4` Add phase 1 admin audit and UX hardening
 - `5a373c3` Add admin API pagination and frontend smoke coverage
 - `3f848df` Add admin filters and workflow smoke coverage
@@ -268,12 +287,26 @@ The doctor-facing review document is now the preferred artifact for signoff:
 3. Decide whether additional state transition rules beyond appointments and encounters should move from documentation into code-level guards.
 4. Decide whether registration should collect additional demographics before Phase 2.
 
+## Phase 2A Assessment
+
+Phase 2A has started. The first slice adds dedicated visit/check-in records and
+a queue board while improving clinician usability through timeline, note
+templates, and prescription print/export.
+
+Remaining Phase 2A follow-ups:
+
+1. Link queued visits to encounters automatically when starting from the queue.
+2. Add queue filters for room/provider and better visit ownership.
+3. Persist note templates as clinic-managed data instead of client-side presets.
+4. Expand prescription print/export into a clinic-branded document format.
+5. Add real browser automation for queue and print workflows.
+
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. do a product-owner review of Phase 1 scope and sign off or trim remaining policy decisions
-2. start Phase 2 planning around reporting, billing/claims, lab integrations, or richer clinical templates
+1. finish Phase 2A visit-to-encounter linking from the queue board
+2. add persisted note templates and clinic-branded prescription print/export
 
 The deliverables added in this worktree are:
 
@@ -281,22 +314,24 @@ The deliverables added in this worktree are:
 - `docs/workflow-state-definition.md`
 - `docs/api-grouping-v1.md`
 - `docs/phase-1-clinician-summary-th.md`
+- `docs/phase-2a-plan.md`
+- `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0012_add_patient_flags.*`
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, audit log lookup, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, note finalize/sign, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, audit log lookup, queue board, visit lifecycle controls, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, prescription print/export, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
-- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue, and encounter edit
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, audit lookup, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, timeline, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page/conflict handling, practitioner create/update/list/search/page/conflict handling, audit lookup, queue lookup/update, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update/templates, prescription print/export, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -313,5 +348,5 @@ Start by reading:
 
 Then produce:
 
-1. Phase 1 product-owner review/signoff
-2. Phase 2 planning and prioritization
+1. Phase 2A visit-to-encounter linking from queue cards
+2. Persisted note templates and branded prescription output

@@ -20,6 +20,7 @@
         <nav class="tab-bar" aria-label="Patient workspace">
           <button type="button" class="tab-button active" data-view="registration">ลงทะเบียน</button>
           <button type="button" class="tab-button" data-view="search">ค้นหา / เวชระเบียน</button>
+          <button type="button" class="tab-button" data-view="queue">คิวตรวจ</button>
           <button type="button" class="tab-button" data-view="admin">ตั้งค่าคลินิก</button>
         </nav>
 
@@ -160,6 +161,45 @@
             <button type="submit" class="primary-button" id="search-button">เปิดเวชระเบียน</button>
           </footer>
         </form>
+
+        <div class="registration-form view-panel" data-view-panel="queue">
+          <form id="queue-form" class="registration-form">
+            <section class="form-section" aria-labelledby="queue-heading">
+              <div class="section-heading">
+                <h2 id="queue-heading">Queue Board</h2>
+                <span>Phase 2A</span>
+              </div>
+              <div class="field-grid three">
+                <label>
+                  Clinic ID
+                  <input id="queueClinicId" name="queueClinicId" autocomplete="off" required />
+                </label>
+                <label>
+                  Status
+                  <select id="queueStatus" name="queueStatus">
+                    <option value="">All active</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="in_room">In room</option>
+                    <option value="with_doctor">With doctor</option>
+                    <option value="completed">Completed</option>
+                    <option value="discharged">Discharged</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </label>
+                <label>
+                  Limit
+                  <input id="queueLimit" name="queueLimit" type="number" min="1" max="200" value="50" />
+                </label>
+              </div>
+            </section>
+
+            <footer class="action-bar">
+              <button type="submit" class="primary-button" id="queue-load-button">โหลดคิว</button>
+            </footer>
+          </form>
+
+          <section class="form-section" id="queue-board" hidden></section>
+        </div>
 
         <div class="registration-form view-panel" data-view-panel="admin">
           <form id="admin-form" class="registration-form">

@@ -67,6 +67,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/appointments/:appointmentId` | `appointment_read` |
 | `POST` | `/api/appointments` | `appointment_write` |
 | `PATCH` | `/api/appointments/:appointmentId` | `appointment_write` |
+| `GET` | `/api/queue` | `appointment_read` |
+| `POST` | `/api/visits` | `appointment_write` |
+| `PATCH` | `/api/visits/:visitId` | `appointment_write` |
 | `POST` | `/api/encounters` | `encounter_create` |
 | `GET` | `/api/encounters/:encounterId` | `patient_read` |
 | `PATCH` | `/api/encounters/:encounterId` | `encounter_update` |

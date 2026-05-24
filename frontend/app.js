@@ -1,9 +1,11 @@
 const registrationForm = document.querySelector('#registration-form');
 const searchForm = document.querySelector('#patient-search-form');
 const adminForm = document.querySelector('#admin-form');
+const queueForm = document.querySelector('#queue-form');
 const submitButton = document.querySelector('#submit-button');
 const searchButton = document.querySelector('#search-button');
 const adminLoadButton = document.querySelector('#admin-load-button');
+const queueLoadButton = document.querySelector('#queue-load-button');
 const serviceStatus = document.querySelector('#service-status');
 const resultTitle = document.querySelector('#result-title');
 const resultList = document.querySelector('#result-list');
@@ -11,6 +13,7 @@ const payloadPreview = document.querySelector('#payload-preview');
 const patientDetailPanel = document.querySelector('#patient-detail-panel');
 const patientDetail = document.querySelector('#patient-detail');
 const adminWorkspace = document.querySelector('#admin-workspace');
+const queueBoard = document.querySelector('#queue-board');
 const tabButtons = Array.from(document.querySelectorAll('[data-view]'));
 const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
 
@@ -21,6 +24,7 @@ let currentApiToken = '';
 let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
+let currentQueue = [];
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -36,6 +40,26 @@ let currentAdminPagination = {
 let currentAdminMeta = {
   users: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
   practitioners: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
+};
+const noteTemplates = {
+  general_follow_up: {
+    subjective: 'มาติดตามอาการ อาการโดยรวมเปลี่ยนแปลงตามที่แจ้ง',
+    objective: 'สัญญาณชีพและการตรวจร่างกายตามบันทึก',
+    assessment: 'อาการอยู่ระหว่างติดตาม',
+    plan: 'ให้คำแนะนำ ติดตามอาการ และนัดตามความเหมาะสม',
+  },
+  uri: {
+    subjective: 'ไอ เจ็บคอ/มีน้ำมูก ไม่มีสัญญาณอันตรายที่ชัดเจน',
+    objective: 'ตรวจร่างกายทั่วไป stable',
+    assessment: 'Upper respiratory tract infection',
+    plan: 'รักษาตามอาการ ดื่มน้ำ พักผ่อน และกลับมาตรวจหากอาการแย่ลง',
+  },
+  chronic_follow_up: {
+    subjective: 'มาติดตามโรคเรื้อรัง รับประทานยาตามแผนเดิม',
+    objective: 'ทบทวน vital signs และผลตรวจที่เกี่ยวข้อง',
+    assessment: 'โรคเรื้อรังอยู่ระหว่างควบคุมและติดตาม',
+    plan: 'ต่อยา/ปรับยาเมื่อจำเป็น นัดติดตาม และให้คำแนะนำพฤติกรรมสุขภาพ',
+  },
 };
 
 const createProfileConfigs = {
@@ -90,6 +114,7 @@ const defaults = {
   clinicId: '10000000-0000-0000-0000-000000000101',
   searchClinicId: '10000000-0000-0000-0000-000000000101',
   adminClinicId: '10000000-0000-0000-0000-000000000101',
+  queueClinicId: '10000000-0000-0000-0000-000000000101',
   userId: '10000000-0000-0000-0000-000000000201',
   userRole: 'nurse',
   apiToken: localStorage.getItem('emr.apiToken') ?? '',
@@ -149,6 +174,29 @@ adminForm.addEventListener('submit', async (event) => {
     setStatus(message, 'error');
   } finally {
     setAdminBusy(false);
+  }
+});
+
+queueForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const clinicId = readValue('queueClinicId');
+  const apiToken = readValue('apiToken');
+  localStorage.setItem('emr.apiToken', apiToken);
+  currentApiToken = apiToken;
+
+  setQueueBusy(true);
+  setStatus('กำลังโหลดคิว', '');
+
+  try {
+    currentQueue = await fetchQueue(clinicId, apiToken);
+    renderQueueBoard();
+    setStatus('โหลดคิวแล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'โหลดคิวไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    setQueueBusy(false);
   }
 });
 
@@ -249,6 +297,14 @@ function buildAdminRequest() {
   });
 }
 
+function buildQueueRequest() {
+  return compactPayload({
+    clinicId: readValue('queueClinicId'),
+    status: readValue('queueStatus'),
+    limit: readValue('queueLimit'),
+  });
+}
+
 function buildHeaders(apiToken) {
   const headers = {
     'content-type': 'application/json',
@@ -317,14 +373,45 @@ async function fetchPatientAppointments(patient, apiToken) {
   return result.data ?? [];
 }
 
+async function fetchPatientTimeline(patientId, apiToken) {
+  const response = await fetch(`/api/patients/${patientId}/timeline?limit=20`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
 async function fetchPatientProfileBundle(patient, apiToken) {
-  const [profile, appointments, practitionersPage] = await Promise.all([
+  const [profile, appointments, practitionersPage, timeline] = await Promise.all([
     fetchClinicalProfile(patient.id, apiToken),
     fetchPatientAppointments(patient, apiToken),
     fetchPractitioners(patient.clinic_id, apiToken, { active: 'active', limit: 200, offset: 0 }),
+    fetchPatientTimeline(patient.id, apiToken),
   ]);
 
-  return { ...profile, appointments, practitioners: practitionersPage.items };
+  return { ...profile, appointments, practitioners: practitionersPage.items, timeline };
+}
+
+async function fetchQueue(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId });
+  if (readValue('queueStatus')) params.set('status', readValue('queueStatus'));
+  if (readValue('queueLimit')) params.set('limit', readValue('queueLimit'));
+
+  const response = await fetch(`/api/queue?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
 }
 
 async function fetchPractitioners(clinicId, apiToken, filters = {}) {
@@ -418,6 +505,8 @@ function setActiveView(view) {
   const statusText =
     activeView === 'search'
       ? 'พร้อมค้นหา'
+      : activeView === 'queue'
+        ? 'พร้อมโหลดคิว'
       : activeView === 'admin'
         ? 'พร้อมตั้งค่า'
         : 'พร้อมกรอกข้อมูล';
@@ -438,6 +527,11 @@ function setSearchBusy(isBusy) {
 function setAdminBusy(isBusy) {
   adminLoadButton.disabled = isBusy;
   adminLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดทีมคลินิก';
+}
+
+function setQueueBusy(isBusy) {
+  queueLoadButton.disabled = isBusy;
+  queueLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดคิว';
 }
 
 function setStatus(text, mode) {
@@ -499,6 +593,7 @@ function showPatientDetail(patient, profile = {}) {
   const medications = profile.medications ?? [];
   const appointments = profile.appointments ?? [];
   const practitioners = profile.practitioners ?? [];
+  const timeline = profile.timeline ?? [];
 
   resultTitle.textContent = `${patient.first_name} ${patient.last_name}`;
   renderResultRows({
@@ -522,7 +617,9 @@ function showPatientDetail(patient, profile = {}) {
       ['Conditions', conditions.length],
       ['Medications', medications.length],
       ['Practitioners', practitioners.length],
+      ['Timeline', timeline.length],
     ]),
+    createTimelinePanel(timeline),
     createProfileTabs({
       Flags: records(flags, flagSummary, ['severity', 'status', 'notes'], 'Flags'),
       Allergies: records(allergies, allergySummary, ['severity', 'status', 'reaction'], 'Allergies'),
@@ -555,6 +652,110 @@ function showPatientDetail(patient, profile = {}) {
       ], 'Notes'),
     }, currentProfileSection)
   );
+}
+
+function createTimelinePanel(timeline) {
+  const section = document.createElement('section');
+  section.className = 'timeline-panel';
+  const title = document.createElement('h3');
+  title.textContent = 'Timeline';
+  section.append(title);
+
+  const list = document.createElement('div');
+  list.className = 'timeline-list';
+  for (const item of timeline.slice(0, 8)) {
+    const row = document.createElement('div');
+    row.className = 'timeline-item';
+    const action = document.createElement('strong');
+    action.textContent = `${item.action ?? 'event'} · ${item.entity_type ?? 'record'}`;
+    const time = document.createElement('span');
+    time.textContent = item.created_at ? formatValue(item.created_at) : '';
+    row.append(action, time);
+    list.append(row);
+  }
+
+  if (timeline.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-note';
+    empty.textContent = 'ยังไม่มี timeline';
+    list.append(empty);
+  }
+
+  section.append(list);
+  return section;
+}
+
+function renderQueueBoard() {
+  queueBoard.hidden = false;
+  const groups = ['waiting', 'in_room', 'with_doctor', 'completed', 'discharged', 'cancelled'];
+  const columns = document.createElement('div');
+  columns.className = 'queue-board';
+
+  for (const status of groups) {
+    const column = document.createElement('section');
+    column.className = 'queue-column';
+    const title = document.createElement('h3');
+    const items = currentQueue.filter((visit) => visit.status === status);
+    title.textContent = `${status.replaceAll('_', ' ')} (${items.length})`;
+    column.append(title);
+
+    for (const visit of items) {
+      const card = createRecordCard(visit, visitSummary, [
+        'queue_label',
+        'medical_record_number',
+        'room_name',
+        'checked_in_at',
+      ]);
+      card.append(createVisitActions(visit));
+      column.append(card);
+    }
+
+    columns.append(column);
+  }
+
+  queueBoard.replaceChildren(columns);
+}
+
+function createVisitActions(visit) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const transitions = {
+    waiting: [['in_room', 'เข้าห้อง'], ['with_doctor', 'พบแพทย์'], ['cancelled', 'ยกเลิก']],
+    in_room: [['with_doctor', 'พบแพทย์'], ['cancelled', 'ยกเลิก']],
+    with_doctor: [['completed', 'จบตรวจ'], ['cancelled', 'ยกเลิก']],
+    completed: [['discharged', 'จำหน่าย']],
+  };
+
+  for (const [status, label] of transitions[visit.status] ?? []) {
+    actions.append(createVisitStatusButton(visit, status, label));
+  }
+
+  return actions;
+}
+
+function createVisitStatusButton(visit, status, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = status === 'cancelled' ? 'secondary-button danger-button small-button' : 'secondary-button small-button';
+  button.textContent = label;
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังบันทึก';
+
+    try {
+      await patchVisit(visit.id, { status });
+      currentQueue = await fetchQueue(readValue('queueClinicId'), currentApiToken || readValue('apiToken'));
+      renderQueueBoard();
+      setStatus(`Visit: ${status}`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดต visit ไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+  return button;
 }
 
 function renderAdminWorkspace(clinicId) {
@@ -1149,6 +1350,7 @@ function createEncounterEntryForm(patient, appointment = null) {
   form.append(header);
 
   form.append(
+    createTemplateField(),
     createFormField('chiefComplaint', 'Chief complaint', 'input', true),
     createPractitionerField('attendingPractitionerId', 'Practitioner', appointment?.practitioner_id ?? ''),
     createFormField('subjective', 'Subjective', 'textarea'),
@@ -1160,6 +1362,10 @@ function createEncounterEntryForm(patient, appointment = null) {
     createFormField('heartRateBpm', 'HR', 'input'),
     createFormField('oxygenSaturationPct', 'SpO2', 'input')
   );
+
+  form.elements.noteTemplate.addEventListener('change', () => {
+    applyNoteTemplate(form, form.elements.noteTemplate.value);
+  });
 
   const submit = document.createElement('button');
   submit.type = 'submit';
@@ -1173,6 +1379,26 @@ function createEncounterEntryForm(patient, appointment = null) {
   });
 
   return form;
+}
+
+function createTemplateField() {
+  return createAdminSelect('noteTemplate', 'Template', [
+    '',
+    'general_follow_up',
+    'uri',
+    'chronic_follow_up',
+  ], '');
+}
+
+function applyNoteTemplate(form, templateKey) {
+  const template = noteTemplates[templateKey];
+  if (!template) return;
+
+  for (const [field, value] of Object.entries(template)) {
+    if (form.elements[field] && !form.elements[field].value) {
+      form.elements[field].value = value;
+    }
+  }
 }
 
 function createFormField(name, labelText, type = 'input', required = false) {
@@ -1454,6 +1680,15 @@ function nextAppointmentNumber(mrn) {
   return `APT-${safeMrn}-${Date.now()}`;
 }
 
+function nextVisitNumber(mrn) {
+  const safeMrn = String(mrn ?? 'MRN').replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'PATIENT';
+  return `VIS-${safeMrn}-${Date.now()}`;
+}
+
+function nextQueueLabel() {
+  return `Q${String(Date.now()).slice(-4)}`;
+}
+
 function defaultDateTimeLocal(minutesFromNow) {
   const date = new Date(Date.now() + minutesFromNow * 60 * 1000);
   date.setSeconds(0, 0);
@@ -1506,6 +1741,8 @@ function renderRequestPreview() {
   const body =
     activeView === 'search'
       ? buildSearchRequest()
+      : activeView === 'queue'
+        ? buildQueueRequest()
       : activeView === 'admin'
         ? buildAdminRequest()
         : buildPatientPayload();
@@ -1806,7 +2043,73 @@ function createRecordCard(item, summary, fields, sectionLabel) {
     card.append(createEncounterActions(item));
   }
 
+  if (sectionLabel === 'Prescriptions' && item.id) {
+    card.append(createPrescriptionActions(item));
+  }
+
   return card;
+}
+
+function createPrescriptionActions(prescription) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const printButton = document.createElement('button');
+  printButton.type = 'button';
+  printButton.className = 'secondary-button small-button';
+  printButton.textContent = 'พิมพ์ใบสั่งยา';
+  printButton.addEventListener('click', () => {
+    openPrescriptionPrint(prescription);
+  });
+  actions.append(printButton);
+  return actions;
+}
+
+function openPrescriptionPrint(prescription) {
+  const printWindow = window.open('', '_blank', 'width=720,height=840');
+  if (!printWindow) return;
+
+  const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '';
+  printWindow.document.write(`
+    <!doctype html>
+    <html lang="th">
+      <head>
+        <title>Prescription</title>
+        <style>
+          body { font-family: system-ui, sans-serif; margin: 32px; color: #111827; }
+          h1 { font-size: 22px; margin: 0 0 16px; }
+          dl { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; }
+          dt { font-weight: 700; color: #475569; }
+          dd { margin: 0; }
+          .footer { margin-top: 48px; border-top: 1px solid #cbd5e1; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <h1>ใบสั่งยา</h1>
+        <dl>
+          <dt>ผู้ป่วย</dt><dd>${escapeHtml(patientName)}</dd>
+          <dt>HN</dt><dd>${escapeHtml(currentPatient?.medical_record_number ?? '')}</dd>
+          <dt>ยา</dt><dd>${escapeHtml(prescription.medication_name ?? '')}</dd>
+          <dt>ขนาดยา</dt><dd>${escapeHtml(prescription.dosage ?? '')}</dd>
+          <dt>ความถี่</dt><dd>${escapeHtml(prescription.frequency ?? '')}</dd>
+          <dt>วิธีใช้</dt><dd>${escapeHtml(prescription.instructions ?? '')}</dd>
+          <dt>สถานะ</dt><dd>${escapeHtml(prescription.status ?? '')}</dd>
+        </dl>
+        <div class="footer">ลงชื่อแพทย์ __________________________</div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function createRecordActions(card, item, sectionLabel, config) {
@@ -1856,7 +2159,7 @@ function createAppointmentActions(card, appointment) {
   }
 
   if (appointment.status === 'confirmed') {
-    actions.append(createAppointmentStatusButton(appointment, 'checked_in', 'เช็กอิน'));
+    actions.append(createCheckInButton(appointment));
   }
 
   if (appointment.status === 'checked_in') {
@@ -1880,6 +2183,53 @@ function createAppointmentActions(card, appointment) {
   }
 
   return actions;
+}
+
+function createCheckInButton(appointment) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'เช็กอิน';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังเช็กอิน';
+
+    try {
+      await createVisitFromAppointment(appointment);
+      await patchAppointment(appointment.id, { status: 'checked_in' });
+      await refreshPatientWorkspace('Appointments');
+      setStatus('เช็กอินและเข้าคิวแล้ว', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'เช็กอินไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'เช็กอิน';
+    }
+  });
+  return button;
+}
+
+async function createVisitFromAppointment(appointment) {
+  const response = await fetch('/api/visits', {
+    method: 'POST',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify({
+      clinicId: appointment.clinic_id,
+      patientId: appointment.patient_id,
+      appointmentId: appointment.id,
+      practitionerId: appointment.practitioner_id,
+      visitNumber: nextVisitNumber(currentPatient?.medical_record_number),
+      queueLabel: nextQueueLabel(),
+    }),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 function createEncounterActions(encounter) {
@@ -1993,6 +2343,21 @@ function createAppointmentStatusButton(appointment, status, label) {
 
 async function patchAppointment(appointmentId, payload) {
   const response = await fetch(`/api/appointments/${appointmentId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+async function patchVisit(visitId, payload) {
+  const response = await fetch(`/api/visits/${visitId}`, {
     method: 'PATCH',
     headers: buildHeaders(currentApiToken || readValue('apiToken')),
     body: JSON.stringify(payload),
@@ -2212,6 +2577,11 @@ function medicationSummary(item) {
 
 function appointmentSummary(item) {
   return `${item.appointment_number ?? item.id} · ${item.status ?? 'pending'}`;
+}
+
+function visitSummary(item) {
+  const name = [item.patient_first_name, item.patient_last_name].filter(Boolean).join(' ');
+  return `${item.queue_label ?? item.visit_number ?? item.id} · ${name || item.medical_record_number || 'patient'}`;
 }
 
 function practitionerSummary(item) {

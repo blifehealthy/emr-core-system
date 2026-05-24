@@ -10,6 +10,13 @@ export type AppointmentStatus =
   | 'completed'
   | 'cancelled'
   | 'no_show';
+export type ClinicVisitStatus =
+  | 'waiting'
+  | 'in_room'
+  | 'with_doctor'
+  | 'completed'
+  | 'discharged'
+  | 'cancelled';
 export type ConsentStatus = 'granted' | 'revoked' | 'expired' | 'declined';
 export type AttachmentTargetType =
   | 'patient'
@@ -154,6 +161,28 @@ export type UpdateAppointmentInput = {
   scheduledStartAt?: string;
   scheduledEndAt?: string | null;
   reason?: string | null;
+  notes?: string | null;
+};
+
+export type CreateClinicVisitInput = {
+  clinicId: string;
+  patientId: string;
+  appointmentId?: string | null;
+  practitionerId?: string | null;
+  visitNumber: string;
+  status?: ClinicVisitStatus;
+  queueLabel?: string | null;
+  roomName?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateClinicVisitInput = {
+  visitId: string;
+  encounterId?: string | null;
+  practitionerId?: string | null;
+  status?: ClinicVisitStatus;
+  queueLabel?: string | null;
+  roomName?: string | null;
   notes?: string | null;
 };
 
@@ -497,6 +526,14 @@ export type Dependencies = {
   }) => Promise<unknown[]>;
   createAppointment: (input: CreateAppointmentInput) => Promise<unknown>;
   updateAppointment: (input: UpdateAppointmentInput) => Promise<unknown | null>;
+  listClinicQueue?: (input: {
+    clinicId: string;
+    status?: ClinicVisitStatus;
+    practitionerId?: string;
+    limit?: number;
+  }) => Promise<unknown[]>;
+  createClinicVisit?: (input: CreateClinicVisitInput) => Promise<unknown>;
+  updateClinicVisit?: (input: UpdateClinicVisitInput) => Promise<unknown | null>;
   listConsentRecordsByPatient: (input: {
     patientId: string;
     status?: ConsentStatus;

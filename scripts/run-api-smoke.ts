@@ -33,6 +33,7 @@ const migrations = [
   '0010_add_patient_conditions.up.sql',
   '0011_add_patient_medications.up.sql',
   '0012_add_patient_flags.up.sql',
+  '0013_add_clinic_visits.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -472,6 +473,42 @@ async function main() {
     assert.equal(rescheduledAppointment.data.practitioner_id, createdPractitioner.data.id);
     assert.equal(rescheduledAppointment.data.notes, 'Rescheduled in smoke test');
 
+    const visit = await requestJson<{
+      id: string;
+      status: string;
+      queue_label: string | null;
+    }>(
+      '/api/visits',
+      authHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        patientId: '10000000-0000-0000-0000-000000001001',
+        appointmentId: createdAppointment.data.id,
+        practitionerId: createdPractitioner.data.id,
+        visitNumber: 'VIS-SMOKE-001',
+        queueLabel: 'Q-SMOKE',
+      }
+    );
+    assert.equal(visit.data.status, 'waiting');
+
+    const queue = await requestJson<Array<{ id: string; status: string; patient_first_name: string }>>(
+      '/api/queue?clinicId=10000000-0000-0000-0000-000000000101&status=waiting&limit=10',
+      authHeaders
+    );
+    assert.ok(queue.data.some((item) => item.id === visit.data.id));
+
+    const visitWithDoctor = await requestJson<{ id: string; status: string; room_name: string | null }>(
+      `/api/visits/${visit.data.id}`,
+      authHeaders,
+      'PATCH',
+      200,
+      { status: 'with_doctor', roomName: 'Room Smoke' }
+    );
+    assert.equal(visitWithDoctor.data.status, 'with_doctor');
+    assert.equal(visitWithDoctor.data.room_name, 'Room Smoke');
+
     const updatedEncounter = await requestJson<{
       id: string;
       status: string;
@@ -503,6 +540,7 @@ async function main() {
       createdUserId: createdUser.data.id,
       createdPractitionerId: createdPractitioner.data.id,
       createdAppointmentId: createdAppointment.data.id,
+      createdVisitId: visit.data.id,
     });
 
     const createdPrescription = await requestJson<{
@@ -745,6 +783,7 @@ async function assertFrontendProxySmoke(input: {
   createdUserId: string;
   createdPractitionerId: string;
   createdAppointmentId: string;
+  createdVisitId: string;
 }) {
   const html = await httpText('/', FRONTEND_PORT);
   assert.equal(html.statusCode, 200);
@@ -760,6 +799,7 @@ async function assertFrontendProxySmoke(input: {
   const styles = await httpText('/styles.css', FRONTEND_PORT);
   assert.equal(styles.statusCode, 200);
   assert.match(styles.body, /\.admin-pagination/);
+  assert.match(app.body, /renderQueueBoard/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
     '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',
@@ -789,6 +829,12 @@ async function assertFrontendProxySmoke(input: {
     { notes: 'Updated through frontend proxy smoke' }
   );
   assert.equal(appointment.data.notes, 'Updated through frontend proxy smoke');
+
+  const queue = await requestFrontendJson<Array<{ id: string }>>(
+    '/api/queue?clinicId=10000000-0000-0000-0000-000000000101&limit=10',
+    input.authHeaders
+  );
+  assert.ok(queue.data.some((item) => item.id === input.createdVisitId));
 
   const encounter = await requestFrontendJson<{ id: string; triage_summary: string | null }>(
     '/api/encounters/10000000-0000-0000-0000-000000002001',

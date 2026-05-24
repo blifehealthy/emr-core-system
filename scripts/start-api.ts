@@ -2,6 +2,7 @@ import { createNodeServer } from '../backend/api/nodeServer.ts';
 import { createPostgresDb } from '../backend/database/postgres.ts';
 import { createAuditLog } from '../backend/services/createAuditLog.ts';
 import { createAppointment } from '../backend/services/createAppointment.ts';
+import { createClinicVisit } from '../backend/services/createClinicVisit.ts';
 import { createAttachmentLink } from '../backend/services/createAttachmentLink.ts';
 import { createConsentRecord } from '../backend/services/createConsentRecord.ts';
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
@@ -34,6 +35,7 @@ import { getSoapNoteByClinicalNoteId } from '../backend/services/getSoapNoteByCl
 import { getVitalSignById } from '../backend/services/getVitalSignById.ts';
 import { listAttachmentsByTarget } from '../backend/services/listAttachmentsByTarget.ts';
 import { listAppointments } from '../backend/services/listAppointments.ts';
+import { listClinicQueue } from '../backend/services/listClinicQueue.ts';
 import { listConsentRecordsByPatient } from '../backend/services/listConsentRecordsByPatient.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
@@ -54,6 +56,7 @@ import { softDeletePrescription } from '../backend/services/softDeletePrescripti
 import { softDeleteSoapNote } from '../backend/services/softDeleteSoapNote.ts';
 import { softDeleteVitalSign } from '../backend/services/softDeleteVitalSign.ts';
 import { updateAppointment } from '../backend/services/updateAppointment.ts';
+import { updateClinicVisit } from '../backend/services/updateClinicVisit.ts';
 import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
 import { updateEncounter } from '../backend/services/updateEncounter.ts';
@@ -92,6 +95,7 @@ const server = createNodeServer({
   getVitalSignById: getVitalSignById(db),
   getPrescriptionById: getPrescriptionById(db),
   listAppointments: listAppointments(db),
+  listClinicQueue: listClinicQueue(db),
   listAttachmentsByTarget: listAttachmentsByTarget(db),
   listConsentRecordsByPatient: listConsentRecordsByPatient(db),
   listPatientAllergies: listPatientAllergies(db),
@@ -101,6 +105,7 @@ const server = createNodeServer({
   listDiagnosesByEncounter: listDiagnosesByEncounter(db),
   listVitalSignsByEncounter: listVitalSignsByEncounter(db),
   createAppointment: createAppointment(db),
+  createClinicVisit: createClinicVisit(db),
   createAttachmentLink: createAttachmentLink(db),
   createConsentRecord: createConsentRecord(db),
   createFileAsset: createFileAsset(db),
@@ -111,6 +116,7 @@ const server = createNodeServer({
   listUsers: listUsers(db),
   createUser: createUser(db),
   updateAppointment: updateAppointment(db),
+  updateClinicVisit: updateClinicVisit(db),
   updateEncounter: updateEncounter(db),
   updateConsentRecord: updateConsentRecord(db),
   updatePatientAllergy: updatePatientAllergy(db),

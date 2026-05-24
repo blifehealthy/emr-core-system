@@ -3,6 +3,7 @@ import type {
   AllergySeverity,
   AllergyStatus,
   AppointmentStatus,
+  ClinicVisitStatus,
   ConsentStatus,
   PatientConditionStatus,
   PatientFlagSeverity,
@@ -11,6 +12,7 @@ import type {
   PatientSexAtBirth,
   CreateAttachmentLinkInput,
   CreateAppointmentInput,
+  CreateClinicVisitInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
   CreatePatientInput,
@@ -33,6 +35,7 @@ import type {
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
   UpdateAppointmentInput,
+  UpdateClinicVisitInput,
   UpdateConsentRecordInput,
   UpdatePatientAllergyInput,
   UpdatePatientConditionInput,
@@ -46,6 +49,15 @@ import type {
   UserRole,
   PrescriptionStatus,
 } from './types.ts';
+
+const clinicVisitStatuses: ClinicVisitStatus[] = [
+  'waiting',
+  'in_room',
+  'with_doctor',
+  'completed',
+  'discharged',
+  'cancelled',
+];
 
 export function validateCreateEncounterBody(body: unknown):
   | { ok: true; value: CreateEncounterInput }
@@ -571,6 +583,93 @@ export function validateUpdateAppointmentBody(body: unknown, appointmentId: stri
         ? { scheduledEndAt: scheduledEndAt.value }
         : {}),
       ...(Object.hasOwn(candidate, 'reason') ? { reason: reason.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateCreateClinicVisitBody(body: unknown):
+  | { ok: true; value: CreateClinicVisitInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+  const visitNumber = readRequiredString(candidate.visitNumber, 'visitNumber');
+  if (!visitNumber.ok) return visitNumber;
+
+  const appointmentId = readOptionalNullableStringField(candidate, 'appointmentId');
+  if (!appointmentId.ok) return appointmentId;
+  const practitionerId = readOptionalNullableStringField(candidate, 'practitionerId');
+  if (!practitionerId.ok) return practitionerId;
+  const status = readEnumValue<ClinicVisitStatus>(candidate.status, 'status', clinicVisitStatuses);
+  if (!status.ok) return status;
+  const queueLabel = readOptionalNullableStringField(candidate, 'queueLabel');
+  if (!queueLabel.ok) return queueLabel;
+  const roomName = readOptionalNullableStringField(candidate, 'roomName');
+  if (!roomName.ok) return roomName;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      appointmentId: appointmentId.value,
+      practitionerId: practitionerId.value,
+      visitNumber: visitNumber.value,
+      status: status.value,
+      queueLabel: queueLabel.value,
+      roomName: roomName.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateClinicVisitBody(body: unknown, visitId: string):
+  | { ok: true; value: UpdateClinicVisitInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const hasChanges = [
+    'encounterId',
+    'practitionerId',
+    'status',
+    'queueLabel',
+    'roomName',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one visit field must be provided for update' };
+  }
+
+  const encounterId = readOptionalNullableStringField(candidate, 'encounterId');
+  if (!encounterId.ok) return encounterId;
+  const practitionerId = readOptionalNullableStringField(candidate, 'practitionerId');
+  if (!practitionerId.ok) return practitionerId;
+  const status = readEnumValue<ClinicVisitStatus>(candidate.status, 'status', clinicVisitStatuses);
+  if (!status.ok) return status;
+  const queueLabel = readOptionalNullableStringField(candidate, 'queueLabel');
+  if (!queueLabel.ok) return queueLabel;
+  const roomName = readOptionalNullableStringField(candidate, 'roomName');
+  if (!roomName.ok) return roomName;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      visitId,
+      ...(Object.hasOwn(candidate, 'encounterId') ? { encounterId: encounterId.value } : {}),
+      ...(Object.hasOwn(candidate, 'practitionerId') ? { practitionerId: practitionerId.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'queueLabel') ? { queueLabel: queueLabel.value } : {}),
+      ...(Object.hasOwn(candidate, 'roomName') ? { roomName: roomName.value } : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
