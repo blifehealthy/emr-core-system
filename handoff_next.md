@@ -3,8 +3,8 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add admin filters and workflow smoke coverage`)
-- Previous checkpoint before this worktree: `1fee16c` (`Add clinic admin and encounter edit frontend`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add admin API pagination and frontend smoke coverage`)
+- Previous checkpoint before this worktree: `3f848df` (`Add admin filters and workflow smoke coverage`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
   - `npm run start:frontend`
@@ -18,13 +18,13 @@
   - appointment edit/reschedule form wired to `PATCH /api/appointments/:id`
   - practitioner picker loaded with `GET /api/practitioners?clinicId=...`
   - clinic setup tab for user/practitioner administration:
-    - list users with `GET /api/users?clinicId=...`
+    - list users with `GET /api/users?clinicId=...&search=...&active=...&limit=...&offset=...`
     - create/update users with `POST /api/users` and `PATCH /api/users/:id`
-    - search and active/inactive filters for users
+    - API-backed search, active/inactive filters, and pagination for users
     - deactivate/reactivate users with `PATCH /api/users/:id`
-    - list practitioners with `GET /api/practitioners?clinicId=...`
+    - list practitioners with `GET /api/practitioners?clinicId=...&search=...&active=...&limit=...&offset=...`
     - create/update practitioners with `POST /api/practitioners` and `PATCH /api/practitioners/:id`
-    - search and active/inactive filters for practitioners
+    - API-backed search, active/inactive filters, and pagination for practitioners
     - deactivate/reactivate practitioners with `PATCH /api/practitioners/:id`
   - appointment status controls wired to `PATCH /api/appointments/:id`
   - check-in represented by the `checked_in` appointment status
@@ -56,7 +56,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `73/73` passing
+  - current result: `75/75` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - `npm run db:test`
@@ -132,9 +132,13 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npx tsc --noEmit`
   - API smoke workflow coverage
   - current result: passing
-  - now covers clinic setup user/practitioner create-update-list, appointment reschedule, and encounter edit
+  - now covers clinic setup user/practitioner create-update-list, admin search/status pagination, appointment reschedule, encounter edit, frontend asset loading, and frontend proxy API flows
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
+  - targeted admin list pagination/filter tests
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/listUsers.test.ts backend/services/listPractitioners.test.ts`
   - targeted user update validation tests
   - current result: passing
   - command used on this machine:
@@ -177,7 +181,8 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient registration API added with `POST /api/patients`
 - frontend patient registration, lookup, clinic user/practitioner administration, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, and note finalize/sign
 - frontend clinic admin search, active/inactive filters, and deactivate/reactivate controls for users and practitioners
-- API smoke coverage for clinic setup user/practitioner flows, appointment reschedule, and encounter edit
+- API-backed admin list pagination/filtering for users and practitioners
+- API/frontend proxy smoke coverage for clinic setup user/practitioner flows, appointment reschedule, and encounter edit
 - user update validation now preserves omitted fields such as `role` during partial PATCH requests
 - code-level appointment state transition guard in the appointment update API
 - code-level encounter state transition guard in the encounter update API
@@ -188,7 +193,8 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 
 Recent commits on `main`:
 
-- current `HEAD` Add admin filters and workflow smoke coverage
+- current `HEAD` Add admin API pagination and frontend smoke coverage
+- `3f848df` Add admin filters and workflow smoke coverage
 - `1fee16c` Add clinic admin and encounter edit frontend
 - `5b289f8` Add encounter workflow and appointment rescheduling
 - `01d9a28` Add note signing and appointment transition guards
@@ -232,7 +238,7 @@ Phase 1 is no longer blocked on the major clinical entities.
 - access foundation:
   - users
   - practitioners
-  - frontend user/practitioner administration with search, active/inactive filters, and deactivate/reactivate controls
+  - frontend user/practitioner administration with API-backed search, active/inactive filters, pagination, and deactivate/reactivate controls
   - role-gated API checks
 
 ### Remaining Follow-ups For A Strong Phase 1 Close
@@ -251,8 +257,8 @@ handoff references the project plan that was present in the transfer snapshot.
 
 If coming back fresh after this pass:
 
-1. add API-side pagination/filtering for user and practitioner admin lists
-2. add browser-level frontend smoke coverage for clinic admin, appointment reschedule, and encounter edit flows
+1. add audit-log list/view UI for admin-visible changes
+2. add practitioner/user uniqueness conflict messaging in the frontend forms
 
 The deliverables added in this worktree are:
 
@@ -263,17 +269,17 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with search/status filters/deactivate controls, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, note finalize/sign, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, encounter metadata edit, SOAP read/update, note finalize/sign, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
-- expanded API smoke coverage for clinic setup, appointment reschedule, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, appointment reschedule, and encounter edit
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, user create/update/list, practitioner create/update/list, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, user create/update/list/search/page, practitioner create/update/list/search/page, appointment create/update/list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -290,5 +296,5 @@ Start by reading:
 
 Then produce:
 
-1. API-side pagination/filtering for user and practitioner admin lists
-2. browser-level frontend smoke coverage for clinic admin, appointment reschedule, and encounter edit flows
+1. audit-log list/view UI for admin-visible changes
+2. clearer conflict handling in user/practitioner frontend forms

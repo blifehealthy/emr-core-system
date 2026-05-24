@@ -1084,8 +1084,30 @@ export async function handleListUsers(
     return validationError('clinicId is required query parameter');
   }
 
-  const users = await dependencies.listUsers({ clinicId });
-  return { status: 200, headers: JSON_HEADERS, body: { data: toUserDtos(users) } };
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const users = await dependencies.listUsers({
+    clinicId,
+    search: search.value,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toUserDtos(users.rows), meta: users.meta },
+  };
 }
 
 export async function handleCreateUser(
@@ -1147,8 +1169,30 @@ export async function handleListPractitioners(
     return validationError('clinicId is required query parameter');
   }
 
-  const practitioners = await dependencies.listPractitioners({ clinicId });
-  return { status: 200, headers: JSON_HEADERS, body: { data: toPractitionerDtos(practitioners) } };
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const practitioners = await dependencies.listPractitioners({
+    clinicId,
+    search: search.value,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPractitionerDtos(practitioners.rows), meta: practitioners.meta },
+  };
 }
 
 export async function handleCreatePractitioner(

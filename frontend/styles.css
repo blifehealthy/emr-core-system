@@ -396,8 +396,18 @@ button:disabled {
 
 .admin-filter-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px;
+  grid-template-columns: minmax(0, 1fr) 140px auto;
   gap: 10px;
+  align-items: center;
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .inline-profile-form {
@@ -629,6 +639,19 @@ pre {
 
   .inline-profile-form {
     grid-template-columns: 1fr;
+  }
+
+  .admin-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-pagination {
+    justify-content: stretch;
+  }
+
+  .admin-pagination span {
+    flex: 1;
+    text-align: center;
   }
 
   .appointment-form,

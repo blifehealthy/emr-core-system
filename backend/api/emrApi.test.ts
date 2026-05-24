@@ -127,7 +127,10 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
       };
     },
     async listUsers() {
-      return [];
+      return {
+        rows: [],
+        meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+      };
     },
     async createUser() {
       return { id: 'user-1' };
@@ -136,7 +139,10 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
       return { id: 'user-1' };
     },
     async listPractitioners() {
-      return [];
+      return {
+        rows: [],
+        meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+      };
     },
     async createPractitioner() {
       return { id: 'practitioner-1' };
@@ -1460,14 +1466,24 @@ test('users, practitioners, and prescriptions APIs work and enforce roles', asyn
     makeDeps({
       async listUsers(input) {
         assert.equal(input.clinicId, 'clinic-1');
-        return [{ id: 'user-1' }];
+        assert.equal(input.search, 'doc');
+        assert.equal(input.active, 'active');
+        assert.equal(input.limit, 10);
+        assert.equal(input.offset, 5);
+        return {
+          rows: [{ id: 'user-1' }],
+          meta: { limit: 10, offset: 5, hasMore: false, nextOffset: null },
+        };
       },
       async createUser(input) {
         assert.equal(input.role, 'doctor');
         return { id: 'user-1' };
       },
       async listPractitioners() {
-        return [{ id: 'practitioner-1' }];
+        return {
+          rows: [{ id: 'practitioner-1' }],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
       },
       async createPractitioner() {
         return { id: 'practitioner-1' };
@@ -1489,9 +1505,13 @@ test('users, practitioners, and prescriptions APIs work and enforce roles', asyn
     method: 'GET',
     path: '/api/users',
     headers: { 'x-user-role': 'admin' },
-    query: { clinicId: 'clinic-1' },
+    query: { clinicId: 'clinic-1', search: 'doc', active: 'active', limit: '10', offset: '5' },
   });
   assert.equal(listUsers.status, 200);
+  assert.deepEqual(listUsers.body, {
+    data: [{ id: 'user-1' }],
+    meta: { limit: 10, offset: 5, hasMore: false, nextOffset: null },
+  });
 
   const createUser = await api({
     method: 'POST',
@@ -1508,6 +1528,10 @@ test('users, practitioners, and prescriptions APIs work and enforce roles', asyn
     query: { clinicId: 'clinic-1' },
   });
   assert.equal(listPractitioners.status, 200);
+  assert.deepEqual(listPractitioners.body, {
+    data: [{ id: 'practitioner-1' }],
+    meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+  });
 
   const createPrescription = await api({
     method: 'POST',

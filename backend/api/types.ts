@@ -60,6 +60,8 @@ export type PaginatedListResult<T = unknown> = {
   };
 };
 
+export type AdminActiveFilter = 'active' | 'inactive' | 'all';
+
 export type CreateEncounterInput = {
   patientId: string;
   encounterNumber: string;
@@ -549,10 +551,22 @@ export type Dependencies = {
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;
-  listUsers: (input: { clinicId: string }) => Promise<unknown[]>;
+  listUsers: (input: {
+    clinicId: string;
+    search?: string;
+    active?: AdminActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
   createUser: (input: CreateUserInput) => Promise<unknown>;
   updateUser: (input: UpdateUserInput) => Promise<unknown | null>;
-  listPractitioners: (input: { clinicId: string }) => Promise<unknown[]>;
+  listPractitioners: (input: {
+    clinicId: string;
+    search?: string;
+    active?: AdminActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
   createPractitioner: (input: CreatePractitionerInput) => Promise<unknown>;
   updatePractitioner: (input: UpdatePractitionerInput) => Promise<unknown | null>;
   listPrescriptionsByEncounter: (input: {

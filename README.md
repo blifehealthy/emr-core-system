@@ -106,7 +106,9 @@ The frontend dev server listens on `http://127.0.0.1:5173` and proxies
 `/api/*` plus `/health` to `API_BASE_URL`, which defaults to
 `http://127.0.0.1:3000`.
 
-Run an end-to-end HTTP smoke test against a temporary Docker Postgres database:
+Run an end-to-end HTTP smoke test against a temporary Docker Postgres database.
+The smoke test starts the API and frontend dev proxy, then exercises API flows
+and selected `/api/*` requests through the frontend proxy:
 
 ```bash
 npm run api:smoke

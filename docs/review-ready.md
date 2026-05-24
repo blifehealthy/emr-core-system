@@ -12,7 +12,7 @@
 - Run `npm test` for TypeScript unit and migration guard tests
 - Run `DATABASE_URL=... npm run db:test` when local `psql` is available
 - Or run `POSTGRES_CONTAINER=... POSTGRES_DB=... npm run db:test` to use `docker exec`
-- Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database
+- Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database, including selected frontend proxy flows
 
 ## Verified
 

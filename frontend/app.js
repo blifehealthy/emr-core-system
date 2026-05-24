@@ -26,6 +26,16 @@ let currentAdminFilters = {
   practitionersSearch: '',
   practitionersActive: 'active',
 };
+let currentAdminPagination = {
+  usersLimit: 10,
+  usersOffset: 0,
+  practitionersLimit: 10,
+  practitionersOffset: 0,
+};
+let currentAdminMeta = {
+  users: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
+  practitioners: { limit: 10, offset: 0, hasMore: false, nextOffset: null },
+};
 
 const createProfileConfigs = {
   Flags: {
@@ -307,17 +317,17 @@ async function fetchPatientAppointments(patient, apiToken) {
 }
 
 async function fetchPatientProfileBundle(patient, apiToken) {
-  const [profile, appointments, practitioners] = await Promise.all([
+  const [profile, appointments, practitionersPage] = await Promise.all([
     fetchClinicalProfile(patient.id, apiToken),
     fetchPatientAppointments(patient, apiToken),
-    fetchPractitioners(patient.clinic_id, apiToken),
+    fetchPractitioners(patient.clinic_id, apiToken, { active: 'active', limit: 200, offset: 0 }),
   ]);
 
-  return { ...profile, appointments, practitioners };
+  return { ...profile, appointments, practitioners: practitionersPage.items };
 }
 
-async function fetchPractitioners(clinicId, apiToken) {
-  const searchParams = new URLSearchParams({ clinicId });
+async function fetchPractitioners(clinicId, apiToken, filters = {}) {
+  const searchParams = buildAdminSearchParams(clinicId, filters);
   const response = await fetch(`/api/practitioners?${searchParams.toString()}`, {
     headers: buildHeaders(apiToken),
   });
@@ -327,11 +337,14 @@ async function fetchPractitioners(clinicId, apiToken) {
     throw new Error(result.detail || result.error || `HTTP ${response.status}`);
   }
 
-  return result.data ?? [];
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: filters.limit ?? 50, offset: filters.offset ?? 0, hasMore: false, nextOffset: null },
+  };
 }
 
-async function fetchUsers(clinicId, apiToken) {
-  const searchParams = new URLSearchParams({ clinicId });
+async function fetchUsers(clinicId, apiToken, filters = {}) {
+  const searchParams = buildAdminSearchParams(clinicId, filters);
   const response = await fetch(`/api/users?${searchParams.toString()}`, {
     headers: buildHeaders(apiToken),
   });
@@ -341,16 +354,42 @@ async function fetchUsers(clinicId, apiToken) {
     throw new Error(result.detail || result.error || `HTTP ${response.status}`);
   }
 
-  return result.data ?? [];
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: filters.limit ?? 50, offset: filters.offset ?? 0, hasMore: false, nextOffset: null },
+  };
+}
+
+function buildAdminSearchParams(clinicId, filters = {}) {
+  const searchParams = new URLSearchParams({ clinicId });
+  if (filters.search) searchParams.set('search', filters.search);
+  if (filters.active && filters.active !== 'all') searchParams.set('active', filters.active);
+  if (filters.limit !== undefined) searchParams.set('limit', String(filters.limit));
+  if (filters.offset !== undefined) searchParams.set('offset', String(filters.offset));
+  return searchParams;
 }
 
 async function fetchAdminBundle(clinicId, apiToken) {
-  const [users, practitioners] = await Promise.all([
-    fetchUsers(clinicId, apiToken),
-    fetchPractitioners(clinicId, apiToken),
+  const [usersPage, practitionersPage] = await Promise.all([
+    fetchUsers(clinicId, apiToken, {
+      search: currentAdminFilters.usersSearch.trim(),
+      active: currentAdminFilters.usersActive,
+      limit: currentAdminPagination.usersLimit,
+      offset: currentAdminPagination.usersOffset,
+    }),
+    fetchPractitioners(clinicId, apiToken, {
+      search: currentAdminFilters.practitionersSearch.trim(),
+      active: currentAdminFilters.practitionersActive,
+      limit: currentAdminPagination.practitionersLimit,
+      offset: currentAdminPagination.practitionersOffset,
+    }),
   ]);
+  currentAdminMeta = {
+    users: usersPage.meta,
+    practitioners: practitionersPage.meta,
+  };
 
-  return { users, practitioners };
+  return { users: usersPage.items, practitioners: practitionersPage.items };
 }
 
 function compactPayload(payload) {
@@ -489,20 +528,9 @@ function showPatientDetail(patient, profile = {}) {
 
 function renderAdminWorkspace(clinicId) {
   adminWorkspace.hidden = false;
-  const users = filterAdminItems(currentAdmin.users, currentAdminFilters.usersSearch, currentAdminFilters.usersActive, [
-    'username',
-    'display_name',
-    'role',
-  ]);
-  const practitioners = filterAdminItems(
-    currentAdmin.practitioners,
-    currentAdminFilters.practitionersSearch,
-    currentAdminFilters.practitionersActive,
-    ['practitioner_code', 'first_name', 'last_name', 'specialty', 'license_number']
-  );
 
   adminWorkspace.replaceChildren(
-    createAdminSection('Users', 'users', createUserForm(clinicId), users, userSummary, [
+    createAdminSection('Users', 'users', createUserForm(clinicId), currentAdmin.users, userSummary, [
       'role',
       'is_active',
       'username',
@@ -511,7 +539,7 @@ function renderAdminWorkspace(clinicId) {
       'Practitioners',
       'practitioners',
       createPractitionerForm(clinicId),
-      practitioners,
+      currentAdmin.practitioners,
       practitionerSummary,
       ['practitioner_code', 'specialty', 'is_active'],
       createPractitionerActions
@@ -551,7 +579,8 @@ function createAdminFilterBar(filterKey) {
       ...currentAdminFilters,
       [`${filterKey}Search`]: search.value,
     };
-    renderAdminWorkspace(readValue('adminClinicId'));
+    setAdminOffset(filterKey, 0);
+    reloadAdminWorkspace();
   });
 
   const active = createSelect('activeFilter', ['active', 'inactive', 'all']);
@@ -561,25 +590,65 @@ function createAdminFilterBar(filterKey) {
       ...currentAdminFilters,
       [`${filterKey}Active`]: active.value,
     };
-    renderAdminWorkspace(readValue('adminClinicId'));
+    setAdminOffset(filterKey, 0);
+    reloadAdminWorkspace();
   });
 
-  filters.append(search, active);
+  filters.append(search, active, createAdminPagination(filterKey));
   return filters;
 }
 
-function filterAdminItems(items, searchValue, activeFilter, fields) {
-  const query = String(searchValue ?? '').trim().toLowerCase();
-  return items.filter((item) => {
-    const activeMatches =
-      activeFilter === 'all' ||
-      (activeFilter === 'active' && item.is_active !== false) ||
-      (activeFilter === 'inactive' && item.is_active === false);
-    if (!activeMatches) return false;
-    if (!query) return true;
+function createAdminPagination(filterKey) {
+  const meta = currentAdminMeta[filterKey];
+  const controls = document.createElement('div');
+  controls.className = 'admin-pagination';
 
-    return fields.some((field) => String(item[field] ?? '').toLowerCase().includes(query));
+  const previous = document.createElement('button');
+  previous.type = 'button';
+  previous.className = 'secondary-button small-button';
+  previous.textContent = 'ก่อนหน้า';
+  previous.disabled = meta.offset === 0;
+  previous.addEventListener('click', () => {
+    setAdminOffset(filterKey, Math.max(0, meta.offset - meta.limit));
+    reloadAdminWorkspace();
   });
+
+  const label = document.createElement('span');
+  const pageCount = currentAdmin[filterKey].length;
+  label.textContent = pageCount === 0 ? '0' : `${meta.offset + 1}-${meta.offset + pageCount}`;
+
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'secondary-button small-button';
+  next.textContent = 'ถัดไป';
+  next.disabled = !meta.hasMore;
+  next.addEventListener('click', () => {
+    setAdminOffset(filterKey, meta.nextOffset ?? meta.offset + meta.limit);
+    reloadAdminWorkspace();
+  });
+
+  controls.append(previous, label, next);
+  return controls;
+}
+
+function setAdminOffset(filterKey, offset) {
+  currentAdminPagination = {
+    ...currentAdminPagination,
+    [`${filterKey}Offset`]: offset,
+  };
+}
+
+async function reloadAdminWorkspace() {
+  const clinicId = readValue('adminClinicId');
+  if (!clinicId) return;
+
+  try {
+    currentAdmin = await fetchAdminBundle(clinicId, currentApiToken || readValue('apiToken'));
+    renderAdminWorkspace(clinicId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'โหลดข้อมูลตั้งค่าคลินิกไม่สำเร็จ';
+    setStatus(message, 'error');
+  }
 }
 
 function createUserForm(clinicId, user = null) {

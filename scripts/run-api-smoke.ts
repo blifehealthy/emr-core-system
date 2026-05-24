@@ -9,6 +9,7 @@ const ROOT_DIR = process.cwd();
 const MIGRATIONS_DIR = join(ROOT_DIR, 'database', 'migrations');
 const SEED_SQL = join(ROOT_DIR, 'database', 'tests', 'api_smoke_seed.sql');
 const PORT = Number(process.env.API_PORT ?? '3105');
+const FRONTEND_PORT = Number(process.env.FRONTEND_PORT ?? '5175');
 const API_TOKEN = process.env.API_TOKEN ?? 'dev-smoke-token';
 
 const POSTGRES_CONTAINER = process.env.POSTGRES_CONTAINER ?? 'poolproject-postgres';
@@ -37,6 +38,7 @@ const migrations = [
 async function main() {
   const databaseUrl = buildDatabaseUrl(TEMP_DB);
   let serverProcess: ReturnType<typeof spawn> | null = null;
+  let frontendProcess: ReturnType<typeof spawn> | null = null;
 
   try {
     dockerExec(['createdb', '-U', POSTGRES_USER, TEMP_DB]);
@@ -70,6 +72,28 @@ async function main() {
     }
 
     await waitForHealth();
+
+    frontendProcess = spawn(
+      process.execPath,
+      ['--loader', 'ts-node/esm', 'scripts/start-frontend.ts'],
+      {
+        cwd: ROOT_DIR,
+        env: {
+          ...process.env,
+          API_BASE_URL: `http://127.0.0.1:${PORT}`,
+          FRONTEND_PORT: String(FRONTEND_PORT),
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+
+    for (const stream of [frontendProcess.stdout, frontendProcess.stderr]) {
+      stream?.on('data', (chunk) => {
+        output.push(String(chunk));
+      });
+    }
+
+    await waitForFrontendHealth();
 
     const authHeaders = {
       Authorization: `Bearer ${API_TOKEN}`,
@@ -362,15 +386,27 @@ async function main() {
     assert.equal(updatedPractitioner.data.is_active, false);
 
     const users = await requestJson<Array<{ id: string; username: string }>>(
-      '/api/users?clinicId=10000000-0000-0000-0000-000000000101',
+      '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',
       adminHeaders
     );
+    assert.deepEqual(users.meta, {
+      limit: 1,
+      offset: 0,
+      hasMore: false,
+      nextOffset: null,
+    });
     assert.ok(users.data.some((user) => user.id === createdUser.data.id));
 
     const practitioners = await requestJson<Array<{ id: string; practitioner_code: string }>>(
-      '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101',
+      '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101&search=primary&active=inactive&limit=1&offset=0',
       authHeaders
     );
+    assert.deepEqual(practitioners.meta, {
+      limit: 1,
+      offset: 0,
+      hasMore: false,
+      nextOffset: null,
+    });
     assert.ok(practitioners.data.some((practitioner) => practitioner.id === createdPractitioner.data.id));
 
     const createdAppointment = await requestJson<{
@@ -439,6 +475,14 @@ async function main() {
     assert.equal(updatedEncounter.data.status, 'completed');
     assert.equal(updatedEncounter.data.chief_complaint, 'Improving cough');
     assert.equal(updatedEncounter.data.triage_summary, 'Stable for discharge');
+
+    await assertFrontendProxySmoke({
+      adminHeaders,
+      authHeaders,
+      createdUserId: createdUser.data.id,
+      createdPractitionerId: createdPractitioner.data.id,
+      createdAppointmentId: createdAppointment.data.id,
+    });
 
     const createdPrescription = await requestJson<{
       id: string;
@@ -587,8 +631,13 @@ async function main() {
     assert.equal(deletedFlag.data.id, createdFlag.data.id);
     assert.ok(deletedFlag.data.deleted_at);
 
-    console.log('API smoke test passed');
+    console.log('API/frontend smoke test passed');
   } finally {
+    if (frontendProcess) {
+      frontendProcess.kill('SIGTERM');
+      await onceExit(frontendProcess);
+    }
+
     if (serverProcess) {
       serverProcess.kill('SIGTERM');
       await onceExit(serverProcess);
@@ -648,6 +697,80 @@ async function waitForHealth() {
   throw lastError ?? new Error('health check timed out');
 }
 
+async function waitForFrontendHealth() {
+  const deadline = Date.now() + 20_000;
+  let lastError: unknown = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await httpJson<{ status: string }>('/health', {}, 'GET', undefined, FRONTEND_PORT);
+      if (response.statusCode === 200 && response.body.status === 'ok') {
+        return;
+      }
+      lastError = new Error(`frontend health check returned ${response.statusCode}`);
+    } catch (error) {
+      lastError = error;
+    }
+
+    await sleep(250);
+  }
+
+  throw lastError ?? new Error('frontend health check timed out');
+}
+
+async function assertFrontendProxySmoke(input: {
+  adminHeaders: Record<string, string>;
+  authHeaders: Record<string, string>;
+  createdUserId: string;
+  createdPractitionerId: string;
+  createdAppointmentId: string;
+}) {
+  const html = await httpText('/', FRONTEND_PORT);
+  assert.equal(html.statusCode, 200);
+  assert.match(html.body, /admin-workspace/);
+  assert.match(html.body, /app\.js/);
+
+  const app = await httpText('/app.js', FRONTEND_PORT);
+  assert.equal(app.statusCode, 200);
+  assert.match(app.body, /createAdminPagination/);
+
+  const styles = await httpText('/styles.css', FRONTEND_PORT);
+  assert.equal(styles.statusCode, 200);
+  assert.match(styles.body, /\.admin-pagination/);
+
+  const users = await requestFrontendJson<Array<{ id: string }>>(
+    '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',
+    input.adminHeaders
+  );
+  assert.deepEqual(users.meta, { limit: 1, offset: 0, hasMore: false, nextOffset: null });
+  assert.equal(users.data[0].id, input.createdUserId);
+
+  const practitioners = await requestFrontendJson<Array<{ id: string }>>(
+    '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101&search=primary&active=inactive&limit=1&offset=0',
+    input.authHeaders
+  );
+  assert.deepEqual(practitioners.meta, { limit: 1, offset: 0, hasMore: false, nextOffset: null });
+  assert.equal(practitioners.data[0].id, input.createdPractitionerId);
+
+  const appointment = await requestFrontendJson<{ id: string; notes: string | null }>(
+    `/api/appointments/${input.createdAppointmentId}`,
+    input.authHeaders,
+    'PATCH',
+    200,
+    { notes: 'Updated through frontend proxy smoke' }
+  );
+  assert.equal(appointment.data.notes, 'Updated through frontend proxy smoke');
+
+  const encounter = await requestFrontendJson<{ id: string; triage_summary: string | null }>(
+    '/api/encounters/10000000-0000-0000-0000-000000002001',
+    input.authHeaders,
+    'PATCH',
+    200,
+    { triageSummary: 'Frontend proxy smoke reviewed' }
+  );
+  assert.equal(encounter.data.triage_summary, 'Frontend proxy smoke reviewed');
+}
+
 async function requestJson<TData>(
   path: string,
   headers: Record<string, string>,
@@ -656,6 +779,22 @@ async function requestJson<TData>(
   requestBody?: unknown
 ) {
   const response = await httpJson<TData>(path, headers, method, requestBody);
+  const responseBody = response.body;
+  assert.equal(response.statusCode, expectedStatus, JSON.stringify(responseBody));
+  return responseBody as {
+    data: TData;
+    meta?: { limit: number; offset: number; hasMore: boolean; nextOffset: number | null };
+  };
+}
+
+async function requestFrontendJson<TData>(
+  path: string,
+  headers: Record<string, string>,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
+  expectedStatus = 200,
+  requestBody?: unknown
+) {
+  const response = await httpJson<TData>(path, headers, method, requestBody, FRONTEND_PORT);
   const responseBody = response.body;
   assert.equal(response.statusCode, expectedStatus, JSON.stringify(responseBody));
   return responseBody as {
@@ -683,14 +822,15 @@ function httpJson<TData>(
   path: string,
   headers: Record<string, string> = {},
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE' = 'GET',
-  body?: unknown
+  body?: unknown,
+  port = PORT
 ) {
   return new Promise<{ statusCode: number; body: TData }>((resolve, reject) => {
     const rawBody = body === undefined ? undefined : JSON.stringify(body);
     const req = httpRequest(
       {
         host: '127.0.0.1',
-        port: PORT,
+        port,
         path,
         method,
         headers: {
@@ -730,6 +870,36 @@ function httpJson<TData>(
     if (rawBody) {
       req.write(rawBody);
     }
+    req.end();
+  });
+}
+
+function httpText(path: string, port: number) {
+  return new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
+    const req = httpRequest(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method: 'GET',
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+
+        res.on('data', (chunk) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+
+        res.on('end', () => {
+          resolve({
+            statusCode: res.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString('utf8'),
+          });
+        });
+      }
+    );
+
+    req.on('error', reject);
     req.end();
   });
 }
