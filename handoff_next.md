@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint before this worktree: `78f84f9` (`Add appointment check-in frontend workflow`)
+- Latest completed checkpoint before this worktree: `01d9a28` (`Add note signing and appointment transition guards`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
   - `npm run start:frontend`
@@ -14,6 +14,8 @@
   - edit and soft-delete controls for flags, allergies, conditions, and medications
   - appointment list loaded with `GET /api/appointments?clinicId=...&patientId=...`
   - appointment create form wired to `POST /api/appointments`
+  - appointment edit/reschedule form wired to `PATCH /api/appointments/:id`
+  - practitioner picker loaded with `GET /api/practitioners?clinicId=...`
   - appointment status controls wired to `PATCH /api/appointments/:id`
   - check-in represented by the `checked_in` appointment status
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
@@ -22,11 +24,19 @@
   - open SOAP notes from the Notes subview
   - edit and save SOAP subjective/objective/assessment/plan fields
   - finalize/sign clinical notes from the Notes subview with `PATCH /api/clinical-notes/:id/finalize` and `PATCH /api/clinical-notes/:id/sign`
+  - encounter read/update APIs added:
+    - `GET /api/encounters/:id`
+    - `PATCH /api/encounters/:id`
+  - encounter status controls in the Encounters subview:
+    - `draft -> in_progress/cancelled`
+    - `in_progress -> completed/cancelled`
+    - `completed -> signed`
   - appointment status transitions are guarded server-side:
     - `pending -> confirmed/cancelled`
     - `confirmed -> checked_in/cancelled/no_show`
     - `checked_in -> completed`
     - terminal states reject further status transitions with `409`
+  - encounter status transitions are guarded server-side with `409` on unsupported jumps
   - frontend dev proxy for `/api/*` and `/health`
 - Previous verified patient registration API:
   - `POST /api/patients`
@@ -35,7 +45,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `72/72` passing
+  - current result: `73/73` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - `npm run db:test`
@@ -101,6 +111,10 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/updateAppointment.test.ts`
+  - targeted encounter workflow tests
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/updateEncounter.test.ts backend/services/updateAppointment.test.ts`
 
 ## Local Tooling
 
@@ -137,8 +151,9 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 - patient flags API flow
 - active patient flags included in `GET /api/patients/detail`
 - patient registration API added with `POST /api/patients`
-- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, encounter/SOAP entry, SOAP read/update, and note finalize/sign
+- frontend patient registration, lookup, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, SOAP read/update, and note finalize/sign
 - code-level appointment state transition guard in the appointment update API
+- code-level encounter state transition guard in the encounter update API
 - Phase 1 governance/API documentation:
   - role/permission matrix
   - workflow state definition
@@ -146,6 +161,7 @@ Core EMR Phase 1 entity/API work is now substantially in place:
 
 Recent commits on `main`:
 
+- `01d9a28` Add note signing and appointment transition guards
 - `78f84f9` Add appointment check-in frontend workflow
 - `f5a3b3f` Add SOAP note editing frontend
 - `dab1082` Add encounter SOAP entry frontend
@@ -174,6 +190,8 @@ Phase 1 is no longer blocked on the major clinical entities.
   - frontend check-in workflow through appointment status
   - appointment transition guard in API update flow
   - encounters
+  - frontend encounter status workflow
+  - encounter transition guard in API update flow
   - SOAP
   - diagnoses
   - vital signs
@@ -195,15 +213,15 @@ handoff references the project plan that was present in the transfer snapshot.
 
 1. Review the new Phase 1 documentation deliverables against product intent.
 2. Decide whether `patient_flags` needs more predefined `flag_type` policy or should remain flexible text for Phase 1.
-3. Decide whether additional state transition rules beyond appointments should move from documentation into code-level guards.
+3. Decide whether additional state transition rules beyond appointments and encounters should move from documentation into code-level guards.
 4. Review whether registration should collect additional demographics before frontend work.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add encounter status transition/finalize/sign workflow beyond clinical-note signing
-2. add richer appointment editing/rescheduling UI and practitioner picker
+1. add frontend practitioner/user administration so the picker has an in-app setup path
+2. add richer encounter editing for class, chief complaint, triage summary, and attending clinician
 
 The deliverables added in this worktree are:
 
@@ -214,15 +232,16 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, encounter/SOAP entry, SOAP read/update, note finalize/sign, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow, SOAP read/update, note finalize/sign, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
+- encounter read/update API, service, validation, and transition guard
 
 This was the highest-leverage next move because:
 
 - the backend foundations are already implemented
 - patient registration is the front door for clinical workflows
 - frontend MVP work needs a stable way to create patients before encounter/SOAP flows
-- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, appointment create/update/list, encounter/SOAP create, SOAP read/update, and note finalize/sign APIs
+- the first usable frontend screen now exercises registration, patient-detail, profile-list, profile-create, profile-update, profile-delete, appointment create/update/list, practitioner list, encounter/SOAP create, encounter read/update, SOAP read/update, and note finalize/sign APIs
 
 ## Concrete Guidance For The Next Session
 
@@ -239,5 +258,5 @@ Start by reading:
 
 Then produce:
 
-1. encounter status transition/finalize/sign workflow beyond clinical-note signing
-2. richer appointment editing/rescheduling UI and practitioner picker
+1. frontend practitioner/user administration so the picker has an in-app setup path
+2. richer encounter editing for class, chief complaint, triage summary, and attending clinician

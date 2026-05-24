@@ -8,6 +8,7 @@ import {
   toConsentRecordDtos,
   toDiagnosisDto,
   toDiagnosisDtos,
+  toEncounterDto,
   toFileAssetDto,
   toPatientDto,
   toPatientAllergyDto,
@@ -48,6 +49,7 @@ import {
   validateSignClinicalNoteBody,
   validateUpdateAppointmentBody,
   validateUpdateConsentRecordBody,
+  validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
   validateUpdatePatientConditionBody,
   validateUpdatePatientFlagBody,
@@ -60,7 +62,13 @@ import {
   validateUpdateVitalSignBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
-import type { AppointmentStatus, Dependencies, HttpRequest, HttpResponse } from './types.ts';
+import type {
+  AppointmentStatus,
+  Dependencies,
+  EncounterStatus,
+  HttpRequest,
+  HttpResponse,
+} from './types.ts';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const appointmentTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
@@ -70,6 +78,13 @@ const appointmentTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
   completed: [],
   cancelled: [],
   no_show: [],
+};
+const encounterTransitions: Record<EncounterStatus, EncounterStatus[]> = {
+  draft: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: ['signed'],
+  signed: [],
+  cancelled: [],
 };
 
 export async function handleHealthCheck(dependencies: Dependencies): Promise<HttpResponse> {
@@ -365,6 +380,75 @@ export async function handleUpdateAppointment(
   };
 }
 
+export async function handleGetEncounter(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  encounterId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getEncounterById) {
+    return mapError(new Error('Encounter read dependency is not configured'));
+  }
+
+  const encounter = await dependencies.getEncounterById({ encounterId });
+  if (!encounter) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Encounter not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toEncounterDto(encounter) } };
+}
+
+export async function handleUpdateEncounter(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  encounterId: string
+): Promise<HttpResponse> {
+  const validation = validateUpdateEncounterBody(request.body, encounterId);
+  if (!validation.ok) return validationError(validation.error);
+
+  if (validation.value.status) {
+    if (!dependencies.getEncounterById) {
+      return mapError(new Error('Encounter read dependency is not configured'));
+    }
+
+    const currentEncounter = await dependencies.getEncounterById({ encounterId });
+    if (!currentEncounter) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Encounter not found' } };
+    }
+
+    const currentStatus = readEncounterStatus(currentEncounter);
+    if (!currentStatus) {
+      return mapError(new Error('Encounter status is not available'));
+    }
+
+    if (!isAllowedEncounterTransition(currentStatus, validation.value.status)) {
+      return {
+        status: 409,
+        headers: JSON_HEADERS,
+        body: {
+          error: `Encounter cannot transition from ${currentStatus} to ${validation.value.status}`,
+        },
+      };
+    }
+  }
+
+  const encounter = await dependencies.updateEncounter(validation.value);
+  if (!encounter) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Encounter not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'encounter',
+    entityId: encounterId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toEncounterDto(encounter) } };
+}
+
 function readAppointmentStatus(row: unknown): AppointmentStatus | null {
   if (!row || typeof row !== 'object' || Array.isArray(row)) {
     return null;
@@ -390,6 +474,29 @@ function isAllowedAppointmentTransition(
   nextStatus: AppointmentStatus
 ) {
   return currentStatus === nextStatus || appointmentTransitions[currentStatus].includes(nextStatus);
+}
+
+function readEncounterStatus(row: unknown): EncounterStatus | null {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    return null;
+  }
+
+  const status = (row as { status?: unknown }).status;
+  return isEncounterStatus(status) ? status : null;
+}
+
+function isEncounterStatus(value: unknown): value is EncounterStatus {
+  return (
+    value === 'draft' ||
+    value === 'in_progress' ||
+    value === 'completed' ||
+    value === 'signed' ||
+    value === 'cancelled'
+  );
+}
+
+function isAllowedEncounterTransition(currentStatus: EncounterStatus, nextStatus: EncounterStatus) {
+  return currentStatus === nextStatus || encounterTransitions[currentStatus].includes(nextStatus);
 }
 
 export async function handleListConsentRecordsByPatient(

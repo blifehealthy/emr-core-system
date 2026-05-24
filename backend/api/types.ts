@@ -155,6 +155,17 @@ export type UpdateAppointmentInput = {
   notes?: string | null;
 };
 
+export type UpdateEncounterInput = {
+  encounterId: string;
+  status?: EncounterStatus;
+  encounterClass?: EncounterClass;
+  attendingPractitionerId?: string | null;
+  chiefComplaint?: string | null;
+  triageSummary?: string | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+};
+
 export type CreateConsentRecordInput = {
   clinicId: string;
   patientId: string;
@@ -472,6 +483,7 @@ export type Dependencies = {
   getPatientFlagById?: (input: { flagId: string }) => Promise<unknown | null>;
   getSoapNoteByClinicalNoteId?: (input: { clinicalNoteId: string }) => Promise<unknown | null>;
   getAppointmentById?: (input: { appointmentId: string }) => Promise<unknown | null>;
+  getEncounterById?: (input: { encounterId: string }) => Promise<unknown | null>;
   getDiagnosisById?: (input: { diagnosisId: string }) => Promise<unknown | null>;
   getVitalSignById?: (input: { vitalSignId: string }) => Promise<unknown | null>;
   getPrescriptionById?: (input: { prescriptionId: string }) => Promise<unknown | null>;
@@ -555,6 +567,7 @@ export type Dependencies = {
   createPrescription: (input: CreatePrescriptionInput) => Promise<unknown>;
   updatePrescription: (input: UpdatePrescriptionInput) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
+  updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;
   updateDiagnosis: (input: UpdateDiagnosisInput) => Promise<unknown | null>;
   updateVitalSign: (input: UpdateVitalSignInput) => Promise<unknown | null>;

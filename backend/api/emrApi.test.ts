@@ -36,6 +36,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getAppointmentById() {
       return { id: 'appointment-1', status: 'confirmed' };
     },
+    async getEncounterById() {
+      return { id: 'encounter-1', status: 'in_progress' };
+    },
     async getDiagnosisById() {
       return { id: 'diagnosis-1' };
     },
@@ -113,6 +116,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     },
     async updateAppointment() {
       return { id: 'appointment-1' };
+    },
+    async updateEncounter() {
+      return { id: 'encounter-1' };
     },
     async listVitalSignsByEncounter() {
       return {
@@ -431,6 +437,50 @@ test('appointments API rejects unsupported status transitions', async () => {
   });
 
   assert.equal(response.status, 409);
+  assert.equal(updateCalled, false);
+});
+
+test('encounter APIs read, update, and reject unsupported status transitions', async () => {
+  let updateCalled = false;
+  const api = createEmrApi(
+    makeDeps({
+      async getEncounterById(input) {
+        assert.equal(input.encounterId, 'encounter-1');
+        return { id: 'encounter-1', status: 'in_progress' };
+      },
+      async updateEncounter(input) {
+        updateCalled = true;
+        assert.equal(input.encounterId, 'encounter-1');
+        assert.equal(input.status, 'completed');
+        return { id: 'encounter-1', status: 'completed' };
+      },
+    })
+  );
+
+  const read = await api({
+    method: 'GET',
+    path: '/api/encounters/encounter-1',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(read.status, 200);
+
+  const update = await api({
+    method: 'PATCH',
+    path: '/api/encounters/encounter-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'completed' },
+  });
+  assert.equal(update.status, 200);
+  assert.equal(updateCalled, true);
+
+  updateCalled = false;
+  const invalid = await api({
+    method: 'PATCH',
+    path: '/api/encounters/encounter-1',
+    headers: { 'x-user-role': 'doctor', 'x-user-id': 'user-1' },
+    body: { status: 'signed' },
+  });
+  assert.equal(invalid.status, 409);
   assert.equal(updateCalled, false);
 });
 

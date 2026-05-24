@@ -28,6 +28,7 @@ import type {
   DiagnosisType,
   EncounterClass,
   EncounterStatus,
+  UpdateEncounterInput,
   UpdateDiagnosisInput,
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
@@ -571,6 +572,75 @@ export function validateUpdateAppointmentBody(body: unknown, appointmentId: stri
         : {}),
       ...(Object.hasOwn(candidate, 'reason') ? { reason: reason.value } : {}),
       ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateUpdateEncounterBody(body: unknown, encounterId: string):
+  | { ok: true; value: UpdateEncounterInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'status',
+    'encounterClass',
+    'attendingPractitionerId',
+    'chiefComplaint',
+    'triageSummary',
+    'startedAt',
+    'endedAt',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one encounter field must be provided for update' };
+  }
+
+  const status = readEnumValue<EncounterStatus>(candidate.status, 'status', [
+    'draft',
+    'in_progress',
+    'completed',
+    'signed',
+    'cancelled',
+  ]);
+  if (!status.ok) return status;
+
+  const encounterClass = readEnumValue<EncounterClass>(
+    candidate.encounterClass,
+    'encounterClass',
+    ['outpatient', 'inpatient', 'emergency', 'other']
+  );
+  if (!encounterClass.ok) return encounterClass;
+
+  const attendingPractitionerId = readOptionalNullableStringField(candidate, 'attendingPractitionerId');
+  if (!attendingPractitionerId.ok) return attendingPractitionerId;
+
+  const chiefComplaint = readOptionalNullableStringField(candidate, 'chiefComplaint');
+  if (!chiefComplaint.ok) return chiefComplaint;
+
+  const triageSummary = readOptionalNullableStringField(candidate, 'triageSummary');
+  if (!triageSummary.ok) return triageSummary;
+
+  const startedAt = readOptionalNullableStringField(candidate, 'startedAt');
+  if (!startedAt.ok) return startedAt;
+
+  const endedAt = readOptionalNullableStringField(candidate, 'endedAt');
+  if (!endedAt.ok) return endedAt;
+
+  return {
+    ok: true,
+    value: {
+      encounterId,
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'encounterClass') ? { encounterClass: encounterClass.value } : {}),
+      ...(Object.hasOwn(candidate, 'attendingPractitionerId')
+        ? { attendingPractitionerId: attendingPractitionerId.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'chiefComplaint') ? { chiefComplaint: chiefComplaint.value } : {}),
+      ...(Object.hasOwn(candidate, 'triageSummary') ? { triageSummary: triageSummary.value } : {}),
+      ...(Object.hasOwn(candidate, 'startedAt') ? { startedAt: startedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'endedAt') ? { endedAt: endedAt.value } : {}),
     },
   };
 }

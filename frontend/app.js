@@ -267,12 +267,27 @@ async function fetchPatientAppointments(patient, apiToken) {
 }
 
 async function fetchPatientProfileBundle(patient, apiToken) {
-  const [profile, appointments] = await Promise.all([
+  const [profile, appointments, practitioners] = await Promise.all([
     fetchClinicalProfile(patient.id, apiToken),
     fetchPatientAppointments(patient, apiToken),
+    fetchPractitioners(patient.clinic_id, apiToken),
   ]);
 
-  return { ...profile, appointments };
+  return { ...profile, appointments, practitioners };
+}
+
+async function fetchPractitioners(clinicId, apiToken) {
+  const searchParams = new URLSearchParams({ clinicId });
+  const response = await fetch(`/api/practitioners?${searchParams.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
 }
 
 function compactPayload(payload) {
@@ -339,6 +354,7 @@ function showPatientDetail(patient, profile = {}) {
   const conditions = profile.conditions ?? [];
   const medications = profile.medications ?? [];
   const appointments = profile.appointments ?? [];
+  const practitioners = profile.practitioners ?? [];
 
   resultTitle.textContent = `${patient.first_name} ${patient.last_name}`;
   renderResultRows({
@@ -361,6 +377,7 @@ function showPatientDetail(patient, profile = {}) {
       ['Allergies', allergies.length],
       ['Conditions', conditions.length],
       ['Medications', medications.length],
+      ['Practitioners', practitioners.length],
     ]),
     createProfileTabs({
       Flags: records(flags, flagSummary, ['severity', 'status', 'notes'], 'Flags'),
@@ -421,7 +438,7 @@ function createAppointmentForm(patient) {
   form.append(
     startField,
     endField,
-    createFormField('practitionerId', 'Practitioner ID', 'input'),
+    createPractitionerField('practitionerId', 'Practitioner', ''),
     createFormField('reason', 'Reason', 'input'),
     createFormField('notes', 'Notes', 'textarea')
   );
@@ -435,6 +452,50 @@ function createAppointmentForm(patient) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     await createAppointmentFromForm(patient, form, submit);
+  });
+
+  return form;
+}
+
+function createAppointmentEditForm(appointment) {
+  const form = document.createElement('form');
+  form.className = 'appointment-form';
+
+  const header = document.createElement('div');
+  header.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'แก้นัดหมาย';
+  const number = document.createElement('span');
+  number.textContent = appointment.appointment_number ?? appointment.id;
+  header.append(title, number);
+  form.append(header);
+
+  const startField = createFormField('scheduledStartAt', 'Start', 'input', true);
+  startField.querySelector('input').type = 'datetime-local';
+  startField.querySelector('input').value = toDateTimeLocal(appointment.scheduled_start_at);
+  const endField = createFormField('scheduledEndAt', 'End', 'input');
+  endField.querySelector('input').type = 'datetime-local';
+  endField.querySelector('input').value = toDateTimeLocal(appointment.scheduled_end_at);
+
+  form.append(
+    startField,
+    endField,
+    createPractitionerField('practitionerId', 'Practitioner', appointment.practitioner_id ?? ''),
+    createFormField('reason', 'Reason', 'input'),
+    createFormField('notes', 'Notes', 'textarea')
+  );
+  form.elements.reason.value = appointment.reason ?? '';
+  form.elements.notes.value = appointment.notes ?? '';
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'บันทึกนัด';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await updateAppointmentFromForm(appointment.id, form, submit);
   });
 
   return form;
@@ -455,6 +516,7 @@ function createEncounterEntryForm(patient, appointment = null) {
 
   form.append(
     createFormField('chiefComplaint', 'Chief complaint', 'input', true),
+    createPractitionerField('attendingPractitionerId', 'Practitioner', appointment?.practitioner_id ?? ''),
     createFormField('subjective', 'Subjective', 'textarea'),
     createFormField('objective', 'Objective', 'textarea'),
     createFormField('assessment', 'Assessment', 'textarea'),
@@ -488,6 +550,29 @@ function createFormField(name, labelText, type = 'input', required = false) {
   input.autocomplete = 'off';
   if (type === 'textarea') input.rows = 2;
   label.append(input);
+  return label;
+}
+
+function createPractitionerField(name, labelText, selectedValue = '') {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่ระบุ';
+  select.append(empty);
+
+  for (const practitioner of currentProfile?.practitioners ?? []) {
+    const option = document.createElement('option');
+    option.value = practitioner.id ?? '';
+    option.textContent = practitionerSummary(practitioner);
+    select.append(option);
+  }
+
+  select.value = selectedValue;
+  label.append(select);
   return label;
 }
 
@@ -534,6 +619,34 @@ async function createAppointmentFromForm(patient, form, submit) {
   }
 }
 
+async function updateAppointmentFromForm(appointmentId, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    practitionerId: values.practitionerId,
+    scheduledStartAt: toIsoDateTime(values.scheduledStartAt),
+    scheduledEndAt: toIsoDateTime(values.scheduledEndAt),
+    reason: values.reason,
+    notes: values.notes,
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังแก้นัด', '');
+
+  try {
+    await patchAppointment(appointmentId, payload);
+    await refreshPatientWorkspace('Appointments');
+    setStatus('แก้นัดแล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'แก้นัดไม่สำเร็จ';
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'บันทึกนัด';
+  }
+}
+
 async function createEncounterFromForm(patient, form, submit, appointment = null) {
   const values = Object.fromEntries(new FormData(form).entries());
   const encounterNumber = nextEncounterNumber(patient.medical_record_number);
@@ -556,6 +669,7 @@ async function createEncounterFromForm(patient, form, submit, appointment = null
     appointmentId: appointment?.id,
     status: 'in_progress',
     encounterClass: 'outpatient',
+    attendingPractitionerId: values.attendingPractitionerId,
     chiefComplaint,
     title: chiefComplaint ? `Visit: ${chiefComplaint}` : 'Visit SOAP',
     subjective: subjective || chiefComplaint,
@@ -634,6 +748,14 @@ function toIsoDateTime(value) {
   const text = String(value ?? '').trim();
   if (!text) return '';
   return new Date(text).toISOString();
+}
+
+function toDateTimeLocal(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 function syncSearchFields(patient) {
@@ -957,6 +1079,10 @@ function createRecordCard(item, summary, fields, sectionLabel) {
     card.append(createAppointmentActions(card, item));
   }
 
+  if (sectionLabel === 'Encounters' && item.id) {
+    card.append(createEncounterActions(item));
+  }
+
   return card;
 }
 
@@ -994,6 +1120,18 @@ function createAppointmentActions(card, appointment) {
     actions.append(createAppointmentStatusButton(appointment, 'confirmed', 'ยืนยันนัด'));
   }
 
+  if (!['completed', 'cancelled', 'no_show'].includes(appointment.status)) {
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'secondary-button small-button';
+    editButton.textContent = 'แก้นัด';
+    editButton.addEventListener('click', () => {
+      card.querySelector('.appointment-form')?.remove();
+      card.append(createAppointmentEditForm(appointment));
+    });
+    actions.append(editButton);
+  }
+
   if (appointment.status === 'confirmed') {
     actions.append(createAppointmentStatusButton(appointment, 'checked_in', 'เช็กอิน'));
   }
@@ -1018,6 +1156,78 @@ function createAppointmentActions(card, appointment) {
   }
 
   return actions;
+}
+
+function createEncounterActions(encounter) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+
+  if (encounter.status === 'draft') {
+    actions.append(createEncounterStatusButton(encounter, 'in_progress', 'เริ่มตรวจ'));
+  }
+
+  if (encounter.status === 'draft' || encounter.status === 'in_progress') {
+    actions.append(createEncounterStatusButton(encounter, 'cancelled', 'ยกเลิก'));
+  }
+
+  if (encounter.status === 'in_progress') {
+    actions.append(createEncounterStatusButton(encounter, 'completed', 'จบ encounter'));
+  }
+
+  if (encounter.status === 'completed') {
+    actions.append(createEncounterStatusButton(encounter, 'signed', 'Sign encounter'));
+  }
+
+  return actions;
+}
+
+function createEncounterStatusButton(encounter, status, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className =
+    status === 'cancelled'
+      ? 'secondary-button danger-button small-button'
+      : status === 'signed'
+        ? 'primary-button small-button'
+        : 'secondary-button small-button';
+  button.textContent = label;
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'กำลังบันทึก';
+
+    try {
+      const payload = { status };
+      if (status === 'completed') payload.endedAt = new Date().toISOString();
+      if (status === 'in_progress') payload.startedAt = encounter.started_at ?? new Date().toISOString();
+      await patchEncounter(encounter.id, payload);
+      await refreshPatientWorkspace('Encounters');
+      setStatus(`Encounter: ${status}`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'อัปเดต encounter ไม่สำเร็จ';
+      setStatus(message, 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
+
+  return button;
+}
+
+async function patchEncounter(encounterId, payload) {
+  const response = await fetch(`/api/encounters/${encounterId}`, {
+    method: 'PATCH',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 function createAppointmentStatusButton(appointment, status, label) {
@@ -1268,6 +1478,11 @@ function medicationSummary(item) {
 
 function appointmentSummary(item) {
   return `${item.appointment_number ?? item.id} · ${item.status ?? 'pending'}`;
+}
+
+function practitionerSummary(item) {
+  const name = [item.first_name, item.last_name].filter(Boolean).join(' ');
+  return `${name || item.practitioner_code || item.id}${item.specialty ? ` · ${item.specialty}` : ''}`;
 }
 
 function encounterSummary(item) {

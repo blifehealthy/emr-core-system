@@ -50,6 +50,7 @@ const permissions: Record<string, UserRole[]> = {
   flag_read: ['doctor', 'nurse', 'admin'],
   flag_write: ['doctor', 'nurse', 'admin'],
   encounter_create: ['doctor', 'nurse', 'admin'],
+  encounter_update: ['doctor', 'admin'],
   user_read: ['admin'],
   user_write: ['admin'],
   practitioner_read: ['doctor', 'nurse', 'admin'],

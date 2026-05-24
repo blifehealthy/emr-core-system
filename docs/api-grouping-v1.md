@@ -51,6 +51,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/appointments` | Create appointment. |
 | `PATCH` | `/api/appointments/:appointmentId` | Update appointment. |
 | `POST` | `/api/encounters` | Create encounter with SOAP note and optional clinical children. |
+| `GET` | `/api/encounters/:encounterId` | Read one encounter. |
+| `PATCH` | `/api/encounters/:encounterId` | Update encounter metadata and status. |
 
 ## Clinical Documentation
 
@@ -110,6 +112,6 @@ All routes except `GET /health` can be protected by bearer token when
   appointments API to create appointments, move them through check-in, and start
   an encounter with the appointment id.
 - Permission and workflow definitions now exist as documentation, while
-  permissions are still kept in code. Appointment status updates enforce the
-  documented transition graph; other workflow state machines are not yet
-  centrally enforced.
+  permissions are still kept in code. Appointment and encounter status updates
+  enforce the documented transition graphs; other workflow state machines are
+  not yet centrally enforced.

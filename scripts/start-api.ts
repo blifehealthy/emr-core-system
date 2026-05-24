@@ -21,6 +21,7 @@ import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.t
 import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
 import { getConsentRecordById } from '../backend/services/getConsentRecordById.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
+import { getEncounterById } from '../backend/services/getEncounterById.ts';
 import { getFileAssetById } from '../backend/services/getFileAssetById.ts';
 import { getPatientAllergyById } from '../backend/services/getPatientAllergyById.ts';
 import { getPatientConditionById } from '../backend/services/getPatientConditionById.ts';
@@ -55,6 +56,7 @@ import { softDeleteVitalSign } from '../backend/services/softDeleteVitalSign.ts'
 import { updateAppointment } from '../backend/services/updateAppointment.ts';
 import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
+import { updateEncounter } from '../backend/services/updateEncounter.ts';
 import { updatePatientAllergy } from '../backend/services/updatePatientAllergy.ts';
 import { updatePatientCondition } from '../backend/services/updatePatientCondition.ts';
 import { updatePatientFlag } from '../backend/services/updatePatientFlag.ts';
@@ -84,6 +86,7 @@ const server = createNodeServer({
   getPatientFlagById: getPatientFlagById(db),
   getPatientMedicationById: getPatientMedicationById(db),
   getAppointmentById: getAppointmentById(db),
+  getEncounterById: getEncounterById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
   getDiagnosisById: getDiagnosisById(db),
   getVitalSignById: getVitalSignById(db),
@@ -108,6 +111,7 @@ const server = createNodeServer({
   listUsers: listUsers(db),
   createUser: createUser(db),
   updateAppointment: updateAppointment(db),
+  updateEncounter: updateEncounter(db),
   updateConsentRecord: updateConsentRecord(db),
   updatePatientAllergy: updatePatientAllergy(db),
   updatePatientCondition: updatePatientCondition(db),

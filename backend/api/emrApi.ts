@@ -28,6 +28,7 @@ import {
   handleGetAppointment,
   handleGetConsentRecord,
   handleGetDiagnosis,
+  handleGetEncounter,
   handleGetFileAsset,
   handleGetPatientDetail,
   handleGetPatientAllergy,
@@ -61,6 +62,7 @@ import {
   handleUpdatePractitioner,
   handleUpdatePrescription,
   handleUpdateDiagnosis,
+  handleUpdateEncounter,
   handleUpdateSoapNote,
   handleUpdateUser,
   handleUpdateVitalSign,
@@ -176,6 +178,14 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'appointment_read');
       if (roleError) return roleError;
       return handleGetAppointment(actorAwareRequest, dependencies, appointmentReadMatch[1]);
+    }
+
+    const encounterReadMatch =
+      request.method === 'GET' ? request.path.match(/^\/api\/encounters\/([^/]+)$/) : null;
+    if (encounterReadMatch) {
+      const roleError = requireRole(actorAwareRequest, 'patient_read');
+      if (roleError) return roleError;
+      return handleGetEncounter(actorAwareRequest, dependencies, encounterReadMatch[1]);
     }
 
     const vitalSignReadMatch =
@@ -440,6 +450,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'appointment_write');
         if (roleError) return roleError;
         return handleUpdateAppointment(actorAwareRequest, dependencies, appointmentMatch[1]);
+      }
+
+      const encounterMatch = request.path.match(/^\/api\/encounters\/([^/]+)$/);
+      if (encounterMatch) {
+        const roleError = requireRole(actorAwareRequest, 'encounter_update');
+        if (roleError) return roleError;
+        return handleUpdateEncounter(actorAwareRequest, dependencies, encounterMatch[1]);
       }
 
       const consentMatch = request.path.match(/^\/api\/consents\/([^/]+)$/);

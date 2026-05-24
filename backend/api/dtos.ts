@@ -140,6 +140,23 @@ const APPOINTMENT_KEYS = [
   'deleted_at',
 ] as const;
 
+const ENCOUNTER_KEYS = [
+  'id',
+  'patient_id',
+  'encounter_number',
+  'status',
+  'encounter_class',
+  'appointment_id',
+  'attending_practitioner_id',
+  'chief_complaint',
+  'triage_summary',
+  'started_at',
+  'ended_at',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const CONSENT_RECORD_KEYS = [
   'id',
   'clinic_id',
@@ -319,6 +336,10 @@ export function toAppointmentDto(row: unknown): Record<string, unknown> {
 
 export function toAppointmentDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toAppointmentDto(row));
+}
+
+export function toEncounterDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...ENCOUNTER_KEYS]);
 }
 
 export function toConsentRecordDto(row: unknown): Record<string, unknown> {

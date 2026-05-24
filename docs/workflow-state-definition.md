@@ -52,6 +52,9 @@ draft -> in_progress -> completed -> signed
 draft/in_progress -> cancelled
 ```
 
+The encounter update API enforces these status transitions and returns `409`
+when a request attempts to skip or leave a terminal state.
+
 ## Clinical Notes
 
 Source enum: `clinical_note_status`.
@@ -171,9 +174,9 @@ Diagnosis type is tracked separately as `working`, `final`, `differential`, or
 
 ## Phase 1 Gaps
 
-- State transition validation is not centralized yet. Appointment status updates
-  are guarded in the API, but other workflow state machines remain mostly
-  documented rather than centrally enforced.
+- State transition validation is not centralized yet. Appointment and encounter
+  status updates are guarded in the API, but other workflow state machines
+  remain mostly documented rather than centrally enforced.
 - Encounter signing and clinical note signing are represented separately and
   should be aligned before deeper workflow automation.
 - Check-in is represented through appointment status, not a separate `check_ins`
