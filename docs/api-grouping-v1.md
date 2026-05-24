@@ -91,17 +91,17 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/file-assets` | Create file asset metadata. |
 | `GET` | `/api/attachments` | List attachment links by target. |
 | `POST` | `/api/attachments` | Create attachment link. |
-| `GET` | `/api/audit-logs` | Read audit logs by entity. |
+| `GET` | `/api/audit-logs` | Read audit logs by entity with optional limit. |
 | `GET` | `/api/patients/:patientId/timeline` | Read patient timeline. |
 
 ## Organization and Access
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/users` | List users. |
+| `GET` | `/api/users` | List users with search, active status, and pagination filters. |
 | `POST` | `/api/users` | Create user. |
 | `PATCH` | `/api/users/:userId` | Update user. |
-| `GET` | `/api/practitioners` | List practitioners. |
+| `GET` | `/api/practitioners` | List practitioners with search, active status, and pagination filters. |
 | `POST` | `/api/practitioners` | Create practitioner. |
 | `PATCH` | `/api/practitioners/:practitionerId` | Update practitioner. |
 

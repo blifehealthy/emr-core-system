@@ -1358,7 +1358,8 @@ test('encounter list routes validate invalid filters', async () => {
 test('health, audit log, and patient timeline routes return data', async () => {
   const api = createEmrApi(
     makeDeps({
-      async getAuditLogsByEntity() {
+      async getAuditLogsByEntity(input) {
+        assert.equal(input.limit, 5);
         return [{ id: 'audit-1' }];
       },
       async getPatientTimeline() {
@@ -1374,7 +1375,7 @@ test('health, audit log, and patient timeline routes return data', async () => {
     method: 'GET',
     path: '/api/audit-logs',
     headers: { 'x-user-role': 'doctor' },
-    query: { entityType: 'clinical_note', entityId: 'clinical-note-1' },
+    query: { entityType: 'clinical_note', entityId: 'clinical-note-1', limit: '5' },
   });
   assert.equal(audit.status, 200);
 
@@ -1384,6 +1385,48 @@ test('health, audit log, and patient timeline routes return data', async () => {
     headers: { 'x-user-role': 'nurse' },
   });
   assert.equal(timeline.status, 200);
+});
+
+test('user and practitioner write routes map duplicate database errors to conflict responses', async () => {
+  const duplicate = Object.assign(new Error('duplicate key value violates unique constraint'), {
+    code: '23505',
+    detail: 'Key (clinic_id, username)=(clinic-1, doc1) already exists.',
+  });
+  const api = createEmrApi(
+    makeDeps({
+      async createUser() {
+        throw duplicate;
+      },
+      async createPractitioner() {
+        throw duplicate;
+      },
+    })
+  );
+
+  const user = await api({
+    method: 'POST',
+    path: '/api/users',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { clinicId: 'clinic-1', username: 'doc1', displayName: 'Doc 1', role: 'doctor' },
+  });
+  assert.equal(user.status, 409);
+  assert.deepEqual(user.body, {
+    error: 'Duplicate record',
+    detail: 'Key (clinic_id, username)=(clinic-1, doc1) already exists.',
+  });
+
+  const practitioner = await api({
+    method: 'POST',
+    path: '/api/practitioners',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: {
+      clinicId: 'clinic-1',
+      practitionerCode: 'DOC1',
+      firstName: 'Doc',
+      lastName: 'One',
+    },
+  });
+  assert.equal(practitioner.status, 409);
 });
 
 test('API can resolve role and practitioner context from user id', async () => {

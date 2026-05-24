@@ -5,6 +5,7 @@
 - patient read now includes encounter-level prescriptions
 - clinical child entities now have read, update, and soft delete API coverage
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
+- clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
 
 ## Quick Checks

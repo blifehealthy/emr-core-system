@@ -167,17 +167,19 @@ export async function handleGetAuditLogsByEntity(
 ): Promise<HttpResponse> {
   const entityType = request.query?.entityType?.trim();
   const entityId = request.query?.entityId?.trim();
-  const limit = request.query?.limit ? Number(request.query.limit) : undefined;
 
   if (!entityType || !entityId) {
     return validationError('entityType and entityId are required query parameters');
   }
 
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
   try {
     const logs = await dependencies.getAuditLogsByEntity({
       entityType,
       entityId,
-      limit,
+      limit: limit.value,
     });
 
     return {
@@ -1117,19 +1119,23 @@ export async function handleCreateUser(
   const validation = validateCreateUserBody(request.body);
   if (!validation.ok) return validationError(validation.error);
 
-  const user = await dependencies.createUser(validation.value);
+  try {
+    const user = await dependencies.createUser(validation.value);
 
-  const actor = getActorContext(request);
-  await dependencies.createAuditLog({
-    entityType: 'user',
-    entityId: (user as { id: string }).id,
-    action: 'created',
-    actorUserId: actor.userId,
-    actorPractitionerId: actor.practitionerId,
-    metadata: { username: validation.value.username },
-  });
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'user',
+      entityId: (user as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { username: validation.value.username },
+    });
 
-  return { status: 201, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
+    return { status: 201, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
+  } catch (error) {
+    return mapError(error);
+  }
 }
 
 export async function handleUpdateUser(
@@ -1140,23 +1146,27 @@ export async function handleUpdateUser(
   const validation = validateUpdateUserBody(request.body, userId);
   if (!validation.ok) return validationError(validation.error);
 
-  const user = await dependencies.updateUser(validation.value);
+  try {
+    const user = await dependencies.updateUser(validation.value);
 
-  if (!user) {
-    return { status: 404, headers: JSON_HEADERS, body: { error: 'User not found' } };
+    if (!user) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'User not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'user',
+      entityId: userId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
+  } catch (error) {
+    return mapError(error);
   }
-
-  const actor = getActorContext(request);
-  await dependencies.createAuditLog({
-    entityType: 'user',
-    entityId: userId,
-    action: 'updated',
-    actorUserId: actor.userId,
-    actorPractitionerId: actor.practitionerId,
-    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
-  });
-
-  return { status: 200, headers: JSON_HEADERS, body: { data: toUserDto(user) } };
 }
 
 export async function handleListPractitioners(
@@ -1202,19 +1212,23 @@ export async function handleCreatePractitioner(
   const validation = validateCreatePractitionerBody(request.body);
   if (!validation.ok) return validationError(validation.error);
 
-  const practitioner = await dependencies.createPractitioner(validation.value);
+  try {
+    const practitioner = await dependencies.createPractitioner(validation.value);
 
-  const actor = getActorContext(request);
-  await dependencies.createAuditLog({
-    entityType: 'practitioner',
-    entityId: (practitioner as { id: string }).id,
-    action: 'created',
-    actorUserId: actor.userId,
-    actorPractitionerId: actor.practitionerId,
-    metadata: { practitionerCode: validation.value.practitionerCode },
-  });
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'practitioner',
+      entityId: (practitioner as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { practitionerCode: validation.value.practitionerCode },
+    });
 
-  return { status: 201, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
+    return { status: 201, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
+  } catch (error) {
+    return mapError(error);
+  }
 }
 
 export async function handleUpdatePractitioner(
@@ -1225,23 +1239,27 @@ export async function handleUpdatePractitioner(
   const validation = validateUpdatePractitionerBody(request.body, practitionerId);
   if (!validation.ok) return validationError(validation.error);
 
-  const practitioner = await dependencies.updatePractitioner(validation.value);
+  try {
+    const practitioner = await dependencies.updatePractitioner(validation.value);
 
-  if (!practitioner) {
-    return { status: 404, headers: JSON_HEADERS, body: { error: 'Practitioner not found' } };
+    if (!practitioner) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Practitioner not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'practitioner',
+      entityId: practitionerId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
+  } catch (error) {
+    return mapError(error);
   }
-
-  const actor = getActorContext(request);
-  await dependencies.createAuditLog({
-    entityType: 'practitioner',
-    entityId: practitionerId,
-    action: 'updated',
-    actorUserId: actor.userId,
-    actorPractitionerId: actor.practitionerId,
-    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
-  });
-
-  return { status: 200, headers: JSON_HEADERS, body: { data: toPractitionerDto(practitioner) } };
 }
 
 export async function handleListPrescriptionsByEncounter(

@@ -74,12 +74,12 @@ Not included yet:
 - `GET /api/vital-signs/:id`
 - `PATCH /api/vital-signs/:id`
 - `DELETE /api/vital-signs/:id`
-- `GET /api/audit-logs?entityType=...&entityId=...`
+- `GET /api/audit-logs?entityType=...&entityId=...&limit=...`
 - `GET /api/patients/:id/timeline`
-- `GET /api/users?clinicId=...`
+- `GET /api/users?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/users`
 - `PATCH /api/users/:id`
-- `GET /api/practitioners?clinicId=...`
+- `GET /api/practitioners?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/practitioners`
 - `PATCH /api/practitioners/:id`
 - `GET /api/encounters/:id/diagnoses?clinicalNoteId=...&status=...&limit=...&offset=...`

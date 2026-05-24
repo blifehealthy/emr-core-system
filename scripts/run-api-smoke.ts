@@ -329,6 +329,20 @@ async function main() {
     assert.equal(createdUser.data.username, 'nurse.smoke');
     assert.equal(createdUser.data.role, 'nurse');
 
+    const duplicateUser = await requestJson<{ error: string; detail?: string }>(
+      '/api/users',
+      adminHeaders,
+      'POST',
+      409,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        username: 'nurse.smoke',
+        displayName: 'Nurse Smoke Duplicate',
+        role: 'nurse',
+      }
+    );
+    assert.equal((duplicateUser as unknown as { error: string }).error, 'Duplicate record');
+
     const updatedUser = await requestJson<{
       id: string;
       display_name: string;
@@ -384,6 +398,13 @@ async function main() {
     );
     assert.equal(updatedPractitioner.data.specialty, 'Primary Care');
     assert.equal(updatedPractitioner.data.is_active, false);
+
+    const userAuditLogs = await requestJson<Array<{ action: string; entity_type: string }>>(
+      `/api/audit-logs?entityType=user&entityId=${createdUser.data.id}&limit=5`,
+      adminHeaders
+    );
+    assert.ok(userAuditLogs.data.some((log) => log.action === 'created' && log.entity_type === 'user'));
+    assert.ok(userAuditLogs.data.some((log) => log.action === 'updated' && log.entity_type === 'user'));
 
     const users = await requestJson<Array<{ id: string; username: string }>>(
       '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',
@@ -733,6 +754,8 @@ async function assertFrontendProxySmoke(input: {
   const app = await httpText('/app.js', FRONTEND_PORT);
   assert.equal(app.statusCode, 200);
   assert.match(app.body, /createAdminPagination/);
+  assert.match(app.body, /createAuditSection/);
+  assert.match(app.body, /friendlyAdminError/);
 
   const styles = await httpText('/styles.css', FRONTEND_PORT);
   assert.equal(styles.statusCode, 200);
@@ -744,6 +767,12 @@ async function assertFrontendProxySmoke(input: {
   );
   assert.deepEqual(users.meta, { limit: 1, offset: 0, hasMore: false, nextOffset: null });
   assert.equal(users.data[0].id, input.createdUserId);
+
+  const userAuditLogs = await requestFrontendJson<Array<{ action: string }>>(
+    `/api/audit-logs?entityType=user&entityId=${input.createdUserId}&limit=5`,
+    input.adminHeaders
+  );
+  assert.ok(userAuditLogs.data.some((log) => log.action === 'created'));
 
   const practitioners = await requestFrontendJson<Array<{ id: string }>>(
     '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101&search=primary&active=inactive&limit=1&offset=0',

@@ -410,6 +410,10 @@ button:disabled {
   font-size: 13px;
 }
 
+.audit-form {
+  grid-template-columns: 160px minmax(0, 1fr) 100px;
+}
+
 .inline-profile-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -565,6 +569,18 @@ button:disabled {
   margin: 10px 0 0;
 }
 
+.muted-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metadata-preview {
+  min-height: 0;
+  max-height: 170px;
+  margin-top: 10px;
+}
+
 .soap-editor-form {
   display: grid;
   gap: 10px;
@@ -652,6 +668,10 @@ pre {
   .admin-pagination span {
     flex: 1;
     text-align: center;
+  }
+
+  .audit-form {
+    grid-template-columns: 1fr;
   }
 
   .appointment-form,

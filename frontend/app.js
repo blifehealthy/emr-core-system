@@ -20,6 +20,7 @@ let currentProfile = null;
 let currentApiToken = '';
 let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
+let currentAuditLogs = [];
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -444,6 +445,36 @@ function setStatus(text, mode) {
   serviceStatus.className = mode ? `status-pill ${mode}` : 'status-pill';
 }
 
+function createApiError(response, result) {
+  const error = new Error(result.detail || result.error || `HTTP ${response.status}`);
+  error.status = response.status;
+  error.apiError = result.error;
+  error.detail = result.detail;
+  return error;
+}
+
+function friendlyAdminError(error) {
+  if (error?.status === 409 && error?.apiError === 'Duplicate record') {
+    const detail = String(error.detail ?? '');
+    if (detail.includes('users') || detail.includes('username')) {
+      return 'Username นี้มีอยู่ในคลินิกแล้ว';
+    }
+    if (detail.includes('practitioner_code')) {
+      return 'Practitioner code นี้มีอยู่ในคลินิกแล้ว';
+    }
+    if (detail.includes('user_id')) {
+      return 'User นี้ถูกผูกกับ practitioner อื่นแล้ว';
+    }
+    return 'รายการนี้ซ้ำกับข้อมูลที่มีอยู่แล้ว';
+  }
+
+  if (error?.status === 422 && error?.apiError === 'Referenced record was not found') {
+    return 'ข้อมูลที่อ้างอิงไม่พบในระบบ กรุณาตรวจสอบ Clinic ID หรือ User ID';
+  }
+
+  return error instanceof Error ? error.message : 'ดำเนินการไม่สำเร็จ';
+}
+
 function showRegisteredPatient(patient) {
   resultTitle.textContent = `${patient.first_name} ${patient.last_name}`;
   renderResultRows({
@@ -543,8 +574,121 @@ function renderAdminWorkspace(clinicId) {
       practitionerSummary,
       ['practitioner_code', 'specialty', 'is_active'],
       createPractitionerActions
-    )
+    ),
+    createAuditSection()
   );
+}
+
+function createAuditSection() {
+  const section = document.createElement('div');
+  section.className = 'admin-section';
+  const title = document.createElement('h3');
+  title.textContent = 'Audit Logs';
+  section.append(title, createAuditForm(), createAuditList());
+  return section;
+}
+
+function createAuditForm() {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form audit-form';
+  form.append(
+    createAdminSelect('entityType', 'Entity type', [
+      'patient',
+      'user',
+      'practitioner',
+      'appointment',
+      'encounter',
+      'clinical_note',
+      'soap_note',
+      'diagnosis',
+      'vital_sign',
+      'prescription',
+      'patient_flag',
+      'patient_allergy',
+      'patient_condition',
+      'patient_medication',
+    ], 'user'),
+    createAdminInput('entityId', 'Entity ID', '', true),
+    createAdminInput('limit', 'Limit', '20')
+  );
+
+  const limit = form.querySelector('[name="limit"]');
+  limit.type = 'number';
+  limit.min = '1';
+  limit.max = '200';
+
+  const submit = createAdminSubmit('โหลด audit');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await loadAuditLogs(form, submit);
+  });
+  return form;
+}
+
+function createAuditList() {
+  const list = document.createElement('div');
+  list.className = 'record-list audit-list';
+
+  if (currentAuditLogs.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-note';
+    empty.textContent = 'ยังไม่มี audit log ที่โหลด';
+    list.append(empty);
+    return list;
+  }
+
+  for (const log of currentAuditLogs) {
+    const card = createRecordCard(log, auditSummary, [
+      'entity_type',
+      'entity_id',
+      'actor_user_id',
+      'actor_practitioner_id',
+      'created_at',
+    ]);
+    const metadata = document.createElement('pre');
+    metadata.className = 'metadata-preview';
+    metadata.textContent = JSON.stringify(log.metadata ?? {}, null, 2);
+    card.append(metadata);
+    list.append(card);
+  }
+
+  return list;
+}
+
+async function loadAuditLogs(form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const params = new URLSearchParams({
+    entityType: values.entityType,
+    entityId: values.entityId,
+    limit: values.limit || '20',
+  });
+  const originalText = submit.textContent;
+  submit.disabled = true;
+  submit.textContent = 'กำลังโหลด';
+  setStatus('กำลังโหลด audit', '');
+
+  try {
+    const response = await fetch(`/api/audit-logs?${params.toString()}`, {
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw createApiError(response, result);
+    }
+
+    currentAuditLogs = result.data ?? [];
+    renderAdminWorkspace(readValue('adminClinicId'));
+    setStatus('โหลด audit แล้ว', 'success');
+  } catch (error) {
+    const message = friendlyAdminError(error);
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = originalText;
+  }
 }
 
 function createAdminSection(titleText, filterKey, form, items, summary, fields, actionsFactory) {
@@ -748,7 +892,7 @@ function createAdminActiveButton(kind, id, isActive) {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+        throw createApiError(response, result);
       }
 
       currentAdmin = await fetchAdminBundle(readValue('adminClinicId'), currentApiToken || readValue('apiToken'));
@@ -756,7 +900,7 @@ function createAdminActiveButton(kind, id, isActive) {
       if (currentPatient) await refreshPatientWorkspace(currentProfileSection);
       setStatus(isActive ? 'ปิดใช้งานแล้ว' : 'เปิดใช้งานแล้ว', 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'อัปเดตสถานะไม่สำเร็จ';
+      const message = friendlyAdminError(error);
       setStatus(message, 'error');
     } finally {
       button.disabled = false;
@@ -838,7 +982,7 @@ async function saveAdminRecord({
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+      throw createApiError(response, result);
     }
 
     if (resetAfterSave) form.reset();
@@ -847,7 +991,7 @@ async function saveAdminRecord({
     if (currentPatient) await refreshPatientWorkspace(currentProfileSection);
     setStatus(successText, 'success');
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ';
+    const message = friendlyAdminError(error);
     setStatus(message, 'error');
     renderInlineFormError(form, message);
   } finally {
@@ -2094,4 +2238,8 @@ function prescriptionSummary(item) {
 
 function noteSummary(item) {
   return item.title ?? item.note_type ?? item.id;
+}
+
+function auditSummary(item) {
+  return `${item.action ?? 'audit'} · ${item.entity_type ?? 'entity'}`;
 }
