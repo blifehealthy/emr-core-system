@@ -30,6 +30,9 @@ test('passes strict mode with persistent storage and strong token', () => {
     DEPLOYMENT_PROFILE: 'pilot',
     DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
     API_TOKEN: '0123456789abcdef0123456789abcdef',
+    AUTH_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+    AUTH_LOGIN_CODE: 'fedcba9876543210fedcba9876543210',
+    AUTH_SESSION_TTL_MINUTES: '480',
     FILE_STORAGE_DRIVER: 'local',
     FILE_STORAGE_DIR: '/var/lib/emr-core/file-assets',
     FILE_STORAGE_MAX_BYTES: '5242880',
@@ -45,6 +48,8 @@ test('reports invalid S3 storage config', () => {
     DEPLOYMENT_PROFILE: 'production',
     DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
     API_TOKEN: '0123456789abcdef0123456789abcdef',
+    AUTH_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+    AUTH_LOGIN_CODE: 'fedcba9876543210fedcba9876543210',
     FILE_STORAGE_DRIVER: 's3',
     FILE_STORAGE_S3_BUCKET: 'emr-assets',
   });

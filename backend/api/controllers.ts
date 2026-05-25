@@ -42,6 +42,7 @@ import {
 import {
   validateCreateAttachmentLinkBody,
   validateCreateAppointmentBody,
+  validateCreateAuthSessionBody,
   validateCreateClinicVisitBody,
   validateCreateClinicalNoteTemplateBody,
   validateCreateConsentRecordBody,
@@ -83,6 +84,7 @@ import {
   validateUpdateVitalSignBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
+import { AuthSessionConfigError } from '../services/createAuthSession.ts';
 import type {
   AppointmentStatus,
   ClinicVisitStatus,
@@ -163,6 +165,69 @@ export async function handleHealthCheck(dependencies: Dependencies): Promise<Htt
     headers: JSON_HEADERS,
     body: { status: 'ok' },
   };
+}
+
+export async function handleCreateAuthSession(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const validation = validateCreateAuthSessionBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  if (!dependencies.createAuthSession) {
+    return {
+      status: 503,
+      headers: JSON_HEADERS,
+      body: { error: 'Auth sessions are not configured' },
+    };
+  }
+
+  try {
+    const session = await dependencies.createAuthSession(validation.value);
+    if (!session) {
+      return {
+        status: 401,
+        headers: JSON_HEADERS,
+        body: { error: 'Invalid username or login code' },
+      };
+    }
+
+    await dependencies.createAuditLog({
+      entityType: 'user',
+      entityId: session.user.id,
+      action: 'session_created',
+      actorUserId: session.user.id,
+      actorPractitionerId: session.user.practitioner_id,
+      metadata: {
+        clinicId: validation.value.clinicId,
+        username: session.user.username,
+        expiresAt: session.expiresAt,
+      },
+    });
+
+    return {
+      status: 201,
+      headers: JSON_HEADERS,
+      body: {
+        data: {
+          accessToken: session.accessToken,
+          tokenType: session.tokenType,
+          expiresAt: session.expiresAt,
+          user: session.user,
+        },
+      },
+    };
+  } catch (error) {
+    if (error instanceof AuthSessionConfigError) {
+      return {
+        status: 503,
+        headers: JSON_HEADERS,
+        body: { error: error.message },
+      };
+    }
+
+    return mapError(error);
+  }
 }
 
 export async function handleGetPatientDetail(

@@ -25,6 +25,9 @@ that need human confirmation.
 - `DEPLOYMENT_PROFILE=pilot` or `NODE_ENV=production`
 - `DATABASE_URL` points to the target Postgres database.
 - `API_TOKEN` is set to a private bearer token of at least 32 characters.
+- `AUTH_SESSION_SECRET` is set to a private signing secret of at least 32 characters.
+- `AUTH_LOGIN_CODE` is set to a private onboarding/login code of at least 32 characters.
+- `AUTH_SESSION_TTL_MINUTES` is set to an integer from 1 to 720 when overridden.
 - `FILE_STORAGE_DRIVER` is set to `local` or `s3`.
 - `FILE_STORAGE_DIR` uses persistent private disk when the local driver is used.
 - `FILE_STORAGE_ALLOWED_MIME_TYPES` lists explicit MIME types.

@@ -11,6 +11,9 @@ const SEED_SQL = join(ROOT_DIR, 'database', 'tests', 'api_smoke_seed.sql');
 const PORT = Number(process.env.API_PORT ?? '3105');
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT ?? '5175');
 const API_TOKEN = process.env.API_TOKEN ?? 'dev-smoke-token';
+const AUTH_LOGIN_CODE = process.env.AUTH_LOGIN_CODE ?? 'pilot-smoke-code';
+const AUTH_SESSION_SECRET =
+  process.env.AUTH_SESSION_SECRET ?? '0123456789abcdef0123456789abcdef';
 
 const POSTGRES_CONTAINER = process.env.POSTGRES_CONTAINER ?? 'poolproject-postgres';
 const POSTGRES_USER = process.env.POSTGRES_USER ?? 'postgres';
@@ -66,6 +69,8 @@ async function main() {
           ...process.env,
           DATABASE_URL: databaseUrl,
           API_TOKEN,
+          AUTH_LOGIN_CODE,
+          AUTH_SESSION_SECRET,
           PORT: String(PORT),
           FILE_STORAGE_DIR,
         },
@@ -104,13 +109,47 @@ async function main() {
 
     await waitForFrontendHealth();
 
+    const doctorSession = await requestJson<{
+      accessToken: string;
+      tokenType: 'Bearer';
+      user: { id: string; role: string };
+    }>(
+      '/api/auth/sessions',
+      {},
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        username: 'doctor.smoke',
+        loginCode: AUTH_LOGIN_CODE,
+      }
+    );
+    assert.equal(doctorSession.data.user.id, '10000000-0000-0000-0000-000000000201');
+    assert.equal(doctorSession.data.user.role, 'doctor');
+
+    const adminSession = await requestJson<{
+      accessToken: string;
+      tokenType: 'Bearer';
+      user: { id: string; role: string };
+    }>(
+      '/api/auth/sessions',
+      {},
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        username: 'admin.smoke',
+        loginCode: AUTH_LOGIN_CODE,
+      }
+    );
+    assert.equal(adminSession.data.user.id, '10000000-0000-0000-0000-000000000202');
+    assert.equal(adminSession.data.user.role, 'admin');
+
     const authHeaders = {
-      Authorization: `Bearer ${API_TOKEN}`,
-      'x-user-id': '10000000-0000-0000-0000-000000000201',
+      Authorization: `${doctorSession.data.tokenType} ${doctorSession.data.accessToken}`,
     };
     const adminHeaders = {
-      Authorization: `Bearer ${API_TOKEN}`,
-      'x-user-id': '10000000-0000-0000-0000-000000000202',
+      Authorization: `${adminSession.data.tokenType} ${adminSession.data.accessToken}`,
     };
 
     const registeredPatient = await requestJson<{

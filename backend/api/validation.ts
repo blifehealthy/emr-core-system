@@ -69,6 +69,33 @@ const clinicVisitStatuses: ClinicVisitStatus[] = [
   'cancelled',
 ];
 
+export function validateCreateAuthSessionBody(body: unknown):
+  | { ok: true; value: { clinicId: string; username: string; loginCode: string } }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const username = readRequiredString(candidate.username, 'username');
+  if (!username.ok) return username;
+
+  const loginCode = readRequiredString(candidate.loginCode, 'loginCode');
+  if (!loginCode.ok) return loginCode;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      username: username.value,
+      loginCode: loginCode.value,
+    },
+  };
+}
+
 export function validateCreateEncounterBody(body: unknown):
   | { ok: true; value: CreateEncounterInput }
   | { ok: false; error: string } {

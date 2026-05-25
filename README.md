@@ -96,6 +96,7 @@ Not included yet:
 ## API
 
 - `GET /health`
+- `POST /api/auth/sessions`
 - `POST /api/patients`
 - `GET /api/patients/detail?clinicId=...&medicalRecordNumber=...`
 - `POST /api/encounters`
@@ -235,8 +236,22 @@ Protect API routes with a bearer token if needed:
 API_TOKEN=dev-secret DATABASE_URL=postgres://localhost:5432/emr_core npm run start:api
 ```
 
-If you have user records in the database already, you can let the API resolve role and practitioner context from `x-user-id`.
-Headers `x-user-role` and `x-practitioner-id` still work as explicit fallbacks.
+For a pilot user session flow, configure a login code and session signing
+secret, then call `POST /api/auth/sessions` with `clinicId`, `username`, and
+`loginCode`. The returned bearer token carries only the user id; the API resolves
+role and practitioner context from the database on each request.
+
+```bash
+AUTH_LOGIN_CODE=change-me-32-plus-characters \
+AUTH_SESSION_SECRET=change-me-32-plus-characters \
+DATABASE_URL=postgres://localhost:5432/emr_core \
+npm run start:api
+```
+
+If you have user records in the database already, static-token technical calls
+can still resolve role and practitioner context from `x-user-id`. Headers
+`x-user-role` and `x-practitioner-id` remain explicit fallbacks for local and
+test harnesses.
 
 Example requests:
 

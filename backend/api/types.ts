@@ -43,6 +43,26 @@ export type AuthActor = {
   role?: UserRole;
 };
 
+export type CreateAuthSessionInput = {
+  clinicId: string;
+  username: string;
+  loginCode: string;
+};
+
+export type AuthSession = {
+  accessToken: string;
+  tokenType: 'Bearer';
+  expiresAt: string;
+  user: {
+    id: string;
+    clinic_id: string;
+    username: string;
+    display_name: string;
+    role: UserRole;
+    practitioner_id: string | null;
+  };
+};
+
 export type HttpRequest = {
   method: string;
   path: string;
@@ -639,6 +659,7 @@ export type UpdatePrescriptionInput = {
 };
 
 export type Dependencies = {
+  createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | null>;
   getPatientWithEncountersAndSOAP: (input: {
     clinicId: string;
     medicalRecordNumber: string;
@@ -843,4 +864,5 @@ export type Dependencies = {
   } | null>;
   healthCheck: () => Promise<void>;
   apiToken?: string;
+  sessionAuthSecret?: string;
 };

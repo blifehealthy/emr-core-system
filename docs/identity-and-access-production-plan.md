@@ -7,8 +7,13 @@ controlled technical pilot, but it is not the final production identity model.
 ## Current State
 
 - API routes can require `Authorization: Bearer <API_TOKEN>`.
-- Role checks use `x-user-role`.
-- Actor resolution can use `x-user-id` and practitioner context.
+- Pilot users can call `POST /api/auth/sessions` with `clinicId`, `username`,
+  and `AUTH_LOGIN_CODE` to receive a short-lived signed bearer token.
+- Session bearer tokens carry only user id; role and practitioner context are
+  resolved from active database records.
+- Static technical tokens can still use `x-user-id` for smoke tests and trusted
+  operator workflows.
+- `x-user-role` and `x-practitioner-id` remain explicit local/test fallbacks.
 - Permission groups are documented in `docs/role-permission-matrix.md`.
 - Audit lookup is available to admin users.
 
@@ -29,8 +34,10 @@ Production access should move to an identity provider with:
 ### Phase I: Pilot Guardrails
 
 - Keep `API_TOKEN` enabled and strong.
+- Keep `AUTH_LOGIN_CODE` and `AUTH_SESSION_SECRET` strong and rotated.
 - Restrict token access to deployment operators.
-- Use role headers only from trusted frontend/API boundary.
+- Prefer session bearer tokens for pilot users.
+- Use role headers only from trusted local/test boundaries.
 - Confirm admin, doctor, and nurse role mappings during UAT.
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot.
 

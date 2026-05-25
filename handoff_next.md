@@ -400,6 +400,25 @@ Recommended next phase:
 1. Run Phase 2B UAT with the doctor and clinic team using `docs/phase-2b-uat-checklist-th.md`.
 2. Start production-auth Phase 2C or medication governance expansion, depending on UAT feedback.
 
+## Phase 2C Status
+
+Phase 2C has started with production-auth hardening:
+
+- `POST /api/auth/sessions` issues short-lived HMAC-signed bearer tokens.
+- Session tokens carry user id only.
+- API role/practitioner context is resolved from active database users when
+  `resolveActor` is configured.
+- Session creation writes an audit log entry.
+- API smoke obtains doctor/admin session tokens before protected workflows.
+- `npm run production:check` now validates `AUTH_SESSION_SECRET`,
+  `AUTH_LOGIN_CODE`, and `AUTH_SESSION_TTL_MINUTES`.
+
+Next Phase 2C batch:
+
+1. Add frontend login/session persistence.
+2. Add login failure audit and last-login/lockout hardening.
+3. Prepare Phase 2C clinician/operator summary after the login UI lands.
+
 The deliverables added in this worktree are:
 
 - `docs/role-permission-matrix.md`
@@ -414,6 +433,7 @@ The deliverables added in this worktree are:
 - `docs/production-readiness-checklist.md`
 - `docs/identity-and-access-production-plan.md`
 - `docs/monitoring-backup-runbook.md`
+- `docs/phase-2c-plan.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

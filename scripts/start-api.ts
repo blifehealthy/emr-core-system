@@ -1,6 +1,7 @@
 import { createNodeServer } from '../backend/api/nodeServer.ts';
 import { createPostgresDb } from '../backend/database/postgres.ts';
 import { createAuditLog } from '../backend/services/createAuditLog.ts';
+import { createAuthSession } from '../backend/services/createAuthSession.ts';
 import { createAppointment } from '../backend/services/createAppointment.ts';
 import { createClinicVisit } from '../backend/services/createClinicVisit.ts';
 import { createClinicalNoteTemplate } from '../backend/services/createClinicalNoteTemplate.ts';
@@ -101,6 +102,11 @@ const fileStoragePolicy = createFileAssetStoragePolicy(process.env);
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
+  createAuthSession: createAuthSession(db, {
+    loginCode: process.env.AUTH_LOGIN_CODE,
+    sessionSecret: process.env.AUTH_SESSION_SECRET,
+    ttlMinutes: Number(process.env.AUTH_SESSION_TTL_MINUTES ?? 480),
+  }),
   createPatient: createPatient(db),
   getConsentRecordById: getConsentRecordById(db),
   getFileAssetById: getFileAssetById(db),
@@ -193,6 +199,7 @@ const server = createNodeServer({
   resolveActor: resolveActor(db),
   healthCheck: () => db.healthCheck(),
   apiToken: process.env.API_TOKEN,
+  sessionAuthSecret: process.env.AUTH_SESSION_SECRET,
 });
 
 const port = Number(process.env.PORT ?? '3000');

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createEmrApi } from './emrApi.ts';
+import { createSessionToken } from '../services/sessionToken.ts';
 import type { Dependencies } from './types.ts';
 
 function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -268,6 +269,21 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPatientTimeline() {
       return [];
     },
+    async createAuthSession() {
+      return {
+        accessToken: 'emr1.test.signature',
+        tokenType: 'Bearer',
+        expiresAt: '2026-05-25T10:30:00.000Z',
+        user: {
+          id: 'user-1',
+          clinic_id: 'clinic-1',
+          username: 'doctor.one',
+          display_name: 'Dr One',
+          role: 'doctor',
+          practitioner_id: 'practitioner-1',
+        },
+      };
+    },
     async healthCheck() {},
   };
 
@@ -276,6 +292,114 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     ...overrides,
   };
 }
+
+test('POST /api/auth/sessions returns a session token and writes audit log', async () => {
+  let auditMetadata: Record<string, unknown> | undefined;
+  const api = createEmrApi(
+    makeDeps({
+      async createAuthSession(input) {
+        assert.deepEqual(input, {
+          clinicId: 'clinic-1',
+          username: 'doctor.one',
+          loginCode: 'pilot-code',
+        });
+        return {
+          accessToken: 'emr1.payload.signature',
+          tokenType: 'Bearer',
+          expiresAt: '2026-05-25T10:30:00.000Z',
+          user: {
+            id: 'user-1',
+            clinic_id: 'clinic-1',
+            username: 'doctor.one',
+            display_name: 'Dr One',
+            role: 'doctor',
+            practitioner_id: 'practitioner-1',
+          },
+        };
+      },
+      async createAuditLog(input) {
+        assert.equal(input.entityType, 'user');
+        assert.equal(input.entityId, 'user-1');
+        assert.equal(input.action, 'session_created');
+        assert.equal(input.actorUserId, 'user-1');
+        auditMetadata = input.metadata;
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'POST',
+    path: '/api/auth/sessions',
+    body: { clinicId: 'clinic-1', username: 'doctor.one', loginCode: 'pilot-code' },
+  });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(auditMetadata, {
+    clinicId: 'clinic-1',
+    username: 'doctor.one',
+    expiresAt: '2026-05-25T10:30:00.000Z',
+  });
+});
+
+test('session bearer token resolves actor without role headers', async () => {
+  const sessionSecret = '0123456789abcdef0123456789abcdef';
+  const accessToken = createSessionToken(
+    {
+      userId: 'user-1',
+      issuedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+    sessionSecret
+  );
+
+  const api = createEmrApi(
+    makeDeps({
+      sessionAuthSecret: sessionSecret,
+      async resolveActor(input) {
+        assert.deepEqual(input, { userId: 'user-1' });
+        return {
+          user_id: 'user-1',
+          role: 'doctor',
+          practitioner_id: 'practitioner-1',
+          clinic_id: 'clinic-1',
+          display_name: 'Dr One',
+        };
+      },
+      async getPatientWithEncountersAndSOAP() {
+        return {
+          id: 'patient-1',
+          clinic_id: 'clinic-1',
+          medical_record_number: 'MRN-001',
+          national_id: null,
+          first_name: 'Jane',
+          middle_name: null,
+          last_name: 'Doe',
+          preferred_name: null,
+          date_of_birth: null,
+          sex_at_birth: 'female',
+          phone_number: null,
+          email: null,
+          blood_type: null,
+          notes: null,
+          created_at: '2026-05-25T10:00:00.000Z',
+          updated_at: '2026-05-25T10:00:00.000Z',
+          flags: [],
+          encounters: [],
+        };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    headers: { authorization: `Bearer ${accessToken}` },
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+
+  assert.equal(response.status, 200);
+});
 
 test('GET /api/patients/detail returns patient data', async () => {
   const api = createEmrApi(

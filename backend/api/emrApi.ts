@@ -1,7 +1,8 @@
-import { getActorContext, requireBearerAuth, withResolvedActor } from './auth.ts';
+import { authenticateBearerRequest, getActorContext, withResolvedActor } from './auth.ts';
 import {
   handleCreateAttachmentLink,
   handleCreateAppointment,
+  handleCreateAuthSession,
   handleCreateClinicVisit,
   handleCreateClinicalNoteTemplate,
   handleCreateConsentRecord,
@@ -100,14 +101,21 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleHealthCheck(dependencies);
     }
 
-    const authError = requireBearerAuth(request, dependencies.apiToken);
-
-    if (authError) {
-      return authError;
+    if (request.method === 'POST' && request.path === '/api/auth/sessions') {
+      return handleCreateAuthSession(request, dependencies);
     }
 
-    let actorAwareRequest = request;
-    const actor = getActorContext(request);
+    const auth = authenticateBearerRequest(request, {
+      apiToken: dependencies.apiToken,
+      sessionSecret: dependencies.sessionAuthSecret,
+    });
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    let actorAwareRequest = auth.request;
+    const actor = getActorContext(actorAwareRequest);
 
     if (dependencies.resolveActor) {
       if (!actor.userId) {

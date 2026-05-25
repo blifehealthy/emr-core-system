@@ -15,6 +15,12 @@ All routes except `GET /health` can be protected by bearer token when
 | --- | --- | --- |
 | `GET` | `/health` | Read service health. |
 
+## Auth
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/sessions` | Exchange clinic id, username, and pilot login code for a signed bearer session token. |
+
 ## Patient and Clinical Profile
 
 | Method | Route | Purpose |

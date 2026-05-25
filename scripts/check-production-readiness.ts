@@ -27,6 +27,7 @@ export function checkProductionReadiness(env: NodeJS.ProcessEnv = process.env) {
   checkDeploymentMode(env, findings, strict);
   checkDatabase(env, findings, strict);
   checkApiToken(env, findings, strict);
+  checkSessionAuth(env, findings, strict);
   checkStorage(env, findings, strict);
 
   return findings;
@@ -77,6 +78,35 @@ function checkApiToken(
 
   if (!isStrongSecret(apiToken)) {
     add(findings, strict ? 'error' : 'warning', 'API_TOKEN', 'API_TOKEN must be at least 32 characters and must not use dev/test/change-me style values.');
+  }
+}
+
+function checkSessionAuth(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  const sessionSecret = env.AUTH_SESSION_SECRET?.trim();
+  const loginCode = env.AUTH_LOGIN_CODE?.trim();
+
+  if (!sessionSecret) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_SESSION_SECRET', 'Set AUTH_SESSION_SECRET before issuing pilot login sessions.');
+  } else if (!isStrongSecret(sessionSecret)) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_SESSION_SECRET', 'AUTH_SESSION_SECRET must be at least 32 characters and must not use dev/test/change-me style values.');
+  }
+
+  if (!loginCode) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_LOGIN_CODE', 'Set AUTH_LOGIN_CODE before enabling /api/auth/sessions.');
+  } else if (!isStrongSecret(loginCode)) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_LOGIN_CODE', 'AUTH_LOGIN_CODE must be at least 32 characters and rotated after pilot onboarding.');
+  }
+
+  const ttl = env.AUTH_SESSION_TTL_MINUTES;
+  if (ttl !== undefined) {
+    const ttlMinutes = Number(ttl);
+    if (!Number.isInteger(ttlMinutes) || ttlMinutes <= 0 || ttlMinutes > 720) {
+      add(findings, strict ? 'error' : 'warning', 'AUTH_SESSION_TTL_MINUTES', 'AUTH_SESSION_TTL_MINUTES must be an integer from 1 to 720.');
+    }
   }
 }
 

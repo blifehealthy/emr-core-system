@@ -1,34 +1,50 @@
 import type { AuthActor, HttpRequest, HttpResponse, UserRole } from './types.ts';
+import { verifySessionToken } from '../services/sessionToken.ts';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 
-export function requireBearerAuth(
+export function authenticateBearerRequest(
   request: HttpRequest,
-  expectedToken?: string
-): HttpResponse | null {
-  if (!expectedToken) {
-    return null;
+  options: { apiToken?: string; sessionSecret?: string }
+): { ok: true; request: HttpRequest } | { ok: false; response: HttpResponse } {
+  if (!options.apiToken && !options.sessionSecret) {
+    return { ok: true, request };
   }
 
   const authorization = request.headers?.authorization?.trim();
 
   if (!authorization) {
     return {
-      status: 401,
-      headers: JSON_HEADERS,
-      body: { error: 'Authorization header is required' },
+      ok: false,
+      response: {
+        status: 401,
+        headers: JSON_HEADERS,
+        body: { error: 'Authorization header is required' },
+      },
     };
   }
 
-  if (authorization !== `Bearer ${expectedToken}`) {
-    return {
-      status: 401,
-      headers: JSON_HEADERS,
-      body: { error: 'Invalid bearer token' },
-    };
+  const bearerToken = readBearerToken(authorization);
+  if (!bearerToken) {
+    return unauthorized('Invalid authorization scheme');
   }
 
-  return null;
+  if (options.apiToken && bearerToken === options.apiToken) {
+    return { ok: true, request };
+  }
+
+  if (options.sessionSecret) {
+    const session = verifySessionToken(bearerToken, options.sessionSecret);
+    if (session.ok) {
+      return {
+        ok: true,
+        request: withResolvedActor(request, { userId: session.payload.userId }),
+      };
+    }
+    return unauthorized(session.error);
+  }
+
+  return unauthorized('Invalid bearer token');
 }
 
 const permissions: Record<string, UserRole[]> = {
@@ -110,6 +126,22 @@ export function withResolvedActor(request: HttpRequest, actor: AuthActor): HttpR
       'x-practitioner-id':
         actor.practitionerId ?? request.headers?.['x-practitioner-id'],
       'x-user-role': actor.role ?? request.headers?.['x-user-role'],
+    },
+  };
+}
+
+function readBearerToken(authorization: string) {
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
+}
+
+function unauthorized(error: string): { ok: false; response: HttpResponse } {
+  return {
+    ok: false,
+    response: {
+      status: 401,
+      headers: JSON_HEADERS,
+      body: { error },
     },
   };
 }
