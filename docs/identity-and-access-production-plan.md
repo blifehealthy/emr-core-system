@@ -14,6 +14,7 @@ controlled technical pilot, but it is not the final production identity model.
 - OIDC-compatible bearer tokens can map external subjects to users through
   `users.oidc_subject`.
 - Clinic admins can bind `oidc_subject` on user records during pilot setup.
+- Known-user login failures write audit events for support review.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
 - Static technical tokens can still use `x-user-id` for smoke tests and trusted
@@ -44,6 +45,7 @@ Production access should move to an identity provider with:
 - Prefer session bearer tokens for pilot users.
 - Use role headers only from trusted local/test boundaries.
 - Review locked accounts and failed login counts during pilot support.
+- Review `session_login_failed` audit events during pilot support.
 - Confirm admin, doctor, and nurse role mappings during UAT.
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot.
 

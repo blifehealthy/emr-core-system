@@ -20,6 +20,20 @@ export type AuthSessionResult = {
   };
 };
 
+export type AuthSessionFailure = {
+  failed: true;
+  reason: 'invalid_login_code' | 'locked';
+  lockedUntil: string | null;
+  user: {
+    id: string;
+    clinic_id: string;
+    username: string;
+    display_name: string;
+    role: 'doctor' | 'nurse' | 'admin';
+    practitioner_id: string | null;
+  };
+};
+
 export class AuthSessionConfigError extends Error {}
 
 export function createAuthSession(
@@ -33,7 +47,9 @@ export function createAuthSession(
     now?: () => Date;
   }
 ) {
-  return async function run(input: CreateAuthSessionInput): Promise<AuthSessionResult | null> {
+  return async function run(
+    input: CreateAuthSessionInput
+  ): Promise<AuthSessionResult | AuthSessionFailure | null> {
     const expectedLoginCode = config.loginCode?.trim();
     const sessionSecret = config.sessionSecret?.trim();
     if (!expectedLoginCode || !sessionSecret) {
@@ -80,7 +96,12 @@ export function createAuthSession(
 
     const now = config.now?.() ?? new Date();
     if (user.locked_until && Date.parse(user.locked_until) > now.getTime()) {
-      return null;
+      return {
+        failed: true,
+        reason: 'locked',
+        lockedUntil: user.locked_until,
+        user,
+      };
     }
 
     if (input.loginCode !== expectedLoginCode) {
@@ -102,7 +123,12 @@ export function createAuthSession(
         [user.id, failedLoginCount, lockedUntil]
       );
 
-      return null;
+      return {
+        failed: true,
+        reason: 'invalid_login_code',
+        lockedUntil,
+        user,
+      };
     }
 
     const ttlMinutes = config.ttlMinutes ?? 480;

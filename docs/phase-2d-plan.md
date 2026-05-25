@@ -23,6 +23,8 @@ bearer token verification and database user mapping.
 - Admin user create/update APIs can bind or clear `oidc_subject`.
 - Clinic admin frontend user form exposes an `OIDC subject` field and shows
   mappings in user cards.
+- Known-user login failures now write `session_login_failed` audit events with
+  reason and lockout timestamp when present.
 - API smoke seeds OIDC subject mappings and verifies protected patient detail
   access with an OIDC bearer token.
 - Production readiness check validates OIDC config when enabled:
@@ -39,7 +41,8 @@ identity provider.
 
 ## Remaining Phase 2D Work
 
-- Add failed-login and OIDC auth failure audit events.
+- Add OIDC auth failure audit events for mapped users when provider data is
+  available.
 - Add RS256/JWKS verification path for the selected provider.
 - Add MFA requirement documentation and enforcement hooks once provider is
   selected.

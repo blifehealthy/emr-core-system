@@ -192,6 +192,28 @@ export async function handleCreateAuthSession(
       };
     }
 
+    if ('failed' in session) {
+      await dependencies.createAuditLog({
+        entityType: 'user',
+        entityId: session.user.id,
+        action: 'session_login_failed',
+        actorUserId: session.user.id,
+        actorPractitionerId: session.user.practitioner_id,
+        metadata: {
+          clinicId: validation.value.clinicId,
+          username: session.user.username,
+          reason: session.reason,
+          lockedUntil: session.lockedUntil,
+        },
+      });
+
+      return {
+        status: 401,
+        headers: JSON_HEADERS,
+        body: { error: 'Invalid username or login code' },
+      };
+    }
+
     await dependencies.createAuditLog({
       entityType: 'user',
       entityId: session.user.id,

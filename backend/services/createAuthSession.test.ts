@@ -46,6 +46,10 @@ test('creates a session for an active user with a valid login code', async () =>
   });
 
   assert.ok(session);
+  assert.equal('failed' in session, false);
+  if ('failed' in session) {
+    throw new Error('Expected successful auth session');
+  }
   assert.equal(session.tokenType, 'Bearer');
   assert.equal(session.expiresAt, '2026-05-25T10:30:00.000Z');
   assert.equal(session.user.id, 'user-1');
@@ -117,7 +121,21 @@ test('tracks failed attempts and locks a user after repeated invalid login codes
     loginCode: 'wrong',
   });
 
-  assert.equal(session, null);
+  assert.deepEqual(session, {
+    failed: true,
+    reason: 'invalid_login_code',
+    lockedUntil: '2026-05-25T10:15:00.000Z',
+    user: {
+      id: 'user-1',
+      clinic_id: 'clinic-1',
+      username: 'doctor.one',
+      display_name: 'Dr One',
+      role: 'doctor',
+      practitioner_id: 'practitioner-1',
+      failed_login_count: 4,
+      locked_until: null,
+    },
+  });
   assert.deepEqual(updates, [['user-1', 5, '2026-05-25T10:15:00.000Z']]);
 });
 

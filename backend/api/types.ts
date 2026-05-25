@@ -64,6 +64,20 @@ export type AuthSession = {
   };
 };
 
+export type AuthSessionFailure = {
+  failed: true;
+  reason: 'invalid_login_code' | 'locked';
+  lockedUntil: string | null;
+  user: {
+    id: string;
+    clinic_id: string;
+    username: string;
+    display_name: string;
+    role: UserRole;
+    practitioner_id: string | null;
+  };
+};
+
 export type HttpRequest = {
   method: string;
   path: string;
@@ -662,7 +676,7 @@ export type UpdatePrescriptionInput = {
 };
 
 export type Dependencies = {
-  createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | null>;
+  createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | AuthSessionFailure | null>;
   getPatientWithEncountersAndSOAP: (input: {
     clinicId: string;
     medicalRecordNumber: string;

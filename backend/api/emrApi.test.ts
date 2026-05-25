@@ -343,6 +343,50 @@ test('POST /api/auth/sessions returns a session token and writes audit log', asy
   });
 });
 
+test('POST /api/auth/sessions audits failed login for known users', async () => {
+  let auditAction = '';
+  let auditMetadata: Record<string, unknown> | undefined;
+  const api = createEmrApi(
+    makeDeps({
+      async createAuthSession() {
+        return {
+          failed: true,
+          reason: 'invalid_login_code',
+          lockedUntil: '2026-05-25T10:15:00.000Z',
+          user: {
+            id: 'user-1',
+            clinic_id: 'clinic-1',
+            username: 'doctor.one',
+            display_name: 'Dr One',
+            role: 'doctor',
+            practitioner_id: 'practitioner-1',
+          },
+        };
+      },
+      async createAuditLog(input) {
+        auditAction = input.action;
+        auditMetadata = input.metadata;
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'POST',
+    path: '/api/auth/sessions',
+    body: { clinicId: 'clinic-1', username: 'doctor.one', loginCode: 'wrong-code' },
+  });
+
+  assert.equal(response.status, 401);
+  assert.equal(auditAction, 'session_login_failed');
+  assert.deepEqual(auditMetadata, {
+    clinicId: 'clinic-1',
+    username: 'doctor.one',
+    reason: 'invalid_login_code',
+    lockedUntil: '2026-05-25T10:15:00.000Z',
+  });
+});
+
 test('session bearer token resolves actor without role headers', async () => {
   const sessionSecret = '0123456789abcdef0123456789abcdef';
   const accessToken = createSessionToken(

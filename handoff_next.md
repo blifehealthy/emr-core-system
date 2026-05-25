@@ -434,6 +434,7 @@ Phase 2D has started with production identity provider readiness:
   deterministic pilot testing.
 - `users.oidc_subject` maps external identity subjects to active local users.
 - Admin user forms can bind and edit `oidc_subject`.
+- Known-user login failures write `session_login_failed` audit events.
 - API role/practitioner context is still resolved from the database.
 - API smoke seeds OIDC subject mappings and verifies protected access with an
   OIDC bearer token.
@@ -441,7 +442,7 @@ Phase 2D has started with production identity provider readiness:
 
 Next Phase 2D batch:
 
-1. Add auth failure audit events.
+1. Add OIDC auth failure audit events for mapped users when provider data is available.
 2. Add RS256/JWKS verification after the target provider is selected.
 3. Add Phase 2D clinician/operator summary and UAT checklist.
 
