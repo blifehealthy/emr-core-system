@@ -28,6 +28,8 @@ that need human confirmation.
 - `AUTH_SESSION_SECRET` is set to a private signing secret of at least 32 characters.
 - `AUTH_LOGIN_CODE` is set to a private onboarding/login code of at least 32 characters.
 - `AUTH_SESSION_TTL_MINUTES` is set to an integer from 1 to 720 when overridden.
+- If OIDC auth is enabled, `AUTH_OIDC_ISSUER`, `AUTH_OIDC_AUDIENCE`, and
+  `AUTH_OIDC_HS256_SECRET` are set.
 - `FILE_STORAGE_DRIVER` is set to `local` or `s3`.
 - `FILE_STORAGE_DIR` uses persistent private disk when the local driver is used.
 - `FILE_STORAGE_ALLOWED_MIME_TYPES` lists explicit MIME types.

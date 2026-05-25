@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createEmrApi } from './emrApi.ts';
 import { createSessionToken } from '../services/sessionToken.ts';
+import { createOidcTestToken } from '../services/oidcToken.ts';
 import type { Dependencies } from './types.ts';
 
 function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
@@ -364,6 +365,70 @@ test('session bearer token resolves actor without role headers', async () => {
           practitioner_id: 'practitioner-1',
           clinic_id: 'clinic-1',
           display_name: 'Dr One',
+        };
+      },
+      async getPatientWithEncountersAndSOAP() {
+        return {
+          id: 'patient-1',
+          clinic_id: 'clinic-1',
+          medical_record_number: 'MRN-001',
+          national_id: null,
+          first_name: 'Jane',
+          middle_name: null,
+          last_name: 'Doe',
+          preferred_name: null,
+          date_of_birth: null,
+          sex_at_birth: 'female',
+          phone_number: null,
+          email: null,
+          blood_type: null,
+          notes: null,
+          created_at: '2026-05-25T10:00:00.000Z',
+          updated_at: '2026-05-25T10:00:00.000Z',
+          flags: [],
+          encounters: [],
+        };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    headers: { authorization: `Bearer ${accessToken}` },
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+
+  assert.equal(response.status, 200);
+});
+
+test('OIDC bearer token resolves actor by subject without role headers', async () => {
+  const oidcAuth = {
+    issuer: 'https://id.example.test',
+    audience: 'emr-core',
+    hs256Secret: '0123456789abcdef0123456789abcdef',
+  };
+  const accessToken = createOidcTestToken(
+    {
+      iss: oidcAuth.issuer,
+      aud: oidcAuth.audience,
+      sub: 'oidc-user-1',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    oidcAuth.hs256Secret
+  );
+
+  const api = createEmrApi(
+    makeDeps({
+      oidcAuth,
+      async resolveOidcActor(input) {
+        assert.deepEqual(input, { oidcSubject: 'oidc-user-1' });
+        return {
+          user_id: 'user-1',
+          role: 'doctor',
+          practitioner_id: 'practitioner-1',
+          clinic_id: 'clinic-1',
+          display_name: 'Dr OIDC',
         };
       },
       async getPatientWithEncountersAndSOAP() {

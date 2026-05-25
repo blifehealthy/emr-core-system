@@ -80,6 +80,15 @@ tracked in:
 - `docs/phase-2c-clinician-summary-th.md`
 - `docs/phase-2c-uat-checklist-th.md`
 
+## Phase 2D
+
+Phase 2D production identity work has started. The first slice adds OIDC-style
+bearer token verification, `users.oidc_subject` mapping, and readiness checks so
+the pilot auth flow can evolve toward an external identity provider. Current
+scope is tracked in:
+
+- `docs/phase-2d-plan.md`
+
 ## Current Scope
 
 Included in this initialization phase:
@@ -263,6 +272,19 @@ If you have user records in the database already, static-token technical calls
 can still resolve role and practitioner context from `x-user-id`. Headers
 `x-user-role` and `x-practitioner-id` remain explicit fallbacks for local and
 test harnesses.
+
+OIDC-compatible bearer verification can be enabled for production identity
+provider integration pilots:
+
+```bash
+AUTH_OIDC_ISSUER=https://id.example.test \
+AUTH_OIDC_AUDIENCE=emr-core \
+AUTH_OIDC_HS256_SECRET=change-me-32-plus-characters \
+DATABASE_URL=postgres://localhost:5432/emr_core \
+npm run start:api
+```
+
+OIDC tokens are mapped to active users through `users.oidc_subject`.
 
 Example requests:
 

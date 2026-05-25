@@ -1,13 +1,14 @@
 import type { AuthActor, HttpRequest, HttpResponse, UserRole } from './types.ts';
 import { verifySessionToken } from '../services/sessionToken.ts';
+import { verifyOidcAccessToken, type OidcAuthConfig } from '../services/oidcToken.ts';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 
 export function authenticateBearerRequest(
   request: HttpRequest,
-  options: { apiToken?: string; sessionSecret?: string }
+  options: { apiToken?: string; sessionSecret?: string; oidc?: OidcAuthConfig }
 ): { ok: true; request: HttpRequest } | { ok: false; response: HttpResponse } {
-  if (!options.apiToken && !options.sessionSecret) {
+  if (!options.apiToken && !options.sessionSecret && !options.oidc) {
     return { ok: true, request };
   }
 
@@ -41,7 +42,20 @@ export function authenticateBearerRequest(
         request: withResolvedActor(request, { userId: session.payload.userId }),
       };
     }
-    return unauthorized(session.error);
+    if (!options.oidc) {
+      return unauthorized(session.error);
+    }
+  }
+
+  if (options.oidc) {
+    const oidc = verifyOidcAccessToken(bearerToken, options.oidc);
+    if (oidc.ok) {
+      return {
+        ok: true,
+        request: withResolvedActor(request, { oidcSubject: oidc.subject }),
+      };
+    }
+    return unauthorized(oidc.error);
   }
 
   return unauthorized('Invalid bearer token');
@@ -113,6 +127,7 @@ export function getActorContext(request: HttpRequest) {
   return {
     userId: request.headers?.['x-user-id']?.trim() || null,
     practitionerId: request.headers?.['x-practitioner-id']?.trim() || null,
+    oidcSubject: request.headers?.['x-oidc-subject']?.trim() || null,
     role: request.headers?.['x-user-role']?.trim() || undefined,
   };
 }
@@ -126,6 +141,7 @@ export function withResolvedActor(request: HttpRequest, actor: AuthActor): HttpR
       'x-practitioner-id':
         actor.practitionerId ?? request.headers?.['x-practitioner-id'],
       'x-user-role': actor.role ?? request.headers?.['x-user-role'],
+      'x-oidc-subject': actor.oidcSubject ?? request.headers?.['x-oidc-subject'],
     },
   };
 }

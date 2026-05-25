@@ -426,6 +426,24 @@ Post-Phase 2C next batch:
 2. Decide whether to start OIDC/MFA implementation or keep it as the next phase after UAT.
 3. Run Phase 2C UAT with clinic operators using `docs/phase-2c-uat-checklist-th.md`.
 
+## Phase 2D Status
+
+Phase 2D has started with production identity provider readiness:
+
+- OIDC-compatible bearer tokens can be verified with local HS256 config for
+  deterministic pilot testing.
+- `users.oidc_subject` maps external identity subjects to active local users.
+- API role/practitioner context is still resolved from the database.
+- API smoke seeds OIDC subject mappings and verifies protected access with an
+  OIDC bearer token.
+- `npm run production:check` validates OIDC config when enabled.
+
+Next Phase 2D batch:
+
+1. Add admin UI support for binding `oidc_subject` to users.
+2. Add auth failure audit events.
+3. Add RS256/JWKS verification after the target provider is selected.
+
 The deliverables added in this worktree are:
 
 - `docs/role-permission-matrix.md`
@@ -443,6 +461,7 @@ The deliverables added in this worktree are:
 - `docs/phase-2c-plan.md`
 - `docs/phase-2c-clinician-summary-th.md`
 - `docs/phase-2c-uat-checklist-th.md`
+- `docs/phase-2d-plan.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

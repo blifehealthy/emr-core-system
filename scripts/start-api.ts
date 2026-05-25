@@ -90,6 +90,7 @@ import { updateUser } from '../backend/services/updateUser.ts';
 import { updateVitalSign } from '../backend/services/updateVitalSign.ts';
 import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.ts';
 import { resolveActor } from '../backend/services/resolveActor.ts';
+import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -197,9 +198,21 @@ const server = createNodeServer({
   getAuditLogsByEntity: getAuditLogsByEntity(db),
   getPatientTimeline: getPatientTimeline(db),
   resolveActor: resolveActor(db),
+  resolveOidcActor: resolveOidcActor(db),
   healthCheck: () => db.healthCheck(),
   apiToken: process.env.API_TOKEN,
   sessionAuthSecret: process.env.AUTH_SESSION_SECRET,
+  oidcAuth:
+    process.env.AUTH_OIDC_ISSUER &&
+    process.env.AUTH_OIDC_AUDIENCE &&
+    process.env.AUTH_OIDC_HS256_SECRET
+      ? {
+          issuer: process.env.AUTH_OIDC_ISSUER,
+          audience: process.env.AUTH_OIDC_AUDIENCE,
+          hs256Secret: process.env.AUTH_OIDC_HS256_SECRET,
+          subjectClaim: process.env.AUTH_OIDC_SUBJECT_CLAIM,
+        }
+      : undefined,
 });
 
 const port = Number(process.env.PORT ?? '3000');

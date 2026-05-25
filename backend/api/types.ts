@@ -41,6 +41,7 @@ export type AuthActor = {
   userId?: string | null;
   practitionerId?: string | null;
   role?: UserRole;
+  oidcSubject?: string | null;
 };
 
 export type CreateAuthSessionInput = {
@@ -862,7 +863,20 @@ export type Dependencies = {
     clinic_id: string;
     display_name: string;
   } | null>;
+  resolveOidcActor?: (input: { oidcSubject: string }) => Promise<{
+    user_id: string;
+    role: UserRole;
+    practitioner_id: string | null;
+    clinic_id: string;
+    display_name: string;
+  } | null>;
   healthCheck: () => Promise<void>;
   apiToken?: string;
   sessionAuthSecret?: string;
+  oidcAuth?: {
+    issuer: string;
+    audience: string;
+    hs256Secret: string;
+    subjectClaim?: string;
+  };
 };

@@ -28,6 +28,7 @@ export function checkProductionReadiness(env: NodeJS.ProcessEnv = process.env) {
   checkDatabase(env, findings, strict);
   checkApiToken(env, findings, strict);
   checkSessionAuth(env, findings, strict);
+  checkOidcAuth(env, findings, strict);
   checkStorage(env, findings, strict);
 
   return findings;
@@ -107,6 +108,35 @@ function checkSessionAuth(
     if (!Number.isInteger(ttlMinutes) || ttlMinutes <= 0 || ttlMinutes > 720) {
       add(findings, strict ? 'error' : 'warning', 'AUTH_SESSION_TTL_MINUTES', 'AUTH_SESSION_TTL_MINUTES must be an integer from 1 to 720.');
     }
+  }
+}
+
+function checkOidcAuth(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  const oidcEnabled = env.AUTH_OIDC_ENABLED === 'true';
+  const issuer = env.AUTH_OIDC_ISSUER?.trim();
+  const audience = env.AUTH_OIDC_AUDIENCE?.trim();
+  const hs256Secret = env.AUTH_OIDC_HS256_SECRET?.trim();
+
+  if (!oidcEnabled && !issuer && !audience && !hs256Secret) {
+    return;
+  }
+
+  if (!issuer) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_ISSUER', 'Set AUTH_OIDC_ISSUER when OIDC auth is enabled.');
+  }
+
+  if (!audience) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_AUDIENCE', 'Set AUTH_OIDC_AUDIENCE when OIDC auth is enabled.');
+  }
+
+  if (!hs256Secret) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_HS256_SECRET', 'Set AUTH_OIDC_HS256_SECRET for local OIDC token verification.');
+  } else if (!isStrongSecret(hs256Secret)) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_HS256_SECRET', 'AUTH_OIDC_HS256_SECRET must be at least 32 characters and must not use dev/test/change-me style values.');
   }
 }
 

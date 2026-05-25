@@ -8,6 +8,7 @@
 - production readiness now includes `npm run production:check` plus a pilot go/no-go checklist
 - Phase 2B clinician/UAT docs are ready for doctor and clinic owner review
 - Phase 2C pilot auth sessions now issue signed bearer tokens from database users and track last login / lockout state
+- Phase 2D OIDC-compatible bearer auth maps external subjects through `users.oidc_subject`
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -26,6 +27,7 @@
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
 - Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators
+- Review `docs/phase-2d-plan.md` before selecting RS256/JWKS provider integration
 
 ## Verified
 
@@ -34,4 +36,5 @@
 - Phase 2B docs updated: clinician summary, UAT checklist, identity/access plan, monitoring/backup runbook
 - Phase 2C targeted auth/session tests pass
 - Phase 2C docs updated: clinician/operator summary and UAT checklist
+- Phase 2D targeted OIDC token, actor mapping, and migration tests pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

@@ -11,6 +11,8 @@ controlled technical pilot, but it is not the final production identity model.
   and `AUTH_LOGIN_CODE` to receive a short-lived signed bearer token.
 - Session bearer tokens carry only user id; role and practitioner context are
   resolved from active database records.
+- OIDC-compatible bearer tokens can map external subjects to users through
+  `users.oidc_subject`.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
 - Static technical tokens can still use `x-user-id` for smoke tests and trusted
@@ -47,8 +49,8 @@ Production access should move to an identity provider with:
 ### Phase II: Identity Provider Integration
 
 - Select provider: managed OIDC, clinic SSO, or private identity service.
-- Add JWT verification middleware.
-- Map token subject to `users.id`.
+- Add provider-grade JWT verification middleware.
+- Map token subject to `users.oidc_subject`.
 - Resolve role and practitioner id from database, not request headers.
 - Reject inactive users.
 - Record authenticated user id in audit logs.

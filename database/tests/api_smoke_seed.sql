@@ -14,14 +14,16 @@ INSERT INTO users (
     clinic_id,
     username,
     display_name,
-    role
+    role,
+    oidc_subject
 )
 VALUES (
     '10000000-0000-0000-0000-000000000201',
     '10000000-0000-0000-0000-000000000101',
     'doctor.smoke',
     'Dr Smoke',
-    'doctor'
+    'doctor',
+    'oidc:doctor.smoke'
 );
 
 INSERT INTO users (
@@ -29,14 +31,16 @@ INSERT INTO users (
     clinic_id,
     username,
     display_name,
-    role
+    role,
+    oidc_subject
 )
 VALUES (
     '10000000-0000-0000-0000-000000000202',
     '10000000-0000-0000-0000-000000000101',
     'admin.smoke',
     'Admin Smoke',
-    'admin'
+    'admin',
+    'oidc:admin.smoke'
 );
 
 INSERT INTO practitioners (

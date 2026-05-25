@@ -108,6 +108,7 @@ export function createEmrApi(dependencies: Dependencies) {
     const auth = authenticateBearerRequest(request, {
       apiToken: dependencies.apiToken,
       sessionSecret: dependencies.sessionAuthSecret,
+      oidc: dependencies.oidcAuth,
     });
 
     if (!auth.ok) {
@@ -117,7 +118,25 @@ export function createEmrApi(dependencies: Dependencies) {
     let actorAwareRequest = auth.request;
     const actor = getActorContext(actorAwareRequest);
 
-    if (dependencies.resolveActor) {
+    if (dependencies.resolveOidcActor && actor.oidcSubject) {
+      const resolvedActor = await dependencies.resolveOidcActor({
+        oidcSubject: actor.oidcSubject,
+      });
+
+      if (!resolvedActor) {
+        return {
+          status: 403,
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          body: { error: 'OIDC actor could not be resolved' },
+        };
+      }
+
+      actorAwareRequest = withResolvedActor(actorAwareRequest, {
+        userId: resolvedActor.user_id,
+        practitionerId: resolvedActor.practitioner_id,
+        role: resolvedActor.role,
+      });
+    } else if (dependencies.resolveActor) {
       if (!actor.userId) {
         return {
           status: 403,

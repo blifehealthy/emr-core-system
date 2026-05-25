@@ -93,6 +93,7 @@ The script applies these migrations in order:
 - `0018_add_prescription_safety_override.up.sql`
 - `0019_add_drug_interaction_rules.up.sql`
 - `0020_add_user_login_security.up.sql`
+- `0021_add_user_oidc_subject.up.sql`
 
 Then it runs:
 

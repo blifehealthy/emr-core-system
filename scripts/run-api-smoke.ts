@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { request as httpRequest } from 'node:http';
 import assert from 'node:assert/strict';
+import { createOidcTestToken } from '../backend/services/oidcToken.ts';
 
 const ROOT_DIR = process.cwd();
 const MIGRATIONS_DIR = join(ROOT_DIR, 'database', 'migrations');
@@ -14,6 +15,10 @@ const API_TOKEN = process.env.API_TOKEN ?? 'dev-smoke-token';
 const AUTH_LOGIN_CODE = process.env.AUTH_LOGIN_CODE ?? 'pilot-smoke-code';
 const AUTH_SESSION_SECRET =
   process.env.AUTH_SESSION_SECRET ?? '0123456789abcdef0123456789abcdef';
+const AUTH_OIDC_ISSUER = process.env.AUTH_OIDC_ISSUER ?? 'https://id.smoke.test';
+const AUTH_OIDC_AUDIENCE = process.env.AUTH_OIDC_AUDIENCE ?? 'emr-core';
+const AUTH_OIDC_HS256_SECRET =
+  process.env.AUTH_OIDC_HS256_SECRET ?? 'abcdef0123456789abcdef0123456789';
 
 const POSTGRES_CONTAINER = process.env.POSTGRES_CONTAINER ?? 'poolproject-postgres';
 const POSTGRES_USER = process.env.POSTGRES_USER ?? 'postgres';
@@ -45,6 +50,7 @@ const migrations = [
   '0018_add_prescription_safety_override.up.sql',
   '0019_add_drug_interaction_rules.up.sql',
   '0020_add_user_login_security.up.sql',
+  '0021_add_user_oidc_subject.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -72,6 +78,9 @@ async function main() {
           API_TOKEN,
           AUTH_LOGIN_CODE,
           AUTH_SESSION_SECRET,
+          AUTH_OIDC_ISSUER,
+          AUTH_OIDC_AUDIENCE,
+          AUTH_OIDC_HS256_SECRET,
           PORT: String(PORT),
           FILE_STORAGE_DIR,
         },
@@ -152,6 +161,18 @@ async function main() {
     const adminHeaders = {
       Authorization: `${adminSession.data.tokenType} ${adminSession.data.accessToken}`,
     };
+    const oidcAccessToken = createOidcTestToken(
+      {
+        iss: AUTH_OIDC_ISSUER,
+        aud: AUTH_OIDC_AUDIENCE,
+        sub: 'oidc:doctor.smoke',
+        exp: Math.floor(Date.now() / 1000) + 300,
+      },
+      AUTH_OIDC_HS256_SECRET
+    );
+    const oidcHeaders = {
+      Authorization: `Bearer ${oidcAccessToken}`,
+    };
 
     const registeredPatient = await requestJson<{
       id: string;
@@ -195,6 +216,12 @@ async function main() {
     assert.equal(patientDetail.data.flags[0].severity, 'critical');
     assert.equal(patientDetail.data.encounters[0].prescriptions.length, 3);
     assert.equal(patientDetail.data.encounters[0].prescriptions[0].id, '10000000-0000-0000-0000-000000006003');
+
+    const oidcPatientDetail = await requestJson<{ id: string }>(
+      `/api/patients/detail?clinicId=10000000-0000-0000-0000-000000000101&medicalRecordNumber=MRN-SMOKE-001`,
+      oidcHeaders
+    );
+    assert.equal(oidcPatientDetail.data.id, '10000000-0000-0000-0000-000000001001');
 
     const diagnoses = await requestJson<Array<{ id: string }>>(
       '/api/encounters/10000000-0000-0000-0000-000000002001/diagnoses?clinicalNoteId=10000000-0000-0000-0000-000000003001&status=active&limit=1&offset=1',
