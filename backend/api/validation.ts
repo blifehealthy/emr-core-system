@@ -1469,6 +1469,9 @@ export function validateCreatePrescriptionBody(body: unknown):
   const instructions = readOptionalNullableStringField(candidate, 'instructions');
   if (!instructions.ok) return instructions;
 
+  const safetyOverrideReason = readOptionalNullableStringField(candidate, 'safetyOverrideReason');
+  if (!safetyOverrideReason.ok) return safetyOverrideReason;
+
   const status = readEnumValue<PrescriptionStatus>(
     candidate.status,
     'status',
@@ -1496,6 +1499,7 @@ export function validateCreatePrescriptionBody(body: unknown):
       frequency: frequency.value,
       durationText: durationText.value,
       instructions: instructions.value,
+      safetyOverrideReason: safetyOverrideReason.value,
       status: status.value,
       startDate: startDate.value,
       endDate: endDate.value,
@@ -1521,6 +1525,7 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
     'frequency',
     'durationText',
     'instructions',
+    'safetyOverrideReason',
     'status',
     'startDate',
     'endDate',
@@ -1559,6 +1564,9 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
   const instructions = readOptionalNullableStringField(candidate, 'instructions');
   if (!instructions.ok) return instructions;
 
+  const safetyOverrideReason = readOptionalNullableStringField(candidate, 'safetyOverrideReason');
+  if (!safetyOverrideReason.ok) return safetyOverrideReason;
+
   const status = readEnumValue<PrescriptionStatus>(
     candidate.status,
     'status',
@@ -1593,6 +1601,9 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
         ? { durationText: durationText.value }
         : {}),
       ...(Object.hasOwn(candidate, 'instructions') ? { instructions: instructions.value } : {}),
+      ...(Object.hasOwn(candidate, 'safetyOverrideReason')
+        ? { safetyOverrideReason: safetyOverrideReason.value }
+        : {}),
       ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
       ...(Object.hasOwn(candidate, 'startDate') ? { startDate: startDate.value } : {}),
       ...(Object.hasOwn(candidate, 'endDate') ? { endDate: endDate.value } : {}),

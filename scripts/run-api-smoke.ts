@@ -39,6 +39,7 @@ const migrations = [
   '0015_add_clinic_settings.up.sql',
   '0016_add_clinic_logo_asset.up.sql',
   '0017_add_drug_catalog_and_safety_warnings.up.sql',
+  '0018_add_prescription_safety_override.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -736,6 +737,7 @@ async function main() {
         frequency: 'three times daily',
         durationText: '7 days',
         instructions: 'safety warning expected for smoke test',
+        safetyOverrideReason: 'Smoke test confirms known allergy warning path',
         status: 'active',
         startDate: '2026-01-04',
         endDate: '2026-01-10',

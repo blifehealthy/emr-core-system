@@ -56,8 +56,9 @@ Current scope, UAT follow-ups, and the Thai clinician summary are tracked in:
 
 Phase 2B has started pilot-readiness work. The first slice adds a clinic drug
 catalog, prescription allergy safety checks, warning snapshots on prescriptions,
-and a patient-record prescription form with visible warning feedback. Current
-scope and follow-ups are tracked in:
+a patient-record prescription form with visible warning feedback, and a required
+override reason when prescribing despite active warnings. Current scope and
+follow-ups are tracked in:
 
 - `docs/phase-2b-plan.md`
 

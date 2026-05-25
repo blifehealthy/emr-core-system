@@ -2834,6 +2834,7 @@ function createPrescriptionEntryForm(patient) {
     createFormField('frequency', 'Frequency', 'input'),
     createFormField('durationText', 'Duration', 'input'),
     createFormField('instructions', 'Instructions', 'textarea'),
+    createFormField('safetyOverrideReason', 'Override reason', 'textarea'),
     warningPanel
   );
 
@@ -3015,6 +3016,7 @@ async function createPrescriptionFromForm(patient, form, submit, warningPanel) {
     frequency: values.frequency,
     durationText: values.durationText,
     instructions: values.instructions,
+    safetyOverrideReason: values.safetyOverrideReason,
     status: 'active',
   });
 
@@ -3028,6 +3030,9 @@ async function createPrescriptionFromForm(patient, form, submit, warningPanel) {
     }
     const assessment = await fetchPrescriptionSafety(buildPrescriptionSafetyPayload(patient, form));
     renderSafetyWarningPanel(warningPanel, assessment);
+    if ((assessment.warnings ?? []).length > 0 && !String(values.safetyOverrideReason ?? '').trim()) {
+      throw new Error('กรุณาระบุ override reason เมื่อมี safety warning');
+    }
 
     const response = await fetch('/api/prescriptions', {
       method: 'POST',

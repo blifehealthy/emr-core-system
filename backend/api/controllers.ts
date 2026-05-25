@@ -122,6 +122,26 @@ function readEncounterId(row: unknown): string | null {
   const value = (row as Record<string, unknown>).encounter_id;
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
+
+function hasSafetyWarnings(warnings: unknown[]): boolean {
+  return Array.isArray(warnings) && warnings.length > 0;
+}
+
+function readOverrideReason(value: string | null | undefined): string | null {
+  const text = String(value ?? '').trim();
+  return text.length > 0 ? text : null;
+}
+
+function safetyOverrideError(warnings: unknown[]): HttpResponse {
+  return {
+    status: 409,
+    headers: JSON_HEADERS,
+    body: {
+      error: 'Prescription safety override reason is required',
+      data: { warnings },
+    },
+  };
+}
 const clinicVisitTransitions: Record<ClinicVisitStatus, ClinicVisitStatus[]> = {
   waiting: ['in_room', 'with_doctor', 'cancelled'],
   in_room: ['with_doctor', 'cancelled'],
@@ -1960,12 +1980,27 @@ export async function handleCreatePrescription(
     }
   }
 
+  const overrideReason = readOverrideReason(validation.value.safetyOverrideReason);
+  if (hasSafetyWarnings(safetyWarnings) && !overrideReason) {
+    return safetyOverrideError(safetyWarnings);
+  }
+
+  const overrideFields = overrideReason
+    ? {
+        safetyOverrideReason: overrideReason,
+        safetyOverriddenAt: new Date().toISOString(),
+        safetyOverriddenByUserId: actor.userId ?? null,
+        safetyOverriddenByPractitionerId: actor.practitionerId ?? null,
+      }
+    : {};
+
   const prescription = await dependencies.createPrescription({
     ...validation.value,
     prescribedByPractitionerId:
       validation.value.prescribedByPractitionerId ?? actor.practitionerId ?? null,
     drugCatalogId: assessedDrugCatalogId,
     safetyWarnings,
+    ...overrideFields,
   });
 
   await dependencies.createAuditLog({
@@ -2092,17 +2127,35 @@ export async function handleUpdatePrescription(
     }
   }
 
+  const overrideReason = readOverrideReason(validation.value.safetyOverrideReason);
+  if (safetyWarnings !== undefined && hasSafetyWarnings(safetyWarnings) && !overrideReason) {
+    return safetyOverrideError(safetyWarnings);
+  }
+
+  const actor = getActorContext(request);
+  const overrideFields =
+    overrideReason && safetyWarnings !== undefined && hasSafetyWarnings(safetyWarnings)
+      ? {
+          safetyOverrideReason: overrideReason,
+          safetyOverriddenAt: new Date().toISOString(),
+          safetyOverriddenByUserId: actor.userId ?? null,
+          safetyOverriddenByPractitionerId: actor.practitionerId ?? null,
+        }
+      : Object.hasOwn(validation.value, 'safetyOverrideReason')
+        ? { safetyOverrideReason: overrideReason }
+        : {};
+
   const prescription = await dependencies.updatePrescription({
     ...validation.value,
     ...(assessedDrugCatalogId !== undefined ? { drugCatalogId: assessedDrugCatalogId } : {}),
     ...(safetyWarnings !== undefined ? { safetyWarnings } : {}),
+    ...overrideFields,
   });
 
   if (!prescription) {
     return { status: 404, headers: JSON_HEADERS, body: { error: 'Prescription not found' } };
   }
 
-  const actor = getActorContext(request);
   await dependencies.createAuditLog({
     entityType: 'prescription',
     entityId: prescriptionId,

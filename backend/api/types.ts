@@ -579,6 +579,10 @@ export type CreatePrescriptionInput = {
   startDate?: string | null;
   endDate?: string | null;
   safetyWarnings?: unknown[];
+  safetyOverrideReason?: string | null;
+  safetyOverriddenAt?: string | null;
+  safetyOverriddenByUserId?: string | null;
+  safetyOverriddenByPractitionerId?: string | null;
 };
 
 export type UpdatePrescriptionInput = {
@@ -596,6 +600,10 @@ export type UpdatePrescriptionInput = {
   startDate?: string | null;
   endDate?: string | null;
   safetyWarnings?: unknown[];
+  safetyOverrideReason?: string | null;
+  safetyOverriddenAt?: string | null;
+  safetyOverriddenByUserId?: string | null;
+  safetyOverriddenByPractitionerId?: string | null;
 };
 
 export type Dependencies = {

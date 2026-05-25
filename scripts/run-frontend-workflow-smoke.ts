@@ -23,6 +23,7 @@ assertContains(app, 'ใบสั่งยา / Prescription', 'prescription pri
 assertContains(app, 'function createPrescriptionEntryForm(', 'prescription entry form');
 assertContains(app, '/api/prescription-safety-checks', 'prescription safety check endpoint');
 assertContains(app, 'function fetchDrugCatalog(', 'drug catalog loader');
+assertContains(app, 'safetyOverrideReason', 'prescription safety override reason field');
 assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');

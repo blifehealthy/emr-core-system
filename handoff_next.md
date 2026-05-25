@@ -367,8 +367,8 @@ Remaining Phase 2A follow-ups:
 
 If coming back fresh after this pass:
 
-1. add warning override reason workflow for prescriptions created despite active safety warnings
-2. add medication interaction rules beyond allergy matching
+1. add medication interaction rules beyond allergy matching
+2. start production readiness hardening checks for auth/session/deployment/monitoring
 
 The deliverables added in this worktree are:
 
@@ -400,7 +400,7 @@ The deliverables added in this worktree are:
 - browser-driven queue and prescription print workflow smoke script
 - expanded API-backed browser workflow smoke script
 - Phase 2B drug catalog and allergy warning foundation with prescription safety warning snapshots
-- Phase 2B frontend prescription entry form with drug catalog picker, visible safety warning panel, and browser smoke coverage
+- Phase 2B frontend prescription entry form with drug catalog picker, visible safety warning panel, required override reason, and browser smoke coverage
 
 This was the highest-leverage next move because:
 
@@ -424,5 +424,5 @@ Start by reading:
 
 Then produce:
 
-1. warning override reason workflow for prescriptions created despite active warnings
-2. medication interaction rules beyond allergy matching
+1. medication interaction rules beyond allergy matching
+2. production readiness hardening checks for auth/session/deployment/monitoring

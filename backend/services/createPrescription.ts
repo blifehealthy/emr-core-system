@@ -17,6 +17,10 @@ export function createPrescription(db: {
     startDate?: string | null;
     endDate?: string | null;
     safetyWarnings?: unknown[];
+    safetyOverrideReason?: string | null;
+    safetyOverriddenAt?: string | null;
+    safetyOverriddenByUserId?: string | null;
+    safetyOverriddenByPractitionerId?: string | null;
   }) {
     const result = await db.query(
       `
@@ -35,9 +39,13 @@ export function createPrescription(db: {
           status,
           start_date,
           end_date,
-          safety_warnings
+          safety_warnings,
+          safety_override_reason,
+          safety_overridden_at,
+          safety_overridden_by_user_id,
+          safety_overridden_by_practitioner_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         RETURNING
           id,
           encounter_id,
@@ -55,6 +63,10 @@ export function createPrescription(db: {
           start_date,
           end_date,
           safety_warnings,
+          safety_override_reason,
+          safety_overridden_at,
+          safety_overridden_by_user_id,
+          safety_overridden_by_practitioner_id,
           created_at,
           updated_at,
           deleted_at
@@ -75,6 +87,10 @@ export function createPrescription(db: {
         input.startDate ?? null,
         input.endDate ?? null,
         JSON.stringify(input.safetyWarnings ?? []),
+        input.safetyOverrideReason ?? null,
+        input.safetyOverriddenAt ?? null,
+        input.safetyOverriddenByUserId ?? null,
+        input.safetyOverriddenByPractitionerId ?? null,
       ]
     );
 

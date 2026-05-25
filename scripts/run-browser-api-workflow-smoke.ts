@@ -49,6 +49,7 @@ const migrations = [
   '0015_add_clinic_settings.up.sql',
   '0016_add_clinic_logo_asset.up.sql',
   '0017_add_drug_catalog_and_safety_warnings.up.sql',
+  '0018_add_prescription_safety_override.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -227,6 +228,7 @@ async function main() {
       const catalog = prescriptionForm.querySelector('select[name="drugCatalogId"]');
       catalog.value = '10000000-0000-0000-0000-000000020001';
       catalog.dispatchEvent(new Event('change', { bubbles: true }));
+      prescriptionForm.querySelector('textarea[name="safetyOverrideReason"]').value = 'Browser smoke validates visible warning';
       clickButtonByText('เช็ก safety');
       return true;
     `);

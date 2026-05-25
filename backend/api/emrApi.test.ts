@@ -1966,10 +1966,13 @@ test('drug catalog and prescription safety APIs enforce safety workflow', async 
       async createPrescription(input) {
         assert.equal(input.drugCatalogId, 'drug-1');
         assert.equal(input.safetyWarnings?.length, 1);
+        assert.equal(input.safetyOverrideReason, 'Known allergy reviewed');
+        assert.ok(input.safetyOverriddenAt);
         return {
           id: 'prescription-1',
           drug_catalog_id: input.drugCatalogId,
           safety_warnings: input.safetyWarnings,
+          safety_override_reason: input.safetyOverrideReason,
         };
       },
     })
@@ -2016,7 +2019,12 @@ test('drug catalog and prescription safety APIs enforce safety workflow', async 
     method: 'POST',
     path: '/api/prescriptions',
     headers: { 'x-user-role': 'doctor', 'x-practitioner-id': 'practitioner-1' },
-    body: { encounterId: 'encounter-1', medicationName: 'Amoxicillin', drugCatalogId: 'drug-1' },
+    body: {
+      encounterId: 'encounter-1',
+      medicationName: 'Amoxicillin',
+      drugCatalogId: 'drug-1',
+      safetyOverrideReason: 'Known allergy reviewed',
+    },
   });
   assert.equal(createPrescription.status, 201);
   assert.equal(
@@ -2024,6 +2032,14 @@ test('drug catalog and prescription safety APIs enforce safety workflow', async 
       .length,
     1
   );
+
+  const missingOverride = await api({
+    method: 'POST',
+    path: '/api/prescriptions',
+    headers: { 'x-user-role': 'doctor', 'x-practitioner-id': 'practitioner-1' },
+    body: { encounterId: 'encounter-1', medicationName: 'Amoxicillin', drugCatalogId: 'drug-1' },
+  });
+  assert.equal(missingOverride.status, 409);
 });
 
 test('entity validators reject empty or invalid patch bodies', async () => {

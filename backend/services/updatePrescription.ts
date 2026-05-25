@@ -16,6 +16,10 @@ export function updatePrescription(db: {
     startDate?: string | null;
     endDate?: string | null;
     safetyWarnings?: unknown[];
+    safetyOverrideReason?: string | null;
+    safetyOverriddenAt?: string | null;
+    safetyOverriddenByUserId?: string | null;
+    safetyOverriddenByPractitionerId?: string | null;
   }) {
     const assignments: string[] = [];
     const params: unknown[] = [input.prescriptionId];
@@ -85,6 +89,26 @@ export function updatePrescription(db: {
       assignments.push(`safety_warnings = $${params.length}`);
     }
 
+    if (Object.hasOwn(input, 'safetyOverrideReason')) {
+      params.push(input.safetyOverrideReason ?? null);
+      assignments.push(`safety_override_reason = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'safetyOverriddenAt')) {
+      params.push(input.safetyOverriddenAt ?? null);
+      assignments.push(`safety_overridden_at = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'safetyOverriddenByUserId')) {
+      params.push(input.safetyOverriddenByUserId ?? null);
+      assignments.push(`safety_overridden_by_user_id = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'safetyOverriddenByPractitionerId')) {
+      params.push(input.safetyOverriddenByPractitionerId ?? null);
+      assignments.push(`safety_overridden_by_practitioner_id = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE prescriptions
@@ -108,6 +132,10 @@ export function updatePrescription(db: {
           start_date,
           end_date,
           safety_warnings,
+          safety_override_reason,
+          safety_overridden_at,
+          safety_overridden_by_user_id,
+          safety_overridden_by_practitioner_id,
           created_at,
           updated_at,
           deleted_at

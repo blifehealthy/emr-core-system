@@ -47,6 +47,10 @@ export function listPrescriptionsByEncounter(db: {
           start_date,
           end_date,
           safety_warnings,
+          safety_override_reason,
+          safety_overridden_at,
+          safety_overridden_by_user_id,
+          safety_overridden_by_practitioner_id,
           created_at,
           updated_at,
           deleted_at

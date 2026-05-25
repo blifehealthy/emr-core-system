@@ -29,6 +29,10 @@ support system yet.
 - Patient record Prescriptions tab now includes a prescription entry form with a
   drug catalog selector, visible safety check button, warning panel, and create
   flow that refreshes the patient record.
+- Prescriptions with active safety warnings now require a clinician override
+  reason before creation/update can proceed.
+- Safety override reason, timestamp, user id, and practitioner id are stored on
+  the prescription record.
 - API smoke seed and smoke test cover a penicillin allergy warning for
   amoxicillin.
 - API-backed browser workflow smoke clicks the safety check UI, verifies the
@@ -37,7 +41,6 @@ support system yet.
 ## Remaining Phase 2B Follow-ups
 
 - Add medication interaction rules beyond allergy matching.
-- Add override reason workflow when a clinician proceeds despite warnings.
 - Add production readiness work: session/auth hardening, MFA/identity provider
   integration plan, monitoring, backup checks, deployment readiness checklist,
   and audit hardening.

@@ -635,8 +635,9 @@ button:disabled {
   min-height: 72px;
 }
 
-.prescription-entry-form label:nth-of-type(5),
+.prescription-entry-form label:nth-of-type(4),
 .prescription-entry-form label:nth-of-type(10),
+.prescription-entry-form label:nth-of-type(11),
 .safety-warning-panel {
   grid-column: 1 / -1;
 }
