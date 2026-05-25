@@ -259,10 +259,22 @@ Core EMR Phase 1 entity/API work is now substantially in place:
   - starter SOAP templates
   - prescription print/export view
   - `docs/phase-2a-plan.md`
+  - `docs/phase-2a-clinician-summary-th.md`
 
-Recent commits on `main`:
+Recent implementation commits on `main` before the Phase 2A closeout summary:
 
-- current `HEAD` Start Phase 2A clinic operations
+- `e11b511` Expand browser smoke for admin CRUD
+- `62cdc30` Expand browser smoke for admin branding
+- `ece0c6e` Expand API-backed browser workflow smoke
+- `dba43ed` Add API-backed browser workflow smoke
+- `8bc9a3a` Add browser workflow smoke
+- `0612433` Add operations charts and frontend workflow smoke
+- `913b63f` Add object storage deployment runbook
+- `d5e5366` Add S3 file asset storage adapter
+- `5329ff3` Harden file asset storage policy
+- `ad23d5b` Add file asset upload storage
+- `d87df11` Add clinic logo asset picker
+- `bbe239e` Add operations export and logo asset branding
 - `4d7e01f` Close Phase 1 with clinician summary
 - `2ef14d4` Add phase 1 admin audit and UX hardening
 - `5a373c3` Add admin API pagination and frontend smoke coverage
@@ -329,9 +341,10 @@ The doctor-facing review document is now the preferred artifact for signoff:
 
 ## Phase 2A Assessment
 
-Phase 2A has started. The current slice adds dedicated visit/check-in records and
-a queue board while improving clinician usability through timeline, clinic note
-templates, prescription print/export, clinic branding, and operations reporting.
+Phase 2A implementation scope is ready for clinician UAT. The current slice adds
+dedicated visit/check-in records and a queue board while improving clinician
+usability through timeline, clinic note templates, prescription print/export,
+clinic branding, and operations reporting.
 The operations report now supports date ranges, CSV export, and lightweight
 visual charts. Clinic
 branding can list/create/upload/download logo file assets and link one for
@@ -347,15 +360,15 @@ incident guidance now live in `docs/object-storage-runbook.md`, with
 
 Remaining Phase 2A follow-ups:
 
-1. Review operations chart labels with clinic users after real-world reporting data is available.
-2. Decide whether Phase 2A is ready to close for clinician UAT.
+1. Run clinician UAT using `docs/phase-2a-clinician-summary-th.md`.
+2. Review operations chart labels and workflow wording with clinic users after real-world reporting data is available.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. review and tune daily operations chart labels after clinical UAT
-2. close Phase 2A with a clinician-facing summary if labels/workflows are accepted
+1. run Phase 2A clinician UAT using `docs/phase-2a-clinician-summary-th.md`
+2. tune chart labels/workflow wording from UAT feedback, then sign off Phase 2A if accepted
 
 The deliverables added in this worktree are:
 
@@ -364,6 +377,7 @@ The deliverables added in this worktree are:
 - `docs/api-grouping-v1.md`
 - `docs/phase-1-clinician-summary-th.md`
 - `docs/phase-2a-plan.md`
+- `docs/phase-2a-clinician-summary-th.md`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
 - `database/migrations/0015_add_clinic_settings.*`
@@ -406,5 +420,5 @@ Start by reading:
 
 Then produce:
 
-1. Clinic UAT feedback for daily operations charts
-2. Phase 2A clinician-facing summary and closeout, if accepted
+1. Clinic UAT feedback for queue wording, SOAP templates, prescription print, and daily operations charts
+2. Phase 2A signoff decision or a short blocker list from clinician UAT

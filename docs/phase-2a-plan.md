@@ -3,6 +3,12 @@
 Phase 2A starts the move from core EMR records into day-to-day clinic operations
 and clinician usability.
 
+## Status
+
+Implementation scope is complete and ready for clinician UAT. Product/clinical
+signoff still depends on clinic-user review of queue wording, workflow fit, and
+daily operations chart labels against real-world data.
+
 ## Completed In This Pass
 
 - Dedicated `clinic_visits` table for check-in and visit lifecycle.
@@ -59,5 +65,6 @@ and clinician usability.
 
 ## Remaining Phase 2A Follow-ups
 
+- Run clinician UAT using `docs/phase-2a-clinician-summary-th.md`.
 - Review chart labels with clinic users after real-world reporting data is
   available.

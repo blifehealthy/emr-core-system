@@ -42,13 +42,15 @@ summary is available at:
 
 ## Phase 2A
 
-Phase 2A has started clinic operations and clinician usability work, including
-queue-to-encounter linking plus practitioner/room queue ownership from the
-clinic queue board, persisted SOAP templates, branded prescription output, and
-daily operations reporting with lightweight visual charts.
-Current scope and follow-ups are tracked in:
+Phase 2A clinic operations and clinician usability work is implementation-ready
+for clinician UAT, including queue-to-encounter linking plus practitioner/room
+queue ownership from the clinic queue board, persisted SOAP templates, branded
+prescription output, daily operations reporting with lightweight visual charts,
+clinic branding/logo management, admin user/practitioner CRUD, and audit lookup.
+Current scope, UAT follow-ups, and the Thai clinician summary are tracked in:
 
 - `docs/phase-2a-plan.md`
+- `docs/phase-2a-clinician-summary-th.md`
 
 ## Current Scope
 
