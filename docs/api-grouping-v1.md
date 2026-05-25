@@ -241,6 +241,15 @@ All routes except `GET /health` can be protected by bearer token when
 - The Prescriptions tab exposes lot metrics, receiving controls, lot cards, and
   lot-aware dispense prompts.
 
+## Phase 3E Additions
+
+- Supplier master data now supports clinic-specific pharmacy vendors.
+- Purchase orders and purchase order lines track ordered and received quantities.
+- Purchase order receiving creates inventory lots, increases item stock, and
+  writes lot-aware stock movement rows.
+- The Prescriptions tab exposes supplier and purchase order controls inside the
+  Pharmacy inventory panel.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

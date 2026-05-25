@@ -95,6 +95,7 @@ export function receiveInventoryLot(db: Db) {
         INSERT INTO inventory_lots (
           clinic_id,
           inventory_item_id,
+          supplier_id,
           lot_number,
           expires_on,
           received_quantity,
@@ -104,12 +105,13 @@ export function receiveInventoryLot(db: Db) {
           received_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10)
         RETURNING id
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
+        input.supplierId ?? null,
         input.lotNumber,
         input.expiresOn ?? null,
         quantity,

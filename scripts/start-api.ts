@@ -82,6 +82,17 @@ import {
   receiveInventoryLot,
 } from '../backend/services/inventoryLots.ts';
 import {
+  createPurchaseOrder,
+  listPurchaseOrders,
+  receivePurchaseOrder,
+  updatePurchaseOrder,
+} from '../backend/services/purchaseOrders.ts';
+import {
+  createSupplier,
+  listSuppliers,
+  updateSupplier,
+} from '../backend/services/suppliers.ts';
+import {
   dispensePrescription,
   listMedicationDispenses,
 } from '../backend/services/medicationDispenses.ts';
@@ -227,6 +238,13 @@ const server = createNodeServer({
   adjustInventoryStock: adjustInventoryStock(db),
   listInventoryLots: listInventoryLots(db),
   receiveInventoryLot: receiveInventoryLot(db),
+  listSuppliers: listSuppliers(db),
+  createSupplier: createSupplier(db),
+  updateSupplier: updateSupplier(db),
+  listPurchaseOrders: listPurchaseOrders(db),
+  createPurchaseOrder: createPurchaseOrder(db),
+  updatePurchaseOrder: updatePurchaseOrder(db),
+  receivePurchaseOrder: receivePurchaseOrder(db),
   listStockMovements: listStockMovements(db),
   listDrugInteractionRules: listDrugInteractionRules(db),
   createDrugInteractionRule: createDrugInteractionRule(db),

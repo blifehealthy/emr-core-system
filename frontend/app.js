@@ -46,6 +46,8 @@ let currentFileAssetStoragePolicy = null;
 let currentDrugCatalog = [];
 let currentInventoryItems = [];
 let currentInventoryLots = [];
+let currentSuppliers = [];
+let currentPurchaseOrders = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -350,6 +352,8 @@ searchForm.addEventListener('submit', async (event) => {
     currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
+    currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
+    currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -803,6 +807,47 @@ async function fetchInventoryLots(clinicId, apiToken, inventoryItemId = '') {
   if (inventoryItemId) params.set('inventoryItemId', inventoryItemId);
 
   const response = await fetch(`/api/inventory-lots?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchSuppliers(clinicId, apiToken, search = '') {
+  const params = new URLSearchParams({
+    clinicId,
+    status: 'active',
+    limit: '200',
+    offset: '0',
+  });
+  if (search) params.set('search', search);
+
+  const response = await fetch(`/api/suppliers?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchPurchaseOrders(clinicId, apiToken, status = 'all') {
+  const params = new URLSearchParams({
+    clinicId,
+    status,
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/purchase-orders?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2309,6 +2354,8 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
+  currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
+  currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -3667,6 +3714,8 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(refreshed.clinic_id, apiToken).catch(() => []);
+  currentSuppliers = await fetchSuppliers(refreshed.clinic_id, apiToken).catch(() => []);
+  currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -3862,7 +3911,7 @@ function createPharmacyInventoryPanel(patient) {
   const title = document.createElement('h3');
   title.textContent = 'Pharmacy inventory';
   const hint = document.createElement('span');
-  hint.textContent = 'Phase 3D';
+  hint.textContent = 'Phase 3E';
   heading.append(title, hint);
   section.append(heading);
 
@@ -3871,6 +3920,8 @@ function createPharmacyInventoryPanel(patient) {
     ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
     ['Lots', currentInventoryLots.length],
     ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
+    ['Suppliers', currentSuppliers.length],
+    ['PO open', currentPurchaseOrders.filter((order) => !['received', 'cancelled'].includes(order.status)).length],
   ]));
 
   const form = document.createElement('form');
@@ -3904,6 +3955,7 @@ function createPharmacyInventoryPanel(patient) {
     createFormField('lotNumber', 'Lot number', 'input', true),
     expiresOnField,
     createFormField('quantity', 'Receive quantity', 'input', true),
+    createSupplierSelectField('supplierId', 'Supplier master'),
     createFormField('supplierName', 'Supplier', 'input'),
     createFormField('referenceNumber', 'Reference number', 'input')
   );
@@ -3917,6 +3969,48 @@ function createPharmacyInventoryPanel(patient) {
     await receiveInventoryLotFromForm(patient, receiveForm, receiveSubmit);
   });
   section.append(receiveForm);
+
+  const supplierForm = document.createElement('form');
+  supplierForm.className = 'nested-inline-form';
+  supplierForm.append(
+    createFormField('supplierCode', 'Supplier code', 'input', true),
+    createFormField('displayName', 'Supplier name', 'input', true),
+    createFormField('contactName', 'Contact', 'input'),
+    createFormField('phoneNumber', 'Phone', 'input')
+  );
+  const supplierSubmit = document.createElement('button');
+  supplierSubmit.type = 'submit';
+  supplierSubmit.className = 'secondary-button compact-button';
+  supplierSubmit.textContent = 'เพิ่ม supplier';
+  supplierForm.append(supplierSubmit);
+  supplierForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createSupplierFromForm(patient, supplierForm, supplierSubmit);
+  });
+  section.append(supplierForm);
+
+  const poForm = document.createElement('form');
+  poForm.className = 'nested-inline-form';
+  const expectedAtField = createFormField('expectedAt', 'Expected date', 'input');
+  expectedAtField.querySelector('input').type = 'date';
+  poForm.append(
+    createSupplierSelectField('supplierId', 'Supplier'),
+    createFormField('purchaseOrderNumber', 'PO number', 'input', true),
+    expectedAtField,
+    createInventoryItemSelectField('inventoryItemId', 'Inventory item', true),
+    createFormField('orderedQuantity', 'Ordered quantity', 'input', true),
+    createFormField('unitPriceAmount', 'Unit price', 'input')
+  );
+  const poSubmit = document.createElement('button');
+  poSubmit.type = 'submit';
+  poSubmit.className = 'secondary-button compact-button';
+  poSubmit.textContent = 'สร้าง PO';
+  poForm.append(poSubmit);
+  poForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createPurchaseOrderFromForm(patient, poForm, poSubmit);
+  });
+  section.append(poForm);
 
   const list = document.createElement('div');
   list.className = 'record-list';
@@ -3941,7 +4035,38 @@ function createPharmacyInventoryPanel(patient) {
     section.append(lotList);
   }
 
+  const poList = document.createElement('div');
+  poList.className = 'record-list';
+  for (const order of currentPurchaseOrders.slice(0, 6)) {
+    poList.append(createPurchaseOrderCard(order));
+  }
+  if (currentPurchaseOrders.length > 0) {
+    section.append(poList);
+  }
+
   return section;
+}
+
+function createSupplierSelectField(name, labelText, required = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  select.required = required;
+
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่ระบุ';
+  select.append(empty);
+
+  for (const supplier of currentSuppliers) {
+    const option = document.createElement('option');
+    option.value = supplier.id;
+    option.textContent = `${supplier.display_name ?? supplier.supplier_code ?? supplier.id}`;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
 }
 
 function createInventoryItemSelectField(name, labelText, required = false) {
@@ -4005,6 +4130,36 @@ function createInventoryLotCard(lot) {
   ]);
 }
 
+function createPurchaseOrderCard(order) {
+  const card = createRecordCard(order, purchaseOrderSummary, [
+    'purchase_order_number',
+    'supplier_display_name',
+    'status',
+    'expected_at',
+  ]);
+  const lines = order.lines ?? [];
+  for (const line of lines.slice(0, 3)) {
+    const detail = document.createElement('p');
+    detail.className = 'muted-text compact-note';
+    detail.textContent = `${line.inventory_item_display_name ?? line.description}: ${line.received_quantity ?? 0}/${line.ordered_quantity ?? 0}`;
+    card.append(detail);
+  }
+  if (!['received', 'cancelled'].includes(order.status) && lines.length > 0) {
+    const actions = document.createElement('div');
+    actions.className = 'record-actions';
+    const receiveButton = document.createElement('button');
+    receiveButton.type = 'button';
+    receiveButton.className = 'primary-button small-button';
+    receiveButton.textContent = 'รับของจาก PO';
+    receiveButton.addEventListener('click', async () => {
+      await receivePurchaseOrderPrompt(order);
+    });
+    actions.append(receiveButton);
+    card.append(actions);
+  }
+  return card;
+}
+
 async function createInventoryItemFromForm(patient, form, submit) {
   const values = Object.fromEntries(new FormData(form).entries());
   submit.disabled = true;
@@ -4050,6 +4205,7 @@ async function receiveInventoryLotFromForm(patient, form, submit) {
         lotNumber: values.lotNumber,
         expiresOn: values.expiresOn,
         quantity: values.quantity,
+        supplierId: values.supplierId,
         supplierName: values.supplierName,
         referenceNumber: values.referenceNumber,
         receivedByUserId: readValue('userId'),
@@ -4066,6 +4222,113 @@ async function receiveInventoryLotFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'รับเข้า lot';
+  }
+}
+
+async function createSupplierFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/suppliers', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        supplierCode: values.supplierCode,
+        displayName: values.displayName,
+        contactName: values.contactName,
+        phoneNumber: values.phoneNumber,
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม supplier แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม supplier ไม่สำเร็จ');
+    setStatus('เพิ่ม supplier ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม supplier';
+  }
+}
+
+async function createPurchaseOrderFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const item = currentInventoryItems.find((inventoryItem) => inventoryItem.id === values.inventoryItemId);
+  submit.disabled = true;
+  submit.textContent = 'กำลังสร้าง';
+  try {
+    const response = await fetch('/api/purchase-orders', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        supplierId: values.supplierId,
+        purchaseOrderNumber: values.purchaseOrderNumber,
+        status: 'ordered',
+        orderedAt: new Date().toISOString(),
+        expectedAt: values.expectedAt,
+        createdByUserId: readValue('userId'),
+        lines: [{
+          inventoryItemId: values.inventoryItemId,
+          description: item?.display_name ?? values.inventoryItemId,
+          orderedQuantity: values.orderedQuantity,
+          unitPriceAmount: values.unitPriceAmount || '0',
+        }],
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('สร้าง PO แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'สร้าง PO ไม่สำเร็จ');
+    setStatus('สร้าง PO ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'สร้าง PO';
+  }
+}
+
+async function receivePurchaseOrderPrompt(order) {
+  const line =
+    (order.lines ?? []).find((entry) => Number(entry.received_quantity ?? 0) < Number(entry.ordered_quantity ?? 0)) ??
+    (order.lines ?? [])[0];
+  if (!line) return;
+  const lotNumber = window.prompt('Lot number', `${order.purchase_order_number ?? 'PO'}-${Date.now()}`);
+  if (!lotNumber) return;
+  const remaining = Math.max(
+    Number(line.ordered_quantity ?? 0) - Number(line.received_quantity ?? 0),
+    0
+  );
+  const quantity = window.prompt('Receive quantity', String(remaining || 1));
+  if (!quantity) return;
+  const expiresOn = window.prompt('Expires on YYYY-MM-DD (optional)', '');
+
+  setStatus('กำลังรับของจาก PO', '');
+  try {
+    const response = await fetch(`/api/purchase-orders/${order.id}/receive`, {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        purchaseOrderLineId: line.id,
+        lotNumber,
+        expiresOn,
+        quantity,
+        receivedByUserId: readValue('userId'),
+        notes: 'Received from pharmacy PO',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('รับของจาก PO แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'รับของจาก PO ไม่สำเร็จ', 'error');
   }
 }
 
@@ -5385,6 +5648,10 @@ function inventoryLotSummary(item) {
   const expiry = item.expires_on ? ` · exp ${formatValue(item.expires_on)}` : '';
   const alert = item.expired ? ' · expired' : item.expiring_soon ? ' · expiring' : '';
   return `${item.lot_number ?? item.id}${expiry}${alert}`;
+}
+
+function purchaseOrderSummary(item) {
+  return `${item.purchase_order_number ?? item.id} · ${item.status ?? 'draft'}`;
 }
 
 function invoiceSummary(item) {

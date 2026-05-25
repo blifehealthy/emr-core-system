@@ -21,6 +21,10 @@ import {
   toInventoryItemDtos,
   toInventoryLotDto,
   toInventoryLotDtos,
+  toPurchaseOrderDto,
+  toPurchaseOrderDtos,
+  toSupplierDto,
+  toSupplierDtos,
   toMedicationDispenseDto,
   toMedicationDispenseDtos,
   toStockMovementDtos,
@@ -70,6 +74,11 @@ import {
   validateUpdateInventoryItemBody,
   validateAdjustInventoryStockBody,
   validateReceiveInventoryLotBody,
+  validateCreateSupplierBody,
+  validateUpdateSupplierBody,
+  validateCreatePurchaseOrderBody,
+  validateUpdatePurchaseOrderBody,
+  validateReceivePurchaseOrderBody,
   validateDispensePrescriptionBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
@@ -2231,6 +2240,252 @@ export async function handleReceiveInventoryLot(
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryLotDto(lot) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListSuppliers(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listSuppliers) {
+    return mapError(new Error('Supplier list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+  const status = readOptionalEnumQuery(request, 'status', ['active', 'inactive', 'all']);
+  if (!status.ok) return validationError(status.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const suppliers = await dependencies.listSuppliers({
+    clinicId,
+    search: search.value,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toSupplierDtos(suppliers.rows), meta: suppliers.meta },
+  };
+}
+
+export async function handleCreateSupplier(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createSupplier) {
+    return mapError(new Error('Supplier create dependency is not configured'));
+  }
+
+  const validation = validateCreateSupplierBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const supplier = await dependencies.createSupplier(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'supplier',
+      entityId: (supplier as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { supplierCode: validation.value.supplierCode },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toSupplierDto(supplier) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateSupplier(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  supplierId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateSupplier) {
+    return mapError(new Error('Supplier update dependency is not configured'));
+  }
+
+  const validation = validateUpdateSupplierBody(request.body, supplierId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const supplier = await dependencies.updateSupplier(validation.value);
+    if (!supplier) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Supplier not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'supplier',
+      entityId: supplierId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toSupplierDto(supplier) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListPurchaseOrders(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listPurchaseOrders) {
+    return mapError(new Error('Purchase order list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const supplierId = readOptionalQueryString(request, 'supplierId');
+  if (!supplierId.ok) return validationError(supplierId.error);
+  const status = readOptionalEnumQuery(request, 'status', [
+    'draft',
+    'ordered',
+    'partially_received',
+    'received',
+    'cancelled',
+    'all',
+  ]);
+  if (!status.ok) return validationError(status.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const orders = await dependencies.listPurchaseOrders({
+    clinicId,
+    supplierId: supplierId.value,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toPurchaseOrderDtos(orders.rows), meta: orders.meta },
+  };
+}
+
+export async function handleCreatePurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createPurchaseOrder) {
+    return mapError(new Error('Purchase order create dependency is not configured'));
+  }
+
+  const validation = validateCreatePurchaseOrderBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.createPurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Purchase order inventory item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: (order as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        purchaseOrderNumber: validation.value.purchaseOrderNumber,
+        lineCount: validation.value.lines.length,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdatePurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  purchaseOrderId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updatePurchaseOrder) {
+    return mapError(new Error('Purchase order update dependency is not configured'));
+  }
+
+  const validation = validateUpdatePurchaseOrderBody(request.body, purchaseOrderId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.updatePurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Purchase order not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: purchaseOrderId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleReceivePurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  purchaseOrderId: string
+): Promise<HttpResponse> {
+  if (!dependencies.receivePurchaseOrder) {
+    return mapError(new Error('Purchase order receive dependency is not configured'));
+  }
+
+  const validation = validateReceivePurchaseOrderBody(request.body, purchaseOrderId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.receivePurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Purchase order line not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: purchaseOrderId,
+      action: 'received',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        purchaseOrderLineId: validation.value.purchaseOrderLineId,
+        lotNumber: validation.value.lotNumber,
+        quantity: validation.value.quantity,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
   } catch (error) {
     return mapError(error);
   }

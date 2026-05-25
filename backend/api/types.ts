@@ -518,6 +518,13 @@ export type BillingDocumentType = 'invoice' | 'receipt' | 'tax_invoice' | 'claim
 export type CashierReconciliationStatus = 'open' | 'closed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' | 'return';
+export type SupplierStatus = 'active' | 'inactive';
+export type PurchaseOrderStatus =
+  | 'draft'
+  | 'ordered'
+  | 'partially_received'
+  | 'received'
+  | 'cancelled';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
   severity: 'critical' | 'warning';
@@ -640,8 +647,70 @@ export type ReceiveInventoryLotInput = {
   lotNumber: string;
   expiresOn?: string | null;
   quantity: number | string;
+  supplierId?: string | null;
   supplierName?: string | null;
   referenceNumber?: string | null;
+  receivedByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type CreateSupplierInput = {
+  clinicId: string;
+  supplierCode: string;
+  displayName: string;
+  contactName?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  address?: string | null;
+  status?: SupplierStatus;
+  notes?: string | null;
+};
+
+export type UpdateSupplierInput = {
+  supplierId: string;
+  supplierCode?: string;
+  displayName?: string;
+  contactName?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  address?: string | null;
+  status?: SupplierStatus;
+  notes?: string | null;
+};
+
+export type CreatePurchaseOrderInput = {
+  clinicId: string;
+  supplierId?: string | null;
+  purchaseOrderNumber: string;
+  status?: PurchaseOrderStatus;
+  orderedAt?: string | null;
+  expectedAt?: string | null;
+  createdByUserId?: string | null;
+  notes?: string | null;
+  lines: Array<{
+    inventoryItemId: string;
+    description: string;
+    orderedQuantity: number | string;
+    unitPriceAmount?: number | string;
+    notes?: string | null;
+  }>;
+};
+
+export type UpdatePurchaseOrderInput = {
+  purchaseOrderId: string;
+  supplierId?: string | null;
+  status?: PurchaseOrderStatus;
+  orderedAt?: string | null;
+  expectedAt?: string | null;
+  notes?: string | null;
+};
+
+export type ReceivePurchaseOrderInput = {
+  purchaseOrderId: string;
+  purchaseOrderLineId: string;
+  lotNumber: string;
+  expiresOn?: string | null;
+  quantity: number | string;
   receivedByUserId?: string | null;
   notes?: string | null;
 };
@@ -1065,6 +1134,25 @@ export type Dependencies = {
     offset?: number;
   }) => Promise<PaginatedListResult>;
   receiveInventoryLot?: (input: ReceiveInventoryLotInput) => Promise<unknown | null>;
+  listSuppliers?: (input: {
+    clinicId: string;
+    search?: string;
+    status?: SupplierStatus | 'all';
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createSupplier?: (input: CreateSupplierInput) => Promise<unknown>;
+  updateSupplier?: (input: UpdateSupplierInput) => Promise<unknown | null>;
+  listPurchaseOrders?: (input: {
+    clinicId: string;
+    supplierId?: string;
+    status?: PurchaseOrderStatus | 'all';
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createPurchaseOrder?: (input: CreatePurchaseOrderInput) => Promise<unknown | null>;
+  updatePurchaseOrder?: (input: UpdatePurchaseOrderInput) => Promise<unknown | null>;
+  receivePurchaseOrder?: (input: ReceivePurchaseOrderInput) => Promise<unknown | null>;
   listStockMovements?: (input: {
     clinicId: string;
     inventoryItemId?: string;

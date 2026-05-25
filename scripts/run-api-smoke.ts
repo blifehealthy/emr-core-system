@@ -57,6 +57,7 @@ const migrations = [
   '0025_add_phase_3b_billing_operations.up.sql',
   '0026_add_phase_3c_pharmacy_inventory.up.sql',
   '0027_add_phase_3d_inventory_lots.up.sql',
+  '0028_add_phase_3e_procurement.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -922,6 +923,86 @@ async function main() {
       adminHeaders
     );
     assert.ok(inventoryLots.data.some((lot) => lot.id === inventoryLot.data.id));
+
+    const supplier = await requestJson<{
+      id: string;
+      supplier_code: string;
+      display_name: string;
+    }>(
+      '/api/suppliers',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        supplierCode: `SUP-${Date.now()}`,
+        displayName: 'Smoke supplier master',
+        contactName: 'Procurement',
+      }
+    );
+    assert.equal(supplier.data.display_name, 'Smoke supplier master');
+
+    const suppliers = await requestJson<Array<{ id: string }>>(
+      '/api/suppliers?clinicId=10000000-0000-0000-0000-000000000101&status=active&limit=10',
+      adminHeaders
+    );
+    assert.ok(suppliers.data.some((item) => item.id === supplier.data.id));
+
+    const purchaseOrder = await requestJson<{
+      id: string;
+      purchase_order_number: string;
+      status: string;
+      lines: Array<{ id: string; ordered_quantity: string; received_quantity: string }>;
+    }>(
+      '/api/purchase-orders',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        supplierId: supplier.data.id,
+        purchaseOrderNumber: `PO-${Date.now()}`,
+        status: 'ordered',
+        orderedAt: new Date().toISOString(),
+        expectedAt: '2026-12-31',
+        lines: [
+          {
+            inventoryItemId: inventoryItem.data.id,
+            description: 'Amoxicillin procurement',
+            orderedQuantity: 4,
+            unitPriceAmount: 12,
+          },
+        ],
+      }
+    );
+    assert.equal(purchaseOrder.data.status, 'ordered');
+    assert.equal(purchaseOrder.data.lines.length, 1);
+
+    const receivedPurchaseOrder = await requestJson<{
+      id: string;
+      status: string;
+      lines: Array<{ id: string; received_quantity: string }>;
+    }>(
+      `/api/purchase-orders/${purchaseOrder.data.id}/receive`,
+      adminHeaders,
+      'POST',
+      200,
+      {
+        purchaseOrderLineId: purchaseOrder.data.lines[0].id,
+        lotNumber: `PO-LOT-${Date.now()}`,
+        expiresOn: '2027-01-31',
+        quantity: 4,
+        notes: 'Smoke PO receive',
+      }
+    );
+    assert.equal(receivedPurchaseOrder.data.status, 'received');
+    assert.equal(Number(receivedPurchaseOrder.data.lines[0].received_quantity), 4);
+
+    const purchaseOrders = await requestJson<Array<{ id: string }>>(
+      '/api/purchase-orders?clinicId=10000000-0000-0000-0000-000000000101&status=all&limit=10',
+      adminHeaders
+    );
+    assert.ok(purchaseOrders.data.some((item) => item.id === purchaseOrder.data.id));
 
     const dispense = await requestJson<{
       id: string;

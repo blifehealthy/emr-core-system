@@ -17,6 +17,8 @@ import {
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
   handleCreateInventoryItem,
+  handleCreatePurchaseOrder,
+  handleCreateSupplier,
   handleCreatePatientAllergy,
   handleCreatePatientCondition,
   handleCreatePatientFlag,
@@ -72,6 +74,8 @@ import {
   handleListDrugInteractionRules,
   handleListInventoryItems,
   handleListInventoryLots,
+  handleListPurchaseOrders,
+  handleListSuppliers,
   handleListMedicationDispenses,
   handleListStockMovements,
   handleListFileAssets,
@@ -95,6 +99,8 @@ import {
   handleUpdateDrugCatalogItem,
   handleUpdateDrugInteractionRule,
   handleUpdateInventoryItem,
+  handleUpdatePurchaseOrder,
+  handleUpdateSupplier,
   handleUpsertClinicSettings,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
@@ -112,6 +118,7 @@ import {
   handleRecordInvoiceRefund,
   handleAdjustInventoryStock,
   handleReceiveInventoryLot,
+  handleReceivePurchaseOrder,
   handleDispensePrescription,
   handleIssueBillingNumber,
   handleCloseCashierReconciliation,
@@ -282,6 +289,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListInventoryLots(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/suppliers') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListSuppliers(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/purchase-orders') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListPurchaseOrders(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/stock-movements') {
@@ -644,6 +663,32 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleReceiveInventoryLot(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/suppliers') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateSupplier(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/purchase-orders') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreatePurchaseOrder(actorAwareRequest, dependencies);
+    }
+
+    const purchaseOrderReceivePostMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/purchase-orders\/([^/]+)\/receive$/)
+        : null;
+    if (purchaseOrderReceivePostMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleReceivePurchaseOrder(
+        actorAwareRequest,
+        dependencies,
+        purchaseOrderReceivePostMatch[1]
+      );
+    }
+
     if (request.method === 'POST' && request.path === '/api/prescription-safety-checks') {
       const roleError = requireRole(actorAwareRequest, 'prescription_write');
       if (roleError) return roleError;
@@ -876,6 +921,20 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
         if (roleError) return roleError;
         return handleUpdateInventoryItem(actorAwareRequest, dependencies, inventoryItemMatch[1]);
+      }
+
+      const supplierMatch = request.path.match(/^\/api\/suppliers\/([^/]+)$/);
+      if (supplierMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdateSupplier(actorAwareRequest, dependencies, supplierMatch[1]);
+      }
+
+      const purchaseOrderMatch = request.path.match(/^\/api\/purchase-orders\/([^/]+)$/);
+      if (purchaseOrderMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdatePurchaseOrder(actorAwareRequest, dependencies, purchaseOrderMatch[1]);
       }
 
       const interactionRuleMatch = request.path.match(/^\/api\/drug-interaction-rules\/([^/]+)$/);

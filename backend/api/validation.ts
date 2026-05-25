@@ -20,6 +20,11 @@ import type {
   CreateDrugInteractionRuleInput,
   CreateInventoryItemInput,
   ReceiveInventoryLotInput,
+  CreateSupplierInput,
+  UpdateSupplierInput,
+  CreatePurchaseOrderInput,
+  UpdatePurchaseOrderInput,
+  ReceivePurchaseOrderInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
   DispensePrescriptionInput,
@@ -84,6 +89,8 @@ import type {
   CashierReconciliationStatus,
   PaymentMethod,
   StockMovementType,
+  SupplierStatus,
+  PurchaseOrderStatus,
 } from './types.ts';
 
 const clinicVisitStatuses: ClinicVisitStatus[] = [
@@ -125,6 +132,14 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
   'adjustment_in',
   'adjustment_out',
   'return',
+];
+const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
+const purchaseOrderStatuses: PurchaseOrderStatus[] = [
+  'draft',
+  'ordered',
+  'partially_received',
+  'received',
+  'cancelled',
 ];
 
 export function validateCreateAuthSessionBody(body: unknown):
@@ -2600,6 +2615,8 @@ export function validateReceiveInventoryLotBody(body: unknown):
   if (!expiresOn.ok) return expiresOn;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
+  const supplierId = readOptionalNullableStringField(candidate, 'supplierId');
+  if (!supplierId.ok) return supplierId;
   const supplierName = readOptionalNullableStringField(candidate, 'supplierName');
   if (!supplierName.ok) return supplierName;
   const referenceNumber = readOptionalNullableStringField(candidate, 'referenceNumber');
@@ -2616,8 +2633,266 @@ export function validateReceiveInventoryLotBody(body: unknown):
       lotNumber: lotNumber.value,
       expiresOn: expiresOn.value,
       quantity: quantity.value,
+      supplierId: supplierId.value,
       supplierName: supplierName.value,
       referenceNumber: referenceNumber.value,
+      receivedByUserId: receivedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateSupplierBody(body: unknown):
+  | { ok: true; value: CreateSupplierInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const supplierCode = readRequiredString(candidate.supplierCode, 'supplierCode');
+  if (!supplierCode.ok) return supplierCode;
+  const displayName = readRequiredString(candidate.displayName, 'displayName');
+  if (!displayName.ok) return displayName;
+  const contactName = readOptionalNullableStringField(candidate, 'contactName');
+  if (!contactName.ok) return contactName;
+  const phoneNumber = readOptionalNullableStringField(candidate, 'phoneNumber');
+  if (!phoneNumber.ok) return phoneNumber;
+  const email = readOptionalNullableStringField(candidate, 'email');
+  if (!email.ok) return email;
+  const address = readOptionalNullableStringField(candidate, 'address');
+  if (!address.ok) return address;
+  const status = readEnumValue<SupplierStatus>(candidate.status, 'status', supplierStatuses);
+  if (!status.ok) return status;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      supplierCode: supplierCode.value,
+      displayName: displayName.value,
+      contactName: contactName.value,
+      phoneNumber: phoneNumber.value,
+      email: email.value,
+      address: address.value,
+      status: status.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateSupplierBody(
+  body: unknown,
+  supplierId: string
+): { ok: true; value: UpdateSupplierInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'supplierCode',
+    'displayName',
+    'contactName',
+    'phoneNumber',
+    'email',
+    'address',
+    'status',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) return { ok: false, error: 'At least one supplier field must be provided for update' };
+
+  const supplierCode = readOptionalTrimmedStringField(candidate, 'supplierCode');
+  if (!supplierCode.ok) return supplierCode;
+  const displayName = readOptionalTrimmedStringField(candidate, 'displayName');
+  if (!displayName.ok) return displayName;
+  const contactName = readOptionalNullableStringField(candidate, 'contactName');
+  if (!contactName.ok) return contactName;
+  const phoneNumber = readOptionalNullableStringField(candidate, 'phoneNumber');
+  if (!phoneNumber.ok) return phoneNumber;
+  const email = readOptionalNullableStringField(candidate, 'email');
+  if (!email.ok) return email;
+  const address = readOptionalNullableStringField(candidate, 'address');
+  if (!address.ok) return address;
+  const status = readEnumValue<SupplierStatus>(candidate.status, 'status', supplierStatuses);
+  if (!status.ok) return status;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      supplierId,
+      ...(Object.hasOwn(candidate, 'supplierCode') ? { supplierCode: supplierCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
+      ...(Object.hasOwn(candidate, 'contactName') ? { contactName: contactName.value } : {}),
+      ...(Object.hasOwn(candidate, 'phoneNumber') ? { phoneNumber: phoneNumber.value } : {}),
+      ...(Object.hasOwn(candidate, 'email') ? { email: email.value } : {}),
+      ...(Object.hasOwn(candidate, 'address') ? { address: address.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+function validatePurchaseOrderLine(
+  item: unknown,
+  index: number
+): { ok: true; value: CreatePurchaseOrderInput['lines'][number] } | { ok: false; error: string } {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return { ok: false, error: `lines[${index}] must be an object` };
+  }
+
+  const entry = item as Record<string, unknown>;
+  const inventoryItemId = readRequiredString(entry.inventoryItemId, `lines[${index}].inventoryItemId`);
+  if (!inventoryItemId.ok) return inventoryItemId;
+  const description = readRequiredString(entry.description, `lines[${index}].description`);
+  if (!description.ok) return description;
+  const orderedQuantity = readPositiveNumberLikeValue(entry.orderedQuantity, `lines[${index}].orderedQuantity`);
+  if (!orderedQuantity.ok) return orderedQuantity;
+  const unitPriceAmount = readOptionalNonNegativeNumberLikeValue(
+    entry.unitPriceAmount,
+    `lines[${index}].unitPriceAmount`
+  );
+  if (!unitPriceAmount.ok) return unitPriceAmount;
+  const notes = readOptionalNullableStringField(entry, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      inventoryItemId: inventoryItemId.value,
+      description: description.value,
+      orderedQuantity: orderedQuantity.value,
+      unitPriceAmount: unitPriceAmount.value ?? undefined,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreatePurchaseOrderBody(body: unknown):
+  | { ok: true; value: CreatePurchaseOrderInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const purchaseOrderNumber = readRequiredString(candidate.purchaseOrderNumber, 'purchaseOrderNumber');
+  if (!purchaseOrderNumber.ok) return purchaseOrderNumber;
+  const supplierId = readOptionalNullableStringField(candidate, 'supplierId');
+  if (!supplierId.ok) return supplierId;
+  const status = readEnumValue<PurchaseOrderStatus>(candidate.status, 'status', purchaseOrderStatuses);
+  if (!status.ok) return status;
+  const orderedAt = readOptionalNullableStringField(candidate, 'orderedAt');
+  if (!orderedAt.ok) return orderedAt;
+  const expectedAt = readOptionalNullableDateField(candidate, 'expectedAt');
+  if (!expectedAt.ok) return expectedAt;
+  const createdByUserId = readOptionalNullableStringField(candidate, 'createdByUserId');
+  if (!createdByUserId.ok) return createdByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  if (!Array.isArray(candidate.lines) || candidate.lines.length === 0) {
+    return { ok: false, error: 'lines must be a non-empty array' };
+  }
+  const lines: CreatePurchaseOrderInput['lines'] = [];
+  for (const [index, line] of candidate.lines.entries()) {
+    const validated = validatePurchaseOrderLine(line, index);
+    if (!validated.ok) return validated;
+    lines.push(validated.value);
+  }
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      purchaseOrderNumber: purchaseOrderNumber.value,
+      supplierId: supplierId.value,
+      status: status.value,
+      orderedAt: orderedAt.value,
+      expectedAt: expectedAt.value,
+      createdByUserId: createdByUserId.value,
+      notes: notes.value,
+      lines,
+    },
+  };
+}
+
+export function validateUpdatePurchaseOrderBody(
+  body: unknown,
+  purchaseOrderId: string
+): { ok: true; value: UpdatePurchaseOrderInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = ['supplierId', 'status', 'orderedAt', 'expectedAt', 'notes'].some((field) =>
+    Object.hasOwn(candidate, field)
+  );
+  if (!hasChanges) return { ok: false, error: 'At least one purchase order field must be provided for update' };
+
+  const supplierId = readOptionalNullableStringField(candidate, 'supplierId');
+  if (!supplierId.ok) return supplierId;
+  const status = readEnumValue<PurchaseOrderStatus>(candidate.status, 'status', purchaseOrderStatuses);
+  if (!status.ok) return status;
+  const orderedAt = readOptionalNullableStringField(candidate, 'orderedAt');
+  if (!orderedAt.ok) return orderedAt;
+  const expectedAt = readOptionalNullableDateField(candidate, 'expectedAt');
+  if (!expectedAt.ok) return expectedAt;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      purchaseOrderId,
+      ...(Object.hasOwn(candidate, 'supplierId') ? { supplierId: supplierId.value } : {}),
+      ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
+      ...(Object.hasOwn(candidate, 'orderedAt') ? { orderedAt: orderedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'expectedAt') ? { expectedAt: expectedAt.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateReceivePurchaseOrderBody(
+  body: unknown,
+  purchaseOrderId: string
+): { ok: true; value: ReceivePurchaseOrderInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const purchaseOrderLineId = readRequiredString(candidate.purchaseOrderLineId, 'purchaseOrderLineId');
+  if (!purchaseOrderLineId.ok) return purchaseOrderLineId;
+  const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
+  if (!lotNumber.ok) return lotNumber;
+  const expiresOn = readOptionalNullableDateField(candidate, 'expiresOn');
+  if (!expiresOn.ok) return expiresOn;
+  const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
+  if (!quantity.ok) return quantity;
+  const receivedByUserId = readOptionalNullableStringField(candidate, 'receivedByUserId');
+  if (!receivedByUserId.ok) return receivedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      purchaseOrderId,
+      purchaseOrderLineId: purchaseOrderLineId.value,
+      lotNumber: lotNumber.value,
+      expiresOn: expiresOn.value,
+      quantity: quantity.value,
       receivedByUserId: receivedByUserId.value,
       notes: notes.value,
     },

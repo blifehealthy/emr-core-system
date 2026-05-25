@@ -303,6 +303,9 @@ const INVENTORY_LOT_KEYS = [
   'id',
   'clinic_id',
   'inventory_item_id',
+  'supplier_id',
+  'purchase_order_id',
+  'purchase_order_line_id',
   'lot_number',
   'expires_on',
   'received_quantity',
@@ -316,6 +319,56 @@ const INVENTORY_LOT_KEYS = [
   'inventory_item_code',
   'expired',
   'expiring_soon',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const SUPPLIER_KEYS = [
+  'id',
+  'clinic_id',
+  'supplier_code',
+  'display_name',
+  'contact_name',
+  'phone_number',
+  'email',
+  'address',
+  'status',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const PURCHASE_ORDER_LINE_KEYS = [
+  'id',
+  'purchase_order_id',
+  'inventory_item_id',
+  'description',
+  'ordered_quantity',
+  'received_quantity',
+  'unit_price_amount',
+  'notes',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const PURCHASE_ORDER_KEYS = [
+  'id',
+  'clinic_id',
+  'supplier_id',
+  'purchase_order_number',
+  'status',
+  'ordered_at',
+  'expected_at',
+  'received_at',
+  'created_by_user_id',
+  'notes',
+  'supplier_display_name',
+  'supplier_code',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -731,6 +784,29 @@ export function toInventoryLotDto(row: unknown): Record<string, unknown> {
 
 export function toInventoryLotDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryLotDto(row));
+}
+
+export function toSupplierDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...SUPPLIER_KEYS]);
+}
+
+export function toSupplierDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toSupplierDto(row));
+}
+
+export function toPurchaseOrderDto(row: unknown): Record<string, unknown> {
+  const order = pickKeys(row, [...PURCHASE_ORDER_KEYS]);
+  if (row && typeof row === 'object') {
+    const source = row as Row;
+    if (Array.isArray(source.lines)) {
+      order.lines = source.lines.map((line) => pickKeys(line, [...PURCHASE_ORDER_LINE_KEYS]));
+    }
+  }
+  return order;
+}
+
+export function toPurchaseOrderDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPurchaseOrderDto(row));
 }
 
 export function toStockMovementDto(row: unknown): Record<string, unknown> {

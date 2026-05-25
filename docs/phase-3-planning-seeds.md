@@ -22,9 +22,11 @@ real UAT findings, but the likely product directions are below.
   visibility.
 - Phase 3D completed lot/expiry tracking, pharmacy receiving into lots, and
   lot-aware prescription dispensing.
+- Phase 3E completed supplier master data, purchase order creation, and purchase
+  order receiving into inventory lots with stock movement audit.
 - Remaining pharmacy follow-up should come from UAT: supplier master workflow,
-  purchase order approval, multi-location stock, barcode scanning, or controlled
-  substance workflow.
+  purchase order approval hierarchy, multi-location stock, barcode scanning, or
+  controlled substance workflow.
 
 ### Patient Communication
 

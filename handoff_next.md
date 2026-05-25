@@ -97,6 +97,14 @@
     - terminal states reject further status transitions with `409`
   - encounter status transitions are guarded server-side with `409` on unsupported jumps
   - frontend dev proxy for `/api/*` and `/health`
+  - Phase 3E pharmacy procurement foundation:
+    - migration `0028_add_phase_3e_procurement`
+    - supplier master APIs and Prescriptions tab supplier form
+    - purchase order create/list/update APIs
+    - purchase order line receive API wired to inventory lot creation, stock
+      increase, and stock movement audit
+    - Prescriptions tab PO form, PO cards, and receive-from-PO prompt
+    - Phase 3E plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -104,15 +112,24 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `79/79` passing
+  - current result: `133/133` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
+  - TypeScript compile check
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npx tsc --noEmit`
+  - frontend asset syntax check
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
   - `npm run db:test`
   - current result: passing via Docker Postgres fallback
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_registration POSTGRES_USER=postgres npm run db:test`
   - `npm run api:smoke`
-  - current result: passing
+  - current result: passing, including Phase 3E supplier creation/listing,
+    purchase order creation/listing, and PO receiving into lot/stock movement
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -670,8 +687,10 @@ Start by reading:
 Then produce:
 
 1. Run Phase 3A/3B/3C/3D cashier, accounting, pharmacy, and clinical UAT.
-2. Start the next Phase 3 pharmacy follow-up from UAT findings: barcode
-   scanning, multi-location stock, supplier master/purchase order workflow, or
-   controlled-substance register.
-3. If pharmacy UAT is not the blocker, switch to accounting or payer export
+2. Run Phase 3E pharmacy procurement UAT for supplier master, purchase order
+   creation, and PO receiving into lots.
+3. Start the next Phase 3 pharmacy follow-up from UAT findings: purchase order
+   approval hierarchy, barcode scanning, multi-location stock, supplier payment
+   handoff, or controlled-substance register.
+4. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.
