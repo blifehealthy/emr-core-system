@@ -48,10 +48,13 @@ and clinician usability.
   workload, top diagnoses, and prescriber workload.
 - `npm run frontend:workflow-smoke` checks queue controls, report chart hooks,
   and prescription print/export UI wiring.
+- `npm run browser:workflow-smoke` opens headless Chrome against the real
+  frontend, clicks queue load/claim/start-checkup, and verifies prescription
+  print HTML through a deterministic mock API.
 
 ## Remaining Phase 2A Follow-ups
 
-- Add full browser-driven click automation when a browser test dependency is
-  introduced.
+- Expand browser automation to API-backed temporary Postgres data once the smoke
+  suite needs deeper backend coverage.
 - Review chart labels with clinic users after real-world reporting data is
   available.

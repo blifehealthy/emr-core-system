@@ -852,7 +852,7 @@ function showPatientDetail(patient, profile = {}) {
         'status',
         'dosage',
         'frequency',
-      ]),
+      ], 'Prescriptions'),
       Notes: records(derived.clinicalNotes, noteSummary, [
         'status',
         'note_type',

@@ -177,6 +177,14 @@ reporting, or prescription print UI code:
 npm run frontend:workflow-smoke
 ```
 
+Run the browser-driven workflow smoke when Chrome is available. This opens the
+real frontend in headless Chrome, clicks through queue claim/start-checkup, and
+verifies prescription print output with a deterministic mock API:
+
+```bash
+npm run browser:workflow-smoke
+```
+
 Protect API routes with a bearer token if needed:
 
 ```bash

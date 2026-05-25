@@ -15,6 +15,7 @@
 - Or run `POSTGRES_CONTAINER=... POSTGRES_DB=... npm run db:test` to use `docker exec`
 - Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database, including selected frontend proxy flows
 - Run `npm run frontend:workflow-smoke` after queue, report chart, or prescription print UI changes
+- Run `npm run browser:workflow-smoke` when Chrome is available to click through queue and prescription print workflows
 - Run `npm run storage:check` before deployment to verify file storage driver configuration
 
 ## Verified
