@@ -37,6 +37,8 @@ and clinician usability.
   to settings before prescription print.
 - File asset storage exposes a local-driver policy for max upload size and
   allowed MIME types so frontend upload controls can validate before submit.
+- File asset storage can run on local disk or an S3/MinIO-compatible driver
+  using the same upload/download API surface.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
   count, provider workload, room workload, prescriber workload, and top
   diagnoses, with date-range filtering and CSV export.
@@ -44,5 +46,5 @@ and clinician usability.
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Add production object-storage adapter after local-driver policy stabilizes.
+- Add deployment runbook and retention/backup policy for object storage.
 - Add visual report charts after operational metrics stabilize.

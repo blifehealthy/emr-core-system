@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Harden file asset storage policy`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add S3 file asset storage adapter`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -310,11 +310,13 @@ printed prescription identity.
 File asset uploads now expose local storage policy for max upload size and
 allowed MIME types, and upload services enforce storage key, MIME, and byte
 limits.
+File asset storage now supports local disk and S3/MinIO-compatible drivers
+behind the same upload/download API surface.
 
 Remaining Phase 2A follow-ups:
 
 1. Add real browser automation for queue and print workflows.
-2. Add production object-storage adapter after local-driver policy stabilizes.
+2. Add deployment runbook and retention/backup policy for object storage.
 3. Add visual report charts once the report metrics settle.
 
 ## Recommended Next Task
@@ -322,7 +324,7 @@ Remaining Phase 2A follow-ups:
 If coming back fresh after this pass:
 
 1. add browser automation for queue and print workflows
-2. add production object-storage adapter after local-driver policy stabilizes
+2. add deployment runbook and retention/backup policy for object storage
 
 The deliverables added in this worktree are:
 
@@ -368,4 +370,4 @@ Start by reading:
 Then produce:
 
 1. Browser automation for queue and print workflows
-2. Production object-storage adapter after local-driver policy stabilizes
+2. Deployment runbook and retention/backup policy for object storage

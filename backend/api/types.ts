@@ -261,7 +261,7 @@ export type UploadFileAssetInput = CreateFileAssetInput & {
 };
 
 export type FileAssetStoragePolicyDto = {
-  driver: 'local';
+  driver: 'local' | 's3';
   maxUploadBytes: number;
   allowedMimeTypes: string[];
 };

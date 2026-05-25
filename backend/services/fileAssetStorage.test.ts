@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import {
+  createStorageAdapter,
   createDownloadFileAssetContentService,
   createUploadFileAssetService,
 } from './fileAssetStorage.ts';
@@ -106,4 +107,49 @@ test('file asset upload enforces storage policy', async () => {
   } finally {
     await rm(storageRoot, { recursive: true, force: true });
   }
+});
+
+test('S3 storage adapter uploads and downloads with signed requests', async (t) => {
+  const requests: Array<{ method: string; url: string; headers: Headers }> = [];
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  globalThis.fetch = (async (url, init) => {
+    requests.push({
+      method: init?.method ?? 'GET',
+      url: String(url),
+      headers: new Headers(init?.headers),
+    });
+
+    if (init?.method === 'PUT') {
+      return new Response(null, { status: 200 });
+    }
+
+    return new Response(Buffer.from('stored'), { status: 200 });
+  }) as typeof fetch;
+
+  const storage = createStorageAdapter({
+    driver: 's3',
+    s3: {
+      endpoint: 'http://127.0.0.1:9000',
+      bucket: 'emr-assets',
+      region: 'ap-southeast-1',
+      accessKeyId: 'access',
+      secretAccessKey: 'secret',
+      forcePathStyle: true,
+    },
+    maxUploadBytes: 1024,
+    allowedMimeTypes: ['image/png'],
+  });
+
+  await storage.put('logos/logo.png', Buffer.from('stored'), 'image/png');
+  const downloaded = await storage.get('logos/logo.png');
+
+  assert.equal(downloaded?.toString('utf8'), 'stored');
+  assert.equal(requests[0].method, 'PUT');
+  assert.equal(requests[0].url, 'http://127.0.0.1:9000/emr-assets/logos/logo.png');
+  assert.match(requests[0].headers.get('authorization') ?? '', /AWS4-HMAC-SHA256/);
+  assert.equal(requests[0].headers.get('content-type'), 'image/png');
+  assert.equal(requests[1].method, 'GET');
 });
