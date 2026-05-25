@@ -10,6 +10,7 @@
     "storage:check": "node --loader ts-node/esm scripts/check-file-storage-config.ts",
     "frontend:workflow-smoke": "node --loader ts-node/esm scripts/run-frontend-workflow-smoke.ts",
     "browser:workflow-smoke": "node --loader ts-node/esm scripts/run-browser-workflow-smoke.ts",
+    "browser:api-workflow-smoke": "node --loader ts-node/esm scripts/run-browser-api-workflow-smoke.ts",
     "api:smoke": "node --loader ts-node/esm scripts/run-api-smoke.ts"
   },
   "devDependencies": {

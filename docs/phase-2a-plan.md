@@ -51,10 +51,12 @@ and clinician usability.
 - `npm run browser:workflow-smoke` opens headless Chrome against the real
   frontend, clicks queue load/claim/start-checkup, and verifies prescription
   print HTML through a deterministic mock API.
+- `npm run browser:api-workflow-smoke` runs the same browser click path through
+  the real API, frontend proxy, and a temporary Docker Postgres database.
 
 ## Remaining Phase 2A Follow-ups
 
-- Expand browser automation to API-backed temporary Postgres data once the smoke
-  suite needs deeper backend coverage.
+- Add more browser coverage for appointment check-in and SOAP editing once the
+  queue/print path stabilizes under UAT.
 - Review chart labels with clinic users after real-world reporting data is
   available.

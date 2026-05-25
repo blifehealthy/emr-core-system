@@ -148,7 +148,7 @@ Phase 1 มี role หลัก:
 - ยังไม่มีระบบ consent/document upload ที่ทำเป็น user-facing workflow เต็ม
 - ยังไม่มี reporting/dashboard สำหรับผู้บริหารหรือแพทย์
 - ยังไม่มี MFA, session management, หรือ production-grade identity provider
-- มี browser smoke test แบบ headless Chrome สำหรับ flow คิวตรวจและพิมพ์ใบสั่งยาแล้ว แต่ยังไม่ใช่ Playwright suite เต็มรูปแบบ
+- มี browser smoke test แบบ headless Chrome สำหรับ flow คิวตรวจและพิมพ์ใบสั่งยาแล้ว รวมถึงชุดที่ยิงผ่าน API จริงกับฐานข้อมูลทดสอบ แต่ยังไม่ใช่ Playwright suite เต็มรูปแบบ
 - check-in ยังใช้ appointment status แทน dedicated check-in record
 
 ## ประเด็นที่ควรให้แพทย์ช่วย review

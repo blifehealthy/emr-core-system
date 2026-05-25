@@ -185,6 +185,14 @@ verifies prescription print output with a deterministic mock API:
 npm run browser:workflow-smoke
 ```
 
+Run the API-backed browser workflow smoke to click through the same queue and
+prescription print flow against the real API, frontend proxy, and a temporary
+Docker Postgres database:
+
+```bash
+npm run browser:api-workflow-smoke
+```
+
 Protect API routes with a bearer token if needed:
 
 ```bash
