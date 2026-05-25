@@ -78,6 +78,9 @@ import {
   validateUpdateSupplierBody,
   validateCreatePurchaseOrderBody,
   validateUpdatePurchaseOrderBody,
+  validateSubmitPurchaseOrderBody,
+  validateApprovePurchaseOrderBody,
+  validateRejectPurchaseOrderBody,
   validateReceivePurchaseOrderBody,
   validateDispensePrescriptionBody,
   validateCreatePatientAllergyBody,
@@ -2363,6 +2366,14 @@ export async function handleListPurchaseOrders(
     'all',
   ]);
   if (!status.ok) return validationError(status.error);
+  const approvalStatus = readOptionalEnumQuery(request, 'approvalStatus', [
+    'draft',
+    'pending_approval',
+    'approved',
+    'rejected',
+    'all',
+  ]);
+  if (!approvalStatus.ok) return validationError(approvalStatus.error);
   const limit = readOptionalLimitQuery(request);
   if (!limit.ok) return validationError(limit.error);
   const offset = readOptionalOffsetQuery(request);
@@ -2372,6 +2383,7 @@ export async function handleListPurchaseOrders(
     clinicId,
     supplierId: supplierId.value,
     status: status.value,
+    approvalStatus: approvalStatus.value,
     limit: limit.value,
     offset: offset.value,
   });
@@ -2483,6 +2495,108 @@ export async function handleReceivePurchaseOrder(
         lotNumber: validation.value.lotNumber,
         quantity: validation.value.quantity,
       },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleSubmitPurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  purchaseOrderId: string
+): Promise<HttpResponse> {
+  if (!dependencies.submitPurchaseOrder) {
+    return mapError(new Error('Purchase order submit dependency is not configured'));
+  }
+
+  const validation = validateSubmitPurchaseOrderBody(request.body, purchaseOrderId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.submitPurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 409, headers: JSON_HEADERS, body: { error: 'Purchase order cannot be submitted' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: purchaseOrderId,
+      action: 'submitted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {},
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleApprovePurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  purchaseOrderId: string
+): Promise<HttpResponse> {
+  if (!dependencies.approvePurchaseOrder) {
+    return mapError(new Error('Purchase order approve dependency is not configured'));
+  }
+
+  const validation = validateApprovePurchaseOrderBody(request.body, purchaseOrderId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.approvePurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 409, headers: JSON_HEADERS, body: { error: 'Purchase order cannot be approved' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: purchaseOrderId,
+      action: 'approved',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {},
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleRejectPurchaseOrder(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  purchaseOrderId: string
+): Promise<HttpResponse> {
+  if (!dependencies.rejectPurchaseOrder) {
+    return mapError(new Error('Purchase order reject dependency is not configured'));
+  }
+
+  const validation = validateRejectPurchaseOrderBody(request.body, purchaseOrderId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const order = await dependencies.rejectPurchaseOrder(validation.value);
+    if (!order) {
+      return { status: 409, headers: JSON_HEADERS, body: { error: 'Purchase order cannot be rejected' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'purchase_order',
+      entityId: purchaseOrderId,
+      action: 'rejected',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { rejectionReason: validation.value.rejectionReason },
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toPurchaseOrderDto(order) } };

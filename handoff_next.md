@@ -105,6 +105,13 @@
       increase, and stock movement audit
     - Prescriptions tab PO form, PO cards, and receive-from-PO prompt
     - Phase 3E plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3F purchase order approval controls:
+    - migration `0029_add_phase_3f_purchase_order_approvals`
+    - PO approval status and submitted/approved/rejected audit fields
+    - submit/approve/reject purchase order APIs
+    - PO receive requires approved purchase orders
+    - Prescriptions tab approval actions on PO cards
+    - Phase 3F plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -112,7 +119,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `133/133` passing
+  - current result: `134/134` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -129,7 +136,8 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_registration POSTGRES_USER=postgres npm run db:test`
   - `npm run api:smoke`
   - current result: passing, including Phase 3E supplier creation/listing,
-    purchase order creation/listing, and PO receiving into lot/stock movement
+    purchase order creation/listing, and Phase 3F submit/approve before PO
+    receiving into lot/stock movement
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -689,8 +697,10 @@ Then produce:
 1. Run Phase 3A/3B/3C/3D cashier, accounting, pharmacy, and clinical UAT.
 2. Run Phase 3E pharmacy procurement UAT for supplier master, purchase order
    creation, and PO receiving into lots.
-3. Start the next Phase 3 pharmacy follow-up from UAT findings: purchase order
-   approval hierarchy, barcode scanning, multi-location stock, supplier payment
-   handoff, or controlled-substance register.
-4. If pharmacy UAT is not the blocker, switch to accounting or payer export
+3. Run Phase 3F pharmacy manager UAT for PO submit/approve/reject and approved
+   receiving controls.
+4. Start the next Phase 3 pharmacy follow-up from UAT findings: approval
+   thresholds, multi-approver routing, barcode scanning, multi-location stock,
+   supplier payment handoff, or controlled-substance register.
+5. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

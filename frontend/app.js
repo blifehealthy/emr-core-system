@@ -4135,6 +4135,7 @@ function createPurchaseOrderCard(order) {
     'purchase_order_number',
     'supplier_display_name',
     'status',
+    'approval_status',
     'expected_at',
   ]);
   const lines = order.lines ?? [];
@@ -4144,9 +4145,37 @@ function createPurchaseOrderCard(order) {
     detail.textContent = `${line.inventory_item_display_name ?? line.description}: ${line.received_quantity ?? 0}/${line.ordered_quantity ?? 0}`;
     card.append(detail);
   }
-  if (!['received', 'cancelled'].includes(order.status) && lines.length > 0) {
+  if (!['received', 'cancelled'].includes(order.status)) {
     const actions = document.createElement('div');
     actions.className = 'record-actions';
+    if (['draft', 'rejected'].includes(order.approval_status)) {
+      const submitButton = document.createElement('button');
+      submitButton.type = 'button';
+      submitButton.className = 'secondary-button small-button';
+      submitButton.textContent = 'ส่งอนุมัติ PO';
+      submitButton.addEventListener('click', async () => {
+        await submitPurchaseOrder(order);
+      });
+      actions.append(submitButton);
+    }
+    if (order.approval_status === 'pending_approval') {
+      const approveButton = document.createElement('button');
+      approveButton.type = 'button';
+      approveButton.className = 'primary-button small-button';
+      approveButton.textContent = 'อนุมัติ PO';
+      approveButton.addEventListener('click', async () => {
+        await approvePurchaseOrder(order);
+      });
+      const rejectButton = document.createElement('button');
+      rejectButton.type = 'button';
+      rejectButton.className = 'secondary-button small-button';
+      rejectButton.textContent = 'ไม่อนุมัติ';
+      rejectButton.addEventListener('click', async () => {
+        await rejectPurchaseOrder(order);
+      });
+      actions.append(approveButton, rejectButton);
+    }
+    if (order.approval_status === 'approved' && lines.length > 0) {
     const receiveButton = document.createElement('button');
     receiveButton.type = 'button';
     receiveButton.className = 'primary-button small-button';
@@ -4155,6 +4184,7 @@ function createPurchaseOrderCard(order) {
       await receivePurchaseOrderPrompt(order);
     });
     actions.append(receiveButton);
+    }
     card.append(actions);
   }
   return card;
@@ -4268,7 +4298,7 @@ async function createPurchaseOrderFromForm(patient, form, submit) {
         clinicId: patient.clinic_id,
         supplierId: values.supplierId,
         purchaseOrderNumber: values.purchaseOrderNumber,
-        status: 'ordered',
+        status: 'draft',
         orderedAt: new Date().toISOString(),
         expectedAt: values.expectedAt,
         createdByUserId: readValue('userId'),
@@ -4291,6 +4321,44 @@ async function createPurchaseOrderFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'สร้าง PO';
+  }
+}
+
+async function submitPurchaseOrder(order) {
+  await patchPurchaseOrderApproval(order, 'submit', {
+    submittedByUserId: readValue('userId'),
+  }, 'ส่ง PO เพื่ออนุมัติแล้ว');
+}
+
+async function approvePurchaseOrder(order) {
+  await patchPurchaseOrderApproval(order, 'approve', {
+    approvedByUserId: readValue('userId'),
+  }, 'อนุมัติ PO แล้ว');
+}
+
+async function rejectPurchaseOrder(order) {
+  const rejectionReason = window.prompt('Reason', 'ต้องแก้ไขรายการก่อนอนุมัติ');
+  if (!rejectionReason) return;
+  await patchPurchaseOrderApproval(order, 'reject', {
+    rejectedByUserId: readValue('userId'),
+    rejectionReason,
+  }, 'ไม่อนุมัติ PO แล้ว');
+}
+
+async function patchPurchaseOrderApproval(order, action, payload, successMessage) {
+  setStatus('กำลังปรับสถานะ PO', '');
+  try {
+    const response = await fetch(`/api/purchase-orders/${order.id}/${action}`, {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload(payload)),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus(successMessage, 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ปรับสถานะ PO ไม่สำเร็จ', 'error');
   }
 }
 
@@ -5651,7 +5719,7 @@ function inventoryLotSummary(item) {
 }
 
 function purchaseOrderSummary(item) {
-  return `${item.purchase_order_number ?? item.id} · ${item.status ?? 'draft'}`;
+  return `${item.purchase_order_number ?? item.id} · ${item.approval_status ?? 'draft'} · ${item.status ?? 'draft'}`;
 }
 
 function invoiceSummary(item) {

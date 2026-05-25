@@ -1,6 +1,9 @@
 import type {
   CreatePurchaseOrderInput,
+  ApprovePurchaseOrderInput,
+  RejectPurchaseOrderInput,
   ReceivePurchaseOrderInput,
+  SubmitPurchaseOrderInput,
   UpdatePurchaseOrderInput,
 } from '../api/types.ts';
 
@@ -56,6 +59,7 @@ export function listPurchaseOrders(db: Db) {
     clinicId: string;
     supplierId?: string;
     status?: 'draft' | 'ordered' | 'partially_received' | 'received' | 'cancelled' | 'all';
+    approvalStatus?: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'all';
     limit?: number;
     offset?: number;
   }) {
@@ -72,6 +76,11 @@ export function listPurchaseOrders(db: Db) {
     if (input.status && input.status !== 'all') {
       params.push(input.status);
       conditions.push(`po.status = $${params.length}`);
+    }
+
+    if (input.approvalStatus && input.approvalStatus !== 'all') {
+      params.push(input.approvalStatus);
+      conditions.push(`po.approval_status = $${params.length}`);
     }
 
     params.push(limit + 1, offset);
@@ -226,6 +235,82 @@ export function updatePurchaseOrder(db: Db) {
   };
 }
 
+export function submitPurchaseOrder(db: Db) {
+  return async function run(input: SubmitPurchaseOrderInput) {
+    const result = await db.query<{ id: string }>(
+      `
+        UPDATE purchase_orders
+        SET approval_status = 'pending_approval',
+            submitted_at = now(),
+            submitted_by_user_id = $2,
+            approved_at = NULL,
+            approved_by_user_id = NULL,
+            rejected_at = NULL,
+            rejected_by_user_id = NULL,
+            rejection_reason = NULL
+        WHERE id = $1
+          AND approval_status IN ('draft', 'rejected')
+          AND status NOT IN ('received', 'cancelled')
+          AND deleted_at IS NULL
+        RETURNING id
+      `,
+      [input.purchaseOrderId, input.submittedByUserId ?? null]
+    );
+
+    if (!result.rows[0]) return null;
+    return getPurchaseOrderById(db, input.purchaseOrderId);
+  };
+}
+
+export function approvePurchaseOrder(db: Db) {
+  return async function run(input: ApprovePurchaseOrderInput) {
+    const result = await db.query<{ id: string }>(
+      `
+        UPDATE purchase_orders
+        SET approval_status = 'approved',
+            status = CASE WHEN status = 'draft' THEN 'ordered' ELSE status END,
+            approved_at = now(),
+            approved_by_user_id = $2,
+            rejected_at = NULL,
+            rejected_by_user_id = NULL,
+            rejection_reason = NULL
+        WHERE id = $1
+          AND approval_status = 'pending_approval'
+          AND status NOT IN ('received', 'cancelled')
+          AND deleted_at IS NULL
+        RETURNING id
+      `,
+      [input.purchaseOrderId, input.approvedByUserId ?? null]
+    );
+
+    if (!result.rows[0]) return null;
+    return getPurchaseOrderById(db, input.purchaseOrderId);
+  };
+}
+
+export function rejectPurchaseOrder(db: Db) {
+  return async function run(input: RejectPurchaseOrderInput) {
+    const result = await db.query<{ id: string }>(
+      `
+        UPDATE purchase_orders
+        SET approval_status = 'rejected',
+            rejected_at = now(),
+            rejected_by_user_id = $2,
+            rejection_reason = $3
+        WHERE id = $1
+          AND approval_status = 'pending_approval'
+          AND status NOT IN ('received', 'cancelled')
+          AND deleted_at IS NULL
+        RETURNING id
+      `,
+      [input.purchaseOrderId, input.rejectedByUserId ?? null, input.rejectionReason]
+    );
+
+    if (!result.rows[0]) return null;
+    return getPurchaseOrderById(db, input.purchaseOrderId);
+  };
+}
+
 export function receivePurchaseOrder(db: Db) {
   return async function run(input: ReceivePurchaseOrderInput) {
     const lineResult = await db.query<{
@@ -234,6 +319,7 @@ export function receivePurchaseOrder(db: Db) {
       supplier_id: string | null;
       supplier_display_name: string | null;
       purchase_order_number: string;
+      approval_status: string;
       inventory_item_id: string;
       ordered_quantity: string;
       received_quantity: string;
@@ -246,6 +332,7 @@ export function receivePurchaseOrder(db: Db) {
           po.supplier_id,
           s.display_name AS supplier_display_name,
           po.purchase_order_number,
+          po.approval_status,
           pol.inventory_item_id,
           pol.ordered_quantity,
           pol.received_quantity,
@@ -264,6 +351,9 @@ export function receivePurchaseOrder(db: Db) {
     );
     const line = lineResult.rows[0];
     if (!line) return null;
+    if (line.approval_status !== 'approved') {
+      throw new Error('Purchase order must be approved before receiving');
+    }
 
     const quantity = Number(input.quantity);
     const orderedQuantity = Number(line.ordered_quantity);

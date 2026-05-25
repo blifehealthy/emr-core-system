@@ -18,6 +18,7 @@
 - Phase 3C pharmacy/inventory foundation adds inventory items, stock movements, prescription dispensing, Prescriptions tab controls, and API smoke coverage
 - Phase 3D pharmacy lot/expiry foundation adds inventory lots, receiving, lot-aware dispensing, lot cards, and API smoke coverage
 - Phase 3E pharmacy procurement foundation adds supplier master data, purchase orders, PO line receiving into lots, Prescriptions tab supplier/PO controls, and API smoke coverage
+- Phase 3F purchase order approval controls add submit/approve/reject workflow, approval audit fields, approved-only receiving, and Prescriptions tab approval actions
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -47,6 +48,7 @@
 - Review `docs/phase-3c-plan.md`, `docs/phase-3c-clinician-summary-th.md`, `docs/phase-3c-uat-checklist-th.md`, and `docs/phase-3c-closure-summary-th.md` with pharmacy and clinical users
 - Review `docs/phase-3d-plan.md`, `docs/phase-3d-clinician-summary-th.md`, `docs/phase-3d-uat-checklist-th.md`, and `docs/phase-3d-closure-summary-th.md` with pharmacy and clinical users
 - Review `docs/phase-3e-plan.md`, `docs/phase-3e-clinician-summary-th.md`, `docs/phase-3e-uat-checklist-th.md`, and `docs/phase-3e-closure-summary-th.md` with pharmacy and procurement users
+- Review `docs/phase-3f-plan.md`, `docs/phase-3f-clinician-summary-th.md`, `docs/phase-3f-uat-checklist-th.md`, and `docs/phase-3f-closure-summary-th.md` with pharmacy managers and clinic owners
 
 ## Verified
 
@@ -69,4 +71,5 @@
 - Phase 3C targeted pharmacy/inventory service, API, frontend syntax, and migration tests pass
 - Phase 3D targeted pharmacy lot/expiry service, API, frontend syntax, and migration tests pass
 - Phase 3E targeted procurement service, API, frontend syntax, and migration tests pass
+- Phase 3F targeted purchase order approval service, API, frontend syntax, and migration tests pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

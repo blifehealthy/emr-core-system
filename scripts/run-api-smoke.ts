@@ -58,6 +58,7 @@ const migrations = [
   '0026_add_phase_3c_pharmacy_inventory.up.sql',
   '0027_add_phase_3d_inventory_lots.up.sql',
   '0028_add_phase_3e_procurement.up.sql',
+  '0029_add_phase_3f_purchase_order_approvals.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -952,6 +953,7 @@ async function main() {
       id: string;
       purchase_order_number: string;
       status: string;
+      approval_status: string;
       lines: Array<{ id: string; ordered_quantity: string; received_quantity: string }>;
     }>(
       '/api/purchase-orders',
@@ -962,7 +964,7 @@ async function main() {
         clinicId: '10000000-0000-0000-0000-000000000101',
         supplierId: supplier.data.id,
         purchaseOrderNumber: `PO-${Date.now()}`,
-        status: 'ordered',
+        status: 'draft',
         orderedAt: new Date().toISOString(),
         expectedAt: '2026-12-31',
         lines: [
@@ -975,8 +977,35 @@ async function main() {
         ],
       }
     );
-    assert.equal(purchaseOrder.data.status, 'ordered');
+    assert.equal(purchaseOrder.data.status, 'draft');
+    assert.equal(purchaseOrder.data.approval_status, 'draft');
     assert.equal(purchaseOrder.data.lines.length, 1);
+
+    const submittedPurchaseOrder = await requestJson<{
+      id: string;
+      approval_status: string;
+    }>(
+      `/api/purchase-orders/${purchaseOrder.data.id}/submit`,
+      adminHeaders,
+      'POST',
+      200,
+      { submittedByUserId: '10000000-0000-0000-0000-000000000201' }
+    );
+    assert.equal(submittedPurchaseOrder.data.approval_status, 'pending_approval');
+
+    const approvedPurchaseOrder = await requestJson<{
+      id: string;
+      status: string;
+      approval_status: string;
+    }>(
+      `/api/purchase-orders/${purchaseOrder.data.id}/approve`,
+      adminHeaders,
+      'POST',
+      200,
+      { approvedByUserId: '10000000-0000-0000-0000-000000000201' }
+    );
+    assert.equal(approvedPurchaseOrder.data.approval_status, 'approved');
+    assert.equal(approvedPurchaseOrder.data.status, 'ordered');
 
     const receivedPurchaseOrder = await requestJson<{
       id: string;

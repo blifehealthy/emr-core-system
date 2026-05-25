@@ -119,6 +119,9 @@ import {
   handleAdjustInventoryStock,
   handleReceiveInventoryLot,
   handleReceivePurchaseOrder,
+  handleSubmitPurchaseOrder,
+  handleApprovePurchaseOrder,
+  handleRejectPurchaseOrder,
   handleDispensePrescription,
   handleIssueBillingNumber,
   handleCloseCashierReconciliation,
@@ -686,6 +689,48 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         actorAwareRequest,
         dependencies,
         purchaseOrderReceivePostMatch[1]
+      );
+    }
+
+    const purchaseOrderSubmitPostMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/purchase-orders\/([^/]+)\/submit$/)
+        : null;
+    if (purchaseOrderSubmitPostMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleSubmitPurchaseOrder(
+        actorAwareRequest,
+        dependencies,
+        purchaseOrderSubmitPostMatch[1]
+      );
+    }
+
+    const purchaseOrderApprovePostMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/purchase-orders\/([^/]+)\/approve$/)
+        : null;
+    if (purchaseOrderApprovePostMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleApprovePurchaseOrder(
+        actorAwareRequest,
+        dependencies,
+        purchaseOrderApprovePostMatch[1]
+      );
+    }
+
+    const purchaseOrderRejectPostMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/purchase-orders\/([^/]+)\/reject$/)
+        : null;
+    if (purchaseOrderRejectPostMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleRejectPurchaseOrder(
+        actorAwareRequest,
+        dependencies,
+        purchaseOrderRejectPostMatch[1]
       );
     }
 

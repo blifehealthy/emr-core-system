@@ -43,7 +43,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `practitioner_read` | Yes | Yes | Yes | Practitioner listing |
 | `practitioner_write` | No | No | Yes | Practitioner create/update |
 | `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog, inventory, supplier, and purchase order listing |
-| `drug_catalog_write` | No | No | Yes | Clinic drug catalog, inventory, supplier, and purchase order create/update/receiving |
+| `drug_catalog_write` | No | No | Yes | Clinic drug catalog, inventory, supplier, purchase order create/update/approval/receiving |
 | `drug_interaction_rule_read` | Yes | Yes | Yes | Clinic drug interaction rule listing |
 | `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
@@ -124,6 +124,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/purchase-orders` | `drug_catalog_read` |
 | `POST` | `/api/purchase-orders` | `drug_catalog_write` |
 | `PATCH` | `/api/purchase-orders/:purchaseOrderId` | `drug_catalog_write` |
+| `POST` | `/api/purchase-orders/:purchaseOrderId/submit` | `drug_catalog_write` |
+| `POST` | `/api/purchase-orders/:purchaseOrderId/approve` | `drug_catalog_write` |
+| `POST` | `/api/purchase-orders/:purchaseOrderId/reject` | `drug_catalog_write` |
 | `POST` | `/api/purchase-orders/:purchaseOrderId/receive` | `drug_catalog_write` |
 | `GET` | `/api/stock-movements` | `drug_catalog_read` |
 | `GET` | `/api/drug-interaction-rules` | `drug_interaction_rule_read` |

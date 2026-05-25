@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { receivePurchaseOrder } from './purchaseOrders.ts';
+import {
+  approvePurchaseOrder,
+  receivePurchaseOrder,
+  submitPurchaseOrder,
+} from './purchaseOrders.ts';
 
 test('receivePurchaseOrder receives into lot, stock movement, and received status', async () => {
   const calls: Array<{ sql: string; params?: unknown[] }> = [];
@@ -16,6 +20,7 @@ test('receivePurchaseOrder receives into lot, stock movement, and received statu
               supplier_id: 'supplier-1',
               supplier_display_name: 'Supplier',
               purchase_order_number: 'PO-1',
+              approval_status: 'approved',
               inventory_item_id: 'item-1',
               ordered_quantity: '5',
               received_quantity: '1',
@@ -68,6 +73,7 @@ test('receivePurchaseOrder rejects over-receiving', async () => {
               supplier_id: null,
               supplier_display_name: null,
               purchase_order_number: 'PO-1',
+              approval_status: 'approved',
               inventory_item_id: 'item-1',
               ordered_quantity: '5',
               received_quantity: '4',
@@ -90,4 +96,71 @@ test('receivePurchaseOrder rejects over-receiving', async () => {
       }),
     /Received quantity cannot exceed ordered quantity/
   );
+});
+
+test('receivePurchaseOrder requires approval before receiving', async () => {
+  const db = {
+    async query<T = unknown>(sql: string) {
+      if (sql.includes('FROM purchase_order_lines pol')) {
+        return {
+          rows: [
+            {
+              purchase_order_id: 'po-1',
+              clinic_id: 'clinic-1',
+              supplier_id: null,
+              supplier_display_name: null,
+              purchase_order_number: 'PO-1',
+              approval_status: 'pending_approval',
+              inventory_item_id: 'item-1',
+              ordered_quantity: '5',
+              received_quantity: '0',
+              quantity_on_hand: '10',
+            },
+          ] as T[],
+        };
+      }
+      return { rows: [] as T[] };
+    },
+  };
+
+  await assert.rejects(
+    () =>
+      receivePurchaseOrder(db)({
+        purchaseOrderId: 'po-1',
+        purchaseOrderLineId: 'line-1',
+        lotNumber: 'LOT-1',
+        quantity: 1,
+      }),
+    /Purchase order must be approved before receiving/
+  );
+});
+
+test('submit and approve purchase order update approval state', async () => {
+  const calls: string[] = [];
+  const db = {
+    async query<T = unknown>(sql: string) {
+      calls.push(sql);
+      if (sql.includes('UPDATE purchase_orders')) {
+        return { rows: [{ id: 'po-1' }] as T[] };
+      }
+      if (sql.includes('FROM purchase_orders po')) {
+        return { rows: [{ id: 'po-1', approval_status: 'approved', status: 'ordered' }] as T[] };
+      }
+      return { rows: [] as T[] };
+    },
+  };
+
+  const submitted = await submitPurchaseOrder(db)({
+    purchaseOrderId: 'po-1',
+    submittedByUserId: 'user-1',
+  });
+  const approved = await approvePurchaseOrder(db)({
+    purchaseOrderId: 'po-1',
+    approvedByUserId: 'user-2',
+  });
+
+  assert.equal((submitted as { id: string }).id, 'po-1');
+  assert.equal((approved as { approval_status: string }).approval_status, 'approved');
+  assert.ok(calls.some((sql) => sql.includes("approval_status = 'pending_approval'")));
+  assert.ok(calls.some((sql) => sql.includes("approval_status = 'approved'")));
 });

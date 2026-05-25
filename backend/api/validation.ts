@@ -25,6 +25,9 @@ import type {
   CreatePurchaseOrderInput,
   UpdatePurchaseOrderInput,
   ReceivePurchaseOrderInput,
+  SubmitPurchaseOrderInput,
+  ApprovePurchaseOrderInput,
+  RejectPurchaseOrderInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
   DispensePrescriptionInput,
@@ -2895,6 +2898,72 @@ export function validateReceivePurchaseOrderBody(
       quantity: quantity.value,
       receivedByUserId: receivedByUserId.value,
       notes: notes.value,
+    },
+  };
+}
+
+export function validateSubmitPurchaseOrderBody(
+  body: unknown,
+  purchaseOrderId: string
+): { ok: true; value: SubmitPurchaseOrderInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const submittedByUserId = readOptionalNullableStringField(candidate, 'submittedByUserId');
+  if (!submittedByUserId.ok) return submittedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      purchaseOrderId,
+      submittedByUserId: submittedByUserId.value,
+    },
+  };
+}
+
+export function validateApprovePurchaseOrderBody(
+  body: unknown,
+  purchaseOrderId: string
+): { ok: true; value: ApprovePurchaseOrderInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const approvedByUserId = readOptionalNullableStringField(candidate, 'approvedByUserId');
+  if (!approvedByUserId.ok) return approvedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      purchaseOrderId,
+      approvedByUserId: approvedByUserId.value,
+    },
+  };
+}
+
+export function validateRejectPurchaseOrderBody(
+  body: unknown,
+  purchaseOrderId: string
+): { ok: true; value: RejectPurchaseOrderInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const rejectedByUserId = readOptionalNullableStringField(candidate, 'rejectedByUserId');
+  if (!rejectedByUserId.ok) return rejectedByUserId;
+  const rejectionReason = readRequiredString(candidate.rejectionReason, 'rejectionReason');
+  if (!rejectionReason.ok) return rejectionReason;
+
+  return {
+    ok: true,
+    value: {
+      purchaseOrderId,
+      rejectedByUserId: rejectedByUserId.value,
+      rejectionReason: rejectionReason.value,
     },
   };
 }

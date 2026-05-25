@@ -250,6 +250,14 @@ All routes except `GET /health` can be protected by bearer token when
 - The Prescriptions tab exposes supplier and purchase order controls inside the
   Pharmacy inventory panel.
 
+## Phase 3F Additions
+
+- Purchase orders now track approval status and submitted/approved/rejected
+  audit fields.
+- Purchase order APIs support submit, approve, and reject actions.
+- Purchase order receiving requires approved purchase orders.
+- The Prescriptions tab exposes approval actions on purchase order cards.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

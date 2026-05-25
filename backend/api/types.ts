@@ -525,6 +525,11 @@ export type PurchaseOrderStatus =
   | 'partially_received'
   | 'received'
   | 'cancelled';
+export type PurchaseOrderApprovalStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
   severity: 'critical' | 'warning';
@@ -713,6 +718,22 @@ export type ReceivePurchaseOrderInput = {
   quantity: number | string;
   receivedByUserId?: string | null;
   notes?: string | null;
+};
+
+export type SubmitPurchaseOrderInput = {
+  purchaseOrderId: string;
+  submittedByUserId?: string | null;
+};
+
+export type ApprovePurchaseOrderInput = {
+  purchaseOrderId: string;
+  approvedByUserId?: string | null;
+};
+
+export type RejectPurchaseOrderInput = {
+  purchaseOrderId: string;
+  rejectedByUserId?: string | null;
+  rejectionReason: string;
 };
 
 export type CreateDrugInteractionRuleInput = {
@@ -1147,11 +1168,15 @@ export type Dependencies = {
     clinicId: string;
     supplierId?: string;
     status?: PurchaseOrderStatus | 'all';
+    approvalStatus?: PurchaseOrderApprovalStatus | 'all';
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;
   createPurchaseOrder?: (input: CreatePurchaseOrderInput) => Promise<unknown | null>;
   updatePurchaseOrder?: (input: UpdatePurchaseOrderInput) => Promise<unknown | null>;
+  submitPurchaseOrder?: (input: SubmitPurchaseOrderInput) => Promise<unknown | null>;
+  approvePurchaseOrder?: (input: ApprovePurchaseOrderInput) => Promise<unknown | null>;
+  rejectPurchaseOrder?: (input: RejectPurchaseOrderInput) => Promise<unknown | null>;
   receivePurchaseOrder?: (input: ReceivePurchaseOrderInput) => Promise<unknown | null>;
   listStockMovements?: (input: {
     clinicId: string;
