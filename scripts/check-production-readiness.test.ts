@@ -78,5 +78,26 @@ test('fails strict mode when OIDC is enabled without complete config', () => {
 
   assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_ISSUER'));
   assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_AUDIENCE'));
-  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_HS256_SECRET'));
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_SIGNING_KEY'));
+});
+
+test('passes strict mode with RS256 OIDC public key config', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DEPLOYMENT_PROFILE: 'production',
+    DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
+    API_TOKEN: '0123456789abcdef0123456789abcdef',
+    AUTH_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+    AUTH_LOGIN_CODE: 'fedcba9876543210fedcba9876543210',
+    AUTH_OIDC_ENABLED: 'true',
+    AUTH_OIDC_ISSUER: 'https://id.example.test',
+    AUTH_OIDC_AUDIENCE: 'emr-core',
+    AUTH_OIDC_RS256_PUBLIC_KEY_PEM: '-----BEGIN PUBLIC KEY-----\\nabc\\n-----END PUBLIC KEY-----',
+    FILE_STORAGE_DRIVER: 'local',
+    FILE_STORAGE_DIR: '/var/lib/emr-core/file-assets',
+    FILE_STORAGE_MAX_BYTES: '5242880',
+    FILE_STORAGE_ALLOWED_MIME_TYPES: 'image/png,image/jpeg,application/pdf',
+  });
+
+  assert.deepEqual(findings, []);
 });

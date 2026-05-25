@@ -120,8 +120,9 @@ function checkOidcAuth(
   const issuer = env.AUTH_OIDC_ISSUER?.trim();
   const audience = env.AUTH_OIDC_AUDIENCE?.trim();
   const hs256Secret = env.AUTH_OIDC_HS256_SECRET?.trim();
+  const rs256PublicKeyPem = env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM?.trim();
 
-  if (!oidcEnabled && !issuer && !audience && !hs256Secret) {
+  if (!oidcEnabled && !issuer && !audience && !hs256Secret && !rs256PublicKeyPem) {
     return;
   }
 
@@ -133,10 +134,16 @@ function checkOidcAuth(
     add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_AUDIENCE', 'Set AUTH_OIDC_AUDIENCE when OIDC auth is enabled.');
   }
 
-  if (!hs256Secret) {
-    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_HS256_SECRET', 'Set AUTH_OIDC_HS256_SECRET for local OIDC token verification.');
-  } else if (!isStrongSecret(hs256Secret)) {
+  if (!hs256Secret && !rs256PublicKeyPem) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_SIGNING_KEY', 'Set AUTH_OIDC_RS256_PUBLIC_KEY_PEM for provider tokens or AUTH_OIDC_HS256_SECRET for local OIDC token verification.');
+  }
+
+  if (hs256Secret && !isStrongSecret(hs256Secret)) {
     add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_HS256_SECRET', 'AUTH_OIDC_HS256_SECRET must be at least 32 characters and must not use dev/test/change-me style values.');
+  }
+
+  if (rs256PublicKeyPem && !rs256PublicKeyPem.includes('BEGIN PUBLIC KEY')) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_RS256_PUBLIC_KEY_PEM', 'AUTH_OIDC_RS256_PUBLIC_KEY_PEM must contain a PEM public key.');
   }
 }
 

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { generateKeyPairSync } from 'node:crypto';
 import test from 'node:test';
 
-import { createOidcTestToken, verifyOidcAccessToken } from './oidcToken.ts';
+import { createOidcRs256TestToken, createOidcTestToken, verifyOidcAccessToken } from './oidcToken.ts';
 
 const config = {
   issuer: 'https://id.example.test',
@@ -44,4 +45,32 @@ test('rejects invalid issuer, audience, signature, and expired tokens', () => {
   assert.equal(verifyOidcAccessToken(wrongAudience, config).ok, false);
   assert.equal(verifyOidcAccessToken(expired, config).ok, false);
   assert.equal(verifyOidcAccessToken(wrongSignature, config).ok, false);
+});
+
+test('verifies a valid RS256 OIDC-compatible test token', () => {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+  const token = createOidcRs256TestToken(
+    {
+      iss: config.issuer,
+      aud: config.audience,
+      sub: 'oidc-rs-user-1',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    privateKey
+  );
+
+  const result = verifyOidcAccessToken(token, {
+    issuer: config.issuer,
+    audience: config.audience,
+    rs256PublicKeyPem: publicKey,
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.subject, 'oidc-rs-user-1');
+  }
 });

@@ -446,6 +446,22 @@ Next Phase 2D batch:
 2. Select identity provider and signing/JWKS approach.
 3. Add RS256/JWKS verification if required by the selected provider.
 
+## Phase 2E Status
+
+Phase 2E has started with provider-grade OIDC signing support:
+
+- OIDC bearer verification supports RS256 public-key tokens through
+  `AUTH_OIDC_RS256_PUBLIC_KEY_PEM`.
+- HS256 remains available for deterministic local and smoke-test tokens.
+- Production readiness accepts either RS256 public-key config or HS256 local
+  config when OIDC is enabled.
+
+Next Phase 2E batch:
+
+1. Add JWKS URL retrieval/cache after identity provider selection.
+2. Add MFA policy hooks/documentation tied to provider claims.
+3. Add Phase 2E operator summary and UAT checklist.
+
 The deliverables added in this worktree are:
 
 - `docs/role-permission-matrix.md`
@@ -466,6 +482,7 @@ The deliverables added in this worktree are:
 - `docs/phase-2d-plan.md`
 - `docs/phase-2d-clinician-summary-th.md`
 - `docs/phase-2d-uat-checklist-th.md`
+- `docs/phase-2e-plan.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

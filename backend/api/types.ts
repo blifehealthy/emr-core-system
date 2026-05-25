@@ -892,7 +892,8 @@ export type Dependencies = {
   oidcAuth?: {
     issuer: string;
     audience: string;
-    hs256Secret: string;
+    hs256Secret?: string;
+    rs256PublicKeyPem?: string;
     subjectClaim?: string;
   };
 };

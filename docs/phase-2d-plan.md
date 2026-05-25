@@ -46,8 +46,8 @@ identity provider.
 ## Post-Phase 2D Follow-ups
 
 - Select the target identity provider.
-- Add RS256/JWKS verification path for the selected provider if HS256 is not
-  acceptable for deployment.
+- Add RS256/JWKS verification path for the selected provider if local public-key
+  configuration is not enough for deployment.
 - Add OIDC auth failure audit events for mapped users when provider data is
   available in failed token paths.
 - Add MFA requirement documentation and enforcement hooks once provider is

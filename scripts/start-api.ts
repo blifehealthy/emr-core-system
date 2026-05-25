@@ -205,11 +205,12 @@ const server = createNodeServer({
   oidcAuth:
     process.env.AUTH_OIDC_ISSUER &&
     process.env.AUTH_OIDC_AUDIENCE &&
-    process.env.AUTH_OIDC_HS256_SECRET
+    (process.env.AUTH_OIDC_HS256_SECRET || process.env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM)
       ? {
           issuer: process.env.AUTH_OIDC_ISSUER,
           audience: process.env.AUTH_OIDC_AUDIENCE,
           hs256Secret: process.env.AUTH_OIDC_HS256_SECRET,
+          rs256PublicKeyPem: process.env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM,
           subjectClaim: process.env.AUTH_OIDC_SUBJECT_CLAIM,
         }
       : undefined,

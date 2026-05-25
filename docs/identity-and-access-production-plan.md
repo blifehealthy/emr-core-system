@@ -14,6 +14,8 @@ controlled technical pilot, but it is not the final production identity model.
 - OIDC-compatible bearer tokens can map external subjects to users through
   `users.oidc_subject`.
 - Clinic admins can bind `oidc_subject` on user records during pilot setup.
+- OIDC verification supports HS256 local testing and RS256 public-key provider
+  tokens through configured env.
 - Known-user login failures write audit events for support review.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
