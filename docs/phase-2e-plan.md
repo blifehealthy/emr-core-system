@@ -5,8 +5,9 @@ toward provider-grade signing support.
 
 ## Status
 
-Phase 2E has started. The first implementation slice adds RS256 public-key
-verification alongside the Phase 2D HS256 local test path.
+Phase 2E is ready for clinician/operator review. The implementation adds RS256
+public-key verification alongside the Phase 2D HS256 local test path and updates
+the production readiness gate for either signing mode.
 
 ## Completed In This Pass
 
@@ -18,9 +19,22 @@ verification alongside the Phase 2D HS256 local test path.
 - OIDC tests cover valid RS256 tokens, invalid signatures, issuer, audience, and
   expiry checks.
 - API startup can load `AUTH_OIDC_RS256_PUBLIC_KEY_PEM`.
+- Thai clinician/operator summary added:
+  - `docs/phase-2e-clinician-summary-th.md`
+- Thai UAT checklist added:
+  - `docs/phase-2e-uat-checklist-th.md`
 
-## Remaining Phase 2E Work
+## Post-Phase 2E Follow-Ups
 
 - Add JWKS URL retrieval/cache once the target identity provider is selected.
 - Add MFA policy hooks/documentation tied to provider claims.
-- Add Phase 2E operator summary and UAT checklist after provider choice is made.
+- Run Phase 2E UAT with the clinic owner, operator, and identity provider
+  representative.
+
+## Recommended Next Phase
+
+Start Phase 2F after provider selection:
+
+- provider-specific JWKS URL retrieval/cache
+- MFA claim policy for admin/doctor access
+- provider runbook for key rotation and incident response

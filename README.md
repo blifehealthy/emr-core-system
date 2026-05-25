@@ -82,14 +82,25 @@ tracked in:
 
 ## Phase 2D
 
-Phase 2D production identity work has started. The first slice adds OIDC-style
-bearer token verification, `users.oidc_subject` mapping, and readiness checks so
-the pilot auth flow can evolve toward an external identity provider. Current
-scope is tracked in:
+Phase 2D production identity work is ready for operator review. It adds
+OIDC-style bearer token verification, `users.oidc_subject` mapping, and
+readiness checks so the pilot auth flow can evolve toward an external identity
+provider. Current scope is tracked in:
 
 - `docs/phase-2d-plan.md`
 - `docs/phase-2d-clinician-summary-th.md`
 - `docs/phase-2d-uat-checklist-th.md`
+
+## Phase 2E
+
+Phase 2E provider-grade identity signing is ready for review. It adds RS256
+public-key verification for OIDC bearer tokens while keeping HS256 available
+for deterministic local tests and smoke tests. Current scope and review docs
+are tracked in:
+
+- `docs/phase-2e-plan.md`
+- `docs/phase-2e-clinician-summary-th.md`
+- `docs/phase-2e-uat-checklist-th.md`
 
 ## Current Scope
 

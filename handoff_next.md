@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add production readiness checks`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add Phase 2E RS256 OIDC verification`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -448,19 +448,27 @@ Next Phase 2D batch:
 
 ## Phase 2E Status
 
-Phase 2E has started with provider-grade OIDC signing support:
+Phase 2E is ready for clinician/operator review with provider-grade OIDC
+signing support:
 
 - OIDC bearer verification supports RS256 public-key tokens through
   `AUTH_OIDC_RS256_PUBLIC_KEY_PEM`.
 - HS256 remains available for deterministic local and smoke-test tokens.
 - Production readiness accepts either RS256 public-key config or HS256 local
   config when OIDC is enabled.
+- Phase 2E clinician/operator summary and UAT checklist are available.
 
-Next Phase 2E batch:
+Post-Phase 2E follow-ups:
 
 1. Add JWKS URL retrieval/cache after identity provider selection.
 2. Add MFA policy hooks/documentation tied to provider claims.
-3. Add Phase 2E operator summary and UAT checklist.
+3. Run Phase 2E UAT with clinic operators and provider/vendor contact.
+
+Recommended next phase:
+
+1. Start Phase 2F provider-specific identity integration after provider choice.
+2. Add JWKS retrieval/cache and key rotation guidance.
+3. Add MFA claim policy for admin/doctor access.
 
 The deliverables added in this worktree are:
 
@@ -483,6 +491,8 @@ The deliverables added in this worktree are:
 - `docs/phase-2d-clinician-summary-th.md`
 - `docs/phase-2d-uat-checklist-th.md`
 - `docs/phase-2e-plan.md`
+- `docs/phase-2e-clinician-summary-th.md`
+- `docs/phase-2e-uat-checklist-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -532,4 +542,4 @@ Start by reading:
 Then produce:
 
 1. Phase 2B UAT fixes found by the doctor and clinic team
-2. Phase 2C production identity/auth hardening or medication governance expansion
+2. Phase 2F provider-specific identity integration after Phase 2E UAT/provider selection
