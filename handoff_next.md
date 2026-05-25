@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add S3 file asset storage adapter`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add object storage deployment runbook`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -312,11 +312,14 @@ allowed MIME types, and upload services enforce storage key, MIME, and byte
 limits.
 File asset storage now supports local disk and S3/MinIO-compatible drivers
 behind the same upload/download API surface.
+Object storage deployment, backup/restore, retention, credential rotation, and
+incident guidance now live in `docs/object-storage-runbook.md`, with
+`.env.example` and `npm run storage:check` for configuration checks.
 
 Remaining Phase 2A follow-ups:
 
 1. Add real browser automation for queue and print workflows.
-2. Add deployment runbook and retention/backup policy for object storage.
+2. Add browser automation for queue and prescription print workflows.
 3. Add visual report charts once the report metrics settle.
 
 ## Recommended Next Task
@@ -324,7 +327,7 @@ Remaining Phase 2A follow-ups:
 If coming back fresh after this pass:
 
 1. add browser automation for queue and print workflows
-2. add deployment runbook and retention/backup policy for object storage
+2. add visual report charts for daily operations metrics
 
 The deliverables added in this worktree are:
 
@@ -346,6 +349,7 @@ The deliverables added in this worktree are:
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
 - expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset policy/listing/upload/download, daily operations reporting, and encounter edit
+- object storage deployment runbook, env example, and storage config validation script
 
 This was the highest-leverage next move because:
 
@@ -370,4 +374,4 @@ Start by reading:
 Then produce:
 
 1. Browser automation for queue and print workflows
-2. Deployment runbook and retention/backup policy for object storage
+2. Visual report charts for daily operations metrics

@@ -39,6 +39,8 @@ and clinician usability.
   allowed MIME types so frontend upload controls can validate before submit.
 - File asset storage can run on local disk or an S3/MinIO-compatible driver
   using the same upload/download API surface.
+- Object storage runbook and example environment settings document local/S3
+  deployment, backup, restore, retention, and credential rotation.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
   count, provider workload, room workload, prescriber workload, and top
   diagnoses, with date-range filtering and CSV export.
@@ -46,5 +48,5 @@ and clinician usability.
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Add deployment runbook and retention/backup policy for object storage.
+- Add browser automation for queue and prescription print workflows.
 - Add visual report charts after operational metrics stabilize.

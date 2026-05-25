@@ -7,6 +7,7 @@
     "db:test": "bash scripts/run-db-integration-tests.sh",
     "start:api": "node --loader ts-node/esm scripts/start-api.ts",
     "start:frontend": "node --loader ts-node/esm scripts/start-frontend.ts",
+    "storage:check": "node --loader ts-node/esm scripts/check-file-storage-config.ts",
     "api:smoke": "node --loader ts-node/esm scripts/run-api-smoke.ts"
   },
   "devDependencies": {

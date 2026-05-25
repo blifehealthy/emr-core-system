@@ -144,6 +144,14 @@ For S3/MinIO-compatible storage, set:
 - `FILE_STORAGE_S3_SECRET_ACCESS_KEY=...`
 - `FILE_STORAGE_S3_FORCE_PATH_STYLE=true`
 
+Validate storage configuration before deploying:
+
+```bash
+npm run storage:check
+```
+
+Operational guidance lives in `docs/object-storage-runbook.md`.
+
 Run the frontend patient registration and lookup MVP:
 
 ```bash
