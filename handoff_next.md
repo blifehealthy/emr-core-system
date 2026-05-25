@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add drug interaction safety rules`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add production readiness checks`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -66,6 +66,10 @@
     - strict readiness checks for deployment profile, database URL, API token strength,
       file storage persistence, upload size, and MIME allowlist
     - deployment operator checklist in `docs/production-readiness-checklist.md`
+    - doctor-facing Phase 2B summary in `docs/phase-2b-clinician-summary-th.md`
+    - Thai UAT checklist in `docs/phase-2b-uat-checklist-th.md`
+    - identity/MFA hardening plan in `docs/identity-and-access-production-plan.md`
+    - monitoring and backup runbook in `docs/monitoring-backup-runbook.md`
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
@@ -384,12 +388,17 @@ Remaining Phase 2A follow-ups:
 1. Run clinician UAT using `docs/phase-2a-clinician-summary-th.md`.
 2. Review operations chart labels and workflow wording with clinic users after real-world reporting data is available.
 
-## Recommended Next Task
+## Phase 2B Status
 
-If coming back fresh after this pass:
+Phase 2B is ready for clinician and pilot-readiness review. The implementation
+scope now includes prescription allergy warnings, interaction warnings, warning
+snapshots, override reason capture, frontend safety UI, production readiness
+checks, and pilot runbooks.
 
-1. start production readiness hardening checks for auth/session/deployment/monitoring
-2. add clinician-facing Phase 2B pilot readiness summary after hardening checks land
+Recommended next phase:
+
+1. Run Phase 2B UAT with the doctor and clinic team using `docs/phase-2b-uat-checklist-th.md`.
+2. Start production-auth Phase 2C or medication governance expansion, depending on UAT feedback.
 
 The deliverables added in this worktree are:
 
@@ -400,6 +409,11 @@ The deliverables added in this worktree are:
 - `docs/phase-2a-plan.md`
 - `docs/phase-2a-clinician-summary-th.md`
 - `docs/phase-2b-plan.md`
+- `docs/phase-2b-clinician-summary-th.md`
+- `docs/phase-2b-uat-checklist-th.md`
+- `docs/production-readiness-checklist.md`
+- `docs/identity-and-access-production-plan.md`
+- `docs/monitoring-backup-runbook.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -423,6 +437,8 @@ The deliverables added in this worktree are:
 - Phase 2B drug catalog and allergy warning foundation with prescription safety warning snapshots
 - Phase 2B frontend prescription entry form with drug catalog picker, visible safety warning panel, required override reason, and browser smoke coverage
 - Phase 2B clinic-managed drug interaction rules and safety checks against active medications/prescriptions
+- Phase 2B production readiness gate with `npm run production:check`
+- Phase 2B clinician summary, UAT checklist, identity/access plan, and monitoring/backup runbook
 
 This was the highest-leverage next move because:
 
@@ -446,5 +462,5 @@ Start by reading:
 
 Then produce:
 
-1. production readiness hardening checks for auth/session/deployment/monitoring
-2. Phase 2B pilot readiness summary for clinician/product-owner review
+1. Phase 2B UAT fixes found by the doctor and clinic team
+2. Phase 2C production identity/auth hardening or medication governance expansion

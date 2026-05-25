@@ -54,15 +54,20 @@ Current scope, UAT follow-ups, and the Thai clinician summary are tracked in:
 
 ## Phase 2B
 
-Phase 2B has started pilot-readiness work. The first slice adds a clinic drug
+Phase 2B is ready for clinician and pilot-readiness review. This scope adds a clinic drug
 catalog, prescription allergy safety checks, warning snapshots on prescriptions,
 a patient-record prescription form with visible warning feedback, and a required
 override reason when prescribing despite active warnings. It also includes
 clinic-managed drug interaction rules and a production readiness configuration
-gate for pilot deployment checks. Current scope and follow-ups are tracked in:
+gate for pilot deployment checks. Current scope, clinician summary, and
+operational runbooks are tracked in:
 
 - `docs/phase-2b-plan.md`
+- `docs/phase-2b-clinician-summary-th.md`
+- `docs/phase-2b-uat-checklist-th.md`
 - `docs/production-readiness-checklist.md`
+- `docs/identity-and-access-production-plan.md`
+- `docs/monitoring-backup-runbook.md`
 
 ## Current Scope
 

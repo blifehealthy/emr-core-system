@@ -6,9 +6,10 @@ operational hardening.
 
 ## Status
 
-Phase 2B is in pilot-readiness hardening. The current scope covers prescription
-safety foundations and an automated production readiness gate. It is not a
-complete medication decision support system yet.
+Phase 2B is ready for clinician and pilot-readiness review. The current scope
+covers prescription safety foundations, an automated production readiness gate,
+and operator runbooks. It is not a complete medication decision support system
+yet.
 
 ## Completed In This Pass
 
@@ -51,14 +52,21 @@ complete medication decision support system yet.
 - `docs/production-readiness-checklist.md` now gives operators a go/no-go
   checklist for smoke checks, backups, file storage, data protection, monitoring,
   and pilot sign-off.
+- `docs/phase-2b-clinician-summary-th.md` summarizes the medication safety and
+  pilot-readiness scope for doctors and clinic owners.
+- `docs/phase-2b-uat-checklist-th.md` gives a clinic UAT checklist for drug
+  catalog, allergy warnings, interaction warnings, override reasons, and
+  deployment readiness.
+- `docs/identity-and-access-production-plan.md` defines the production identity,
+  MFA, RBAC, and audit hardening path beyond the current bearer-token gate.
+- `docs/monitoring-backup-runbook.md` defines health checks, smoke checks,
+  backup cadence, restore drills, incident response, and go/no-go gates.
 
-## Remaining Phase 2B Follow-ups
+## Post-Phase 2B Follow-ups
 
-- Add clinician-facing Phase 2B pilot summary and UAT checklist for the doctor
-  and clinic operations team.
-- Add identity provider/MFA integration plan for a later production auth
-  replacement of the bearer-token gate.
-- Add monitoring/backup runbook details for the final target deployment
-  environment once hosting is selected.
+- Review the Phase 2B clinician summary and UAT checklist with the pilot clinic.
+- Select the final hosting, database backup, object storage, and monitoring
+  providers, then fill in provider-specific values in the runbooks.
+- Implement production identity provider and MFA after the pilot auth decision.
 - Decide whether warning severity and allergen tags should be clinic-managed or
   centrally governed.
