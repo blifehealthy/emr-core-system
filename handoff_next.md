@@ -415,11 +415,16 @@ Phase 2C has started with production-auth hardening:
 - `npm run production:check` now validates `AUTH_SESSION_SECRET`,
   `AUTH_LOGIN_CODE`, and `AUTH_SESSION_TTL_MINUTES`.
 
-Next Phase 2C batch:
+Phase 2C review docs:
+
+- `docs/phase-2c-clinician-summary-th.md`
+- `docs/phase-2c-uat-checklist-th.md`
+
+Post-Phase 2C next batch:
 
 1. Add failed-login audit events for known active users.
-2. Add Phase 2C clinician/operator summary.
-3. Decide whether to start OIDC/MFA implementation or keep it as the next phase after UAT.
+2. Decide whether to start OIDC/MFA implementation or keep it as the next phase after UAT.
+3. Run Phase 2C UAT with clinic operators using `docs/phase-2c-uat-checklist-th.md`.
 
 The deliverables added in this worktree are:
 
@@ -436,6 +441,8 @@ The deliverables added in this worktree are:
 - `docs/identity-and-access-production-plan.md`
 - `docs/monitoring-backup-runbook.md`
 - `docs/phase-2c-plan.md`
+- `docs/phase-2c-clinician-summary-th.md`
+- `docs/phase-2c-uat-checklist-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

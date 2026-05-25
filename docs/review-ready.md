@@ -25,6 +25,7 @@
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot/production deployment
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
+- Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators
 
 ## Verified
 
@@ -32,4 +33,5 @@
 - `node --loader ts-node/esm --test scripts/check-production-readiness.test.ts`
 - Phase 2B docs updated: clinician summary, UAT checklist, identity/access plan, monitoring/backup runbook
 - Phase 2C targeted auth/session tests pass
+- Phase 2C docs updated: clinician/operator summary and UAT checklist
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

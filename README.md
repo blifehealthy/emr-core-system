@@ -69,6 +69,17 @@ operational runbooks are tracked in:
 - `docs/identity-and-access-production-plan.md`
 - `docs/monitoring-backup-runbook.md`
 
+## Phase 2C
+
+Phase 2C pilot-auth hardening is ready for review. It adds session login,
+database-resolved role/practitioner context, frontend login controls, login
+security state, and updated smoke coverage. Current scope and review docs are
+tracked in:
+
+- `docs/phase-2c-plan.md`
+- `docs/phase-2c-clinician-summary-th.md`
+- `docs/phase-2c-uat-checklist-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:
