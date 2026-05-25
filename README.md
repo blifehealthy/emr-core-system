@@ -186,8 +186,9 @@ npm run browser:workflow-smoke
 ```
 
 Run the API-backed browser workflow smoke to click through queue, prescription
-print, appointment check-in, and SOAP editing against the real API, frontend
-proxy, and a temporary Docker Postgres database:
+print, appointment check-in, SOAP editing, operations CSV export, and clinic
+branding/logo upload against the real API, frontend proxy, and a temporary
+Docker Postgres database:
 
 ```bash
 npm run browser:api-workflow-smoke

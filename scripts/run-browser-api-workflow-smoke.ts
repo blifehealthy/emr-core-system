@@ -277,6 +277,91 @@ async function main() {
     assert.equal(soap.data.assessment, 'Browser API updated assessment');
     assert.equal(soap.data.plan, 'Browser API updated plan');
 
+    await evaluate(cdp, `
+      document.querySelector('[data-view="queue"]').click();
+      window.__downloadedCsv = '';
+      window.__downloadName = '';
+      URL.createObjectURL = (blob) => {
+        blob.text().then((text) => { window.__downloadedCsv = text; });
+        return 'blob:browser-api-smoke';
+      };
+      URL.revokeObjectURL = () => {};
+      HTMLAnchorElement.prototype.click = function click() {
+        window.__downloadName = this.download;
+      };
+      clickButtonByText('Export CSV');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('export report แล้ว') && window.__downloadedCsv.includes('visits_total')`);
+    const exportedCsv = await evaluate<string>(cdp, `return window.__downloadedCsv;`);
+    const exportedName = await evaluate<string>(cdp, `return window.__downloadName;`);
+    assert.match(exportedCsv, /visits_total/);
+    assert.match(exportedName, /^daily-operations-/);
+
+    await evaluate(cdp, `
+      document.querySelector('[data-view="admin"]').click();
+      document.querySelector('#userRole').value = 'admin';
+      document.querySelector('#userId').value = '10000000-0000-0000-0000-000000000202';
+      document.querySelector('#actorPractitionerId').value = '';
+      document.querySelector('#adminClinicId').value = '${CLINIC_ID}';
+      document.querySelector('#admin-form').requestSubmit();
+      return true;
+    `);
+    try {
+      await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('โหลดทีมแล้ว') && document.querySelector('[data-workflow="clinic-logo-asset-picker"]')`);
+    } catch (error) {
+      const adminStatus = await evaluate<string>(cdp, `return document.querySelector('#service-status')?.textContent ?? '';`);
+      const adminText = await evaluate<string>(cdp, `return document.body.textContent.slice(0, 2000);`);
+      throw new Error(`Admin branding workspace did not load. Status: ${adminStatus}. Body: ${adminText}`, { cause: error });
+    }
+    await evaluate(cdp, `
+      const panel = document.querySelector('[data-workflow="clinic-logo-asset-picker"]');
+      const file = new File(['browser api logo bytes'], 'browser-api-logo.png', { type: 'image/png' });
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      const input = panel.querySelector('input[name="logoAssetFile"]');
+      input.files = dataTransfer.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      clickButtonByText('สร้าง logo asset');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('[data-workflow="clinic-logo-asset-status"]')?.textContent.includes('upload logo asset แล้ว')`);
+    const uploadedAssetId = await evaluate<string>(
+      cdp,
+      `return document.querySelector('select[name="logoFileAssetId"]')?.value ?? '';`
+    );
+    assert.ok(uploadedAssetId);
+    await evaluate(cdp, `
+      const brandingForm = document.querySelector('textarea[name="prescriptionFooter"]').closest('form');
+      brandingForm.querySelector('input[name="displayName"]').value = 'Browser API Logo Clinic';
+      brandingForm.querySelector('textarea[name="prescriptionFooter"]').value = 'Browser API logo signature';
+      brandingForm.requestSubmit();
+      return true;
+    `);
+    try {
+      await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('บันทึก branding แล้ว')`);
+    } catch (error) {
+      const brandingStatus = await evaluate<string>(cdp, `return document.querySelector('#service-status')?.textContent ?? '';`);
+      const brandingFormText = await evaluate<string>(cdp, `return document.querySelector('textarea[name="prescriptionFooter"]')?.closest('form')?.textContent ?? '';`);
+      throw new Error(`Clinic branding save did not complete. Status: ${brandingStatus}. Form: ${brandingFormText}`, { cause: error });
+    }
+    const branding = await requestJson<{ display_name: string; logo_file_asset_id: string | null; prescription_footer: string | null }>(
+      API_PORT,
+      `/api/clinics/${CLINIC_ID}/settings`,
+      headers
+    );
+    assert.equal(branding.data.display_name, 'Browser API Logo Clinic');
+    assert.equal(branding.data.logo_file_asset_id, uploadedAssetId);
+    assert.equal(branding.data.prescription_footer, 'Browser API logo signature');
+
+    const uploadedLogo = await requestJson<{ id: string; original_filename: string; mime_type: string }>(
+      API_PORT,
+      `/api/file-assets/${uploadedAssetId}`,
+      headers
+    );
+    assert.equal(uploadedLogo.data.original_filename, 'browser-api-logo.png');
+    assert.equal(uploadedLogo.data.mime_type, 'image/png');
+
     await cdp.close();
     console.log('Browser API workflow smoke passed');
   } finally {

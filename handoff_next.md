@@ -48,8 +48,10 @@
     start-checkup, patient record opening, and prescription print HTML generation
   - API-backed headless Chrome browser workflow smoke repeats the queue/print
     click path through the real API, frontend proxy, and temporary Docker Postgres
-  - API-backed browser workflow smoke also covers appointment check-in and SOAP
-    open/edit/save through the patient record UI
+- API-backed browser workflow smoke also covers appointment check-in and SOAP
+  open/edit/save through the patient record UI
+- API-backed browser workflow smoke now covers operations CSV export plus admin
+  branding/logo upload and save through the clinic admin UI
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
@@ -171,10 +173,11 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run browser:workflow-smoke`
-  - API-backed browser workflow smoke coverage
-  - current result: passing
-  - now covers queue load/claim/start-checkup, prescription print output,
-    appointment check-in, and SOAP open/edit/save against real API/frontend proxy
+- API-backed browser workflow smoke coverage
+- current result: passing
+- now covers queue load/claim/start-checkup, prescription print output,
+  appointment check-in, SOAP open/edit/save, operations CSV export, and admin
+  branding/logo upload against real API/frontend proxy
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run browser:api-workflow-smoke`
   - targeted admin list pagination/filter tests
@@ -341,14 +344,14 @@ incident guidance now live in `docs/object-storage-runbook.md`, with
 
 Remaining Phase 2A follow-ups:
 
-1. Add browser coverage for admin branding/logo upload and operations CSV export.
+1. Add browser coverage for admin user/practitioner CRUD and audit lookup.
 2. Review operations chart labels with clinic users after real-world reporting data is available.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add browser workflow smoke for admin branding/logo upload and operations CSV export
+1. add browser workflow smoke for admin user/practitioner CRUD and audit lookup
 2. review and tune daily operations chart labels after clinical UAT
 
 The deliverables added in this worktree are:
@@ -372,7 +375,7 @@ The deliverables added in this worktree are:
 - duplicate conflict mapping for user/practitioner writes
 - expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset policy/listing/upload/download, daily operations reporting/chart hooks, prescription print builder, and encounter edit
 - headless Chrome browser smoke coverage for queue claim/start-checkup and prescription print output
-- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres, including queue claim/start-checkup, prescription print, appointment check-in, and SOAP editing
+- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres, including queue claim/start-checkup, prescription print, appointment check-in, SOAP editing, operations CSV export, and admin branding/logo upload
 - object storage deployment runbook, env example, and storage config validation script
 - queue operations charts and deterministic frontend workflow smoke script
 - browser-driven queue and prescription print workflow smoke script
@@ -400,5 +403,5 @@ Start by reading:
 
 Then produce:
 
-1. Admin branding/logo upload and operations CSV export browser workflow smoke
+1. Admin user/practitioner CRUD and audit lookup browser workflow smoke
 2. Clinic UAT feedback for daily operations charts

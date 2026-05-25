@@ -16,7 +16,7 @@
 - Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database, including selected frontend proxy flows
 - Run `npm run frontend:workflow-smoke` after queue, report chart, or prescription print UI changes
 - Run `npm run browser:workflow-smoke` when Chrome is available to click through queue and prescription print workflows
-- Run `npm run browser:api-workflow-smoke` when Chrome and Docker Postgres are available to click queue, print, appointment check-in, and SOAP editing workflows against the real API/frontend proxy
+- Run `npm run browser:api-workflow-smoke` when Chrome and Docker Postgres are available to click queue, print, appointment check-in, SOAP editing, operations CSV export, and clinic branding/logo upload workflows against the real API/frontend proxy
 - Run `npm run storage:check` before deployment to verify file storage driver configuration
 
 ## Verified

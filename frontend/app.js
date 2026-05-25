@@ -3554,6 +3554,10 @@ function visitSummary(item) {
   return `${item.queue_label ?? item.visit_number ?? item.id} · ${name || item.medical_record_number || 'patient'} · ${ownerText}`;
 }
 
+function userSummary(item) {
+  return item.display_name ?? item.username ?? item.email ?? item.id;
+}
+
 function practitionerSummary(item) {
   const name = [item.first_name, item.last_name].filter(Boolean).join(' ');
   return `${name || item.practitioner_code || item.id}${item.specialty ? ` · ${item.specialty}` : ''}`;
