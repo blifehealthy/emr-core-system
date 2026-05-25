@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add Phase 2E RS256 OIDC verification`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add Phase 2G identity security operations`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -508,6 +508,26 @@ Recommended next phase:
 2. Fix UAT findings.
 3. Produce Phase 2 pilot go/no-go summary before Phase 3 planning.
 
+## Phase 2 Closure Status
+
+Phase 2 implementation scope is closed for pilot UAT/go-no-go review:
+
+- Phase 2A clinic operations/usability foundation is complete.
+- Phase 2B medication safety and production readiness foundation is complete.
+- Phase 2C pilot login/session hardening is complete.
+- Phase 2D OIDC subject mapping is complete.
+- Phase 2E RS256 provider signing support is complete.
+- Phase 2F JWKS and MFA claim policy is complete.
+- Phase 2G identity security operations is complete.
+- Master UAT, pilot go/no-go, and Phase 3 planning seed docs are available.
+
+Recommended next work:
+
+1. Run `docs/phase-2-uat-master-checklist-th.md` with clinic users/operators.
+2. Record decision in `docs/phase-2-pilot-go-no-go-th.md`.
+3. Fix only UAT blockers before pilot.
+4. Use `docs/phase-3-planning-seeds.md` after Phase 2 sign-off.
+
 The deliverables added in this worktree are:
 
 - `docs/role-permission-matrix.md`
@@ -538,6 +558,10 @@ The deliverables added in this worktree are:
 - `docs/phase-2g-clinician-summary-th.md`
 - `docs/phase-2g-uat-checklist-th.md`
 - `docs/identity-security-operations-runbook.md`
+- `docs/phase-2-closure-summary-th.md`
+- `docs/phase-2-uat-master-checklist-th.md`
+- `docs/phase-2-pilot-go-no-go-th.md`
+- `docs/phase-3-planning-seeds.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -586,5 +610,5 @@ Start by reading:
 
 Then produce:
 
-1. Phase 2B UAT fixes found by the doctor and clinic team
-2. Phase 2F provider-specific identity integration after Phase 2E UAT/provider selection
+1. Phase 2 pilot UAT findings from `docs/phase-2-uat-master-checklist-th.md`
+2. Phase 3 planning after `docs/phase-2-pilot-go-no-go-th.md` is signed off

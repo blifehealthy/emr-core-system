@@ -124,6 +124,16 @@ tracked in:
 - `docs/phase-2g-uat-checklist-th.md`
 - `docs/identity-security-operations-runbook.md`
 
+## Phase 2 Closure
+
+Phase 2 implementation scope is closed for pilot UAT/go-no-go review. The
+combined closure docs are tracked in:
+
+- `docs/phase-2-closure-summary-th.md`
+- `docs/phase-2-uat-master-checklist-th.md`
+- `docs/phase-2-pilot-go-no-go-th.md`
+- `docs/phase-3-planning-seeds.md`
+
 ## Current Scope
 
 Included in this initialization phase:
