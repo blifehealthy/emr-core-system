@@ -8,6 +8,7 @@
     "start:api": "node --loader ts-node/esm scripts/start-api.ts",
     "start:frontend": "node --loader ts-node/esm scripts/start-frontend.ts",
     "storage:check": "node --loader ts-node/esm scripts/check-file-storage-config.ts",
+    "frontend:workflow-smoke": "node --loader ts-node/esm scripts/run-frontend-workflow-smoke.ts",
     "api:smoke": "node --loader ts-node/esm scripts/run-api-smoke.ts"
   },
   "devDependencies": {

@@ -900,6 +900,7 @@ function renderQueueBoard() {
   const groups = ['waiting', 'in_room', 'with_doctor', 'completed', 'discharged', 'cancelled'];
   const fragment = document.createDocumentFragment();
   fragment.append(createQueueSummary());
+  fragment.append(createOperationsCharts());
   const columns = document.createElement('div');
   columns.className = 'queue-board';
 
@@ -949,6 +950,81 @@ function createQueueSummary() {
     ['Daily Dx', report.diagnoses_total ?? 0],
     ['Daily Rx', report.prescriptions_total ?? 0],
   ]);
+}
+
+function createOperationsCharts() {
+  const section = document.createElement('section');
+  section.className = 'operations-charts';
+
+  const report = currentDailyReport ?? {};
+  const statusRows = [
+    ['Waiting', report.waiting ?? currentQueue.filter((visit) => visit.status === 'waiting').length],
+    ['In room', report.in_room ?? currentQueue.filter((visit) => visit.status === 'in_room').length],
+    ['With doctor', report.with_doctor ?? currentQueue.filter((visit) => visit.status === 'with_doctor').length],
+    ['Completed', report.completed ?? currentQueue.filter((visit) => visit.status === 'completed').length],
+    ['Discharged', report.discharged ?? currentQueue.filter((visit) => visit.status === 'discharged').length],
+    ['Cancelled', report.cancelled ?? currentQueue.filter((visit) => visit.status === 'cancelled').length],
+  ];
+
+  section.append(
+    createBarChart('Visit status', statusRows),
+    createBarChart('Rooms', (report.by_room ?? []).map((item) => [item.room_name || 'No room', item.visits ?? 0])),
+    createBarChart('Top diagnoses', (report.top_diagnoses ?? []).map((item) => [item.diagnosis_name || 'Unspecified', item.count ?? 0])),
+    createBarChart('Prescribers', (report.by_prescriber ?? []).map((item) => [
+      practitionerLabel(item.prescribed_by_practitioner_id) || 'No prescriber',
+      item.prescriptions ?? 0,
+    ]))
+  );
+
+  return section;
+}
+
+function createBarChart(title, rows) {
+  const chart = document.createElement('article');
+  chart.className = 'bar-chart';
+
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  chart.append(heading);
+
+  const normalizedRows = rows
+    .map(([label, value]) => [label, Number(value) || 0])
+    .filter(([, value]) => value > 0)
+    .slice(0, 6);
+  const maxValue = Math.max(1, ...normalizedRows.map(([, value]) => value));
+
+  if (normalizedRows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-note';
+    empty.textContent = 'ไม่มีข้อมูล';
+    chart.append(empty);
+    return chart;
+  }
+
+  for (const [label, value] of normalizedRows) {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    const labelText = document.createElement('span');
+    labelText.textContent = label;
+    const track = document.createElement('div');
+    track.className = 'bar-track';
+    const fill = document.createElement('span');
+    fill.style.width = `${Math.max(8, Math.round((value / maxValue) * 100))}%`;
+    track.append(fill);
+    const valueText = document.createElement('strong');
+    valueText.textContent = String(value);
+    row.append(labelText, track, valueText);
+    chart.append(row);
+  }
+
+  return chart;
+}
+
+function practitionerLabel(practitionerId) {
+  if (!practitionerId) return '';
+  const practitioner = (currentAdmin.practitioners ?? []).find((item) => item.id === practitionerId)
+    || (currentProfile?.practitioners ?? []).find((item) => item.id === practitionerId);
+  return practitioner ? practitionerSummary(practitioner) : practitionerId.slice(0, 8);
 }
 
 function createVisitActions(visit) {
@@ -2884,6 +2960,14 @@ async function openPrescriptionPrint(prescription) {
   const printWindow = window.open('', '_blank', 'width=720,height=840');
   if (!printWindow) return;
 
+  const html = await buildPrescriptionPrintHtml(prescription);
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+async function buildPrescriptionPrintHtml(prescription) {
   const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '';
   const practitioner = (currentProfile?.practitioners ?? []).find(
     (item) => item.id === prescription.prescribed_by_practitioner_id
@@ -2906,7 +2990,8 @@ async function openPrescriptionPrint(prescription) {
   const logoMarkup = logoUrl
     ? `<img class="clinic-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(clinicName)} logo" />`
     : '';
-  printWindow.document.write(`
+
+  return `
     <!doctype html>
     <html lang="th">
       <head>
@@ -2966,10 +3051,7 @@ async function openPrescriptionPrint(prescription) {
         </div>
       </body>
     </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  `;
 }
 
 function escapeHtml(value) {

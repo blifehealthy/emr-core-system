@@ -950,6 +950,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /createClinicSettingsSection/);
   assert.match(app.body, /fetchDailyOperationsReport/);
   assert.match(app.body, /exportDailyOperationsCsv/);
+  assert.match(app.body, /createOperationsCharts/);
+  assert.match(app.body, /createBarChart/);
+  assert.match(app.body, /buildPrescriptionPrintHtml/);
   assert.match(app.body, /fetchFileAssets/);
   assert.match(app.body, /uploadFileAsset/);
   assert.match(app.body, /fetchFileAssetDataUrl/);
@@ -960,6 +963,9 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /queueReportStartDate/);
   assert.match(app.body, /logoFileAssetId/);
   assert.match(app.body, /currentClinicSettings/);
+  assert.match(styles.body, /\.operations-charts/);
+  assert.match(styles.body, /\.bar-chart/);
+  assert.match(styles.body, /\.bar-track/);
 
   const users = await requestFrontendJson<Array<{ id: string }>>(
     '/api/users?clinicId=10000000-0000-0000-0000-000000000101&search=nurse&active=inactive&limit=1&offset=0',

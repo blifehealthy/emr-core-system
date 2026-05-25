@@ -44,9 +44,14 @@ and clinician usability.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
   count, provider workload, room workload, prescriber workload, and top
   diagnoses, with date-range filtering and CSV export.
+- Queue board now renders lightweight operations charts for visit status, room
+  workload, top diagnoses, and prescriber workload.
+- `npm run frontend:workflow-smoke` checks queue controls, report chart hooks,
+  and prescription print/export UI wiring.
 
 ## Remaining Phase 2A Follow-ups
 
-- Add real browser automation for queue and print workflows.
-- Add browser automation for queue and prescription print workflows.
-- Add visual report charts after operational metrics stabilize.
+- Add full browser-driven click automation when a browser test dependency is
+  introduced.
+- Review chart labels with clinic users after real-world reporting data is
+  available.

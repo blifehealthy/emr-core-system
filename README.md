@@ -45,7 +45,7 @@ summary is available at:
 Phase 2A has started clinic operations and clinician usability work, including
 queue-to-encounter linking plus practitioner/room queue ownership from the
 clinic queue board, persisted SOAP templates, branded prescription output, and
-daily operations reporting.
+daily operations reporting with lightweight visual charts.
 Current scope and follow-ups are tracked in:
 
 - `docs/phase-2a-plan.md`
@@ -168,6 +168,13 @@ and selected `/api/*` requests through the frontend proxy:
 
 ```bash
 npm run api:smoke
+```
+
+Run the deterministic frontend workflow smoke check after changing queue,
+reporting, or prescription print UI code:
+
+```bash
+npm run frontend:workflow-smoke
 ```
 
 Protect API routes with a bearer token if needed:
