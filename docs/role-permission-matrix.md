@@ -42,8 +42,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `user_write` | No | No | Yes | User create/update |
 | `practitioner_read` | Yes | Yes | Yes | Practitioner listing |
 | `practitioner_write` | No | No | Yes | Practitioner create/update |
-| `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog listing |
-| `drug_catalog_write` | No | No | Yes | Clinic drug catalog create/update |
+| `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog and inventory listing |
+| `drug_catalog_write` | No | No | Yes | Clinic drug catalog and inventory create/update/stock adjustment |
 | `drug_interaction_rule_read` | Yes | Yes | Yes | Clinic drug interaction rule listing |
 | `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
@@ -103,12 +103,20 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `DELETE` | `/api/vital-signs/:vitalSignId` | `vital_sign_update` |
 | `GET` | `/api/prescriptions/:prescriptionId` | `prescription_read` |
 | `GET` | `/api/encounters/:encounterId/prescriptions` | `prescription_read` |
+| `GET` | `/api/prescriptions/:prescriptionId/dispenses` | `prescription_read` |
+| `GET` | `/api/medication-dispenses` | `prescription_read` |
 | `POST` | `/api/prescriptions` | `prescription_write` |
+| `POST` | `/api/prescriptions/:prescriptionId/dispenses` | `prescription_write` |
 | `PATCH` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
 | `DELETE` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
 | `GET` | `/api/drug-catalog` | `drug_catalog_read` |
 | `POST` | `/api/drug-catalog` | `drug_catalog_write` |
 | `PATCH` | `/api/drug-catalog/:drugCatalogId` | `drug_catalog_write` |
+| `GET` | `/api/inventory-items` | `drug_catalog_read` |
+| `POST` | `/api/inventory-items` | `drug_catalog_write` |
+| `PATCH` | `/api/inventory-items/:inventoryItemId` | `drug_catalog_write` |
+| `PATCH` | `/api/inventory-items/:inventoryItemId/stock` | `drug_catalog_write` |
+| `GET` | `/api/stock-movements` | `drug_catalog_read` |
 | `GET` | `/api/drug-interaction-rules` | `drug_interaction_rule_read` |
 | `POST` | `/api/drug-interaction-rules` | `drug_interaction_rule_write` |
 | `PATCH` | `/api/drug-interaction-rules/:interactionRuleId` | `drug_interaction_rule_write` |

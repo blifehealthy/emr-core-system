@@ -280,6 +280,61 @@ const DRUG_INTERACTION_RULE_KEYS = [
   'deleted_at',
 ] as const;
 
+const INVENTORY_ITEM_KEYS = [
+  'id',
+  'clinic_id',
+  'drug_catalog_id',
+  'item_code',
+  'display_name',
+  'unit',
+  'quantity_on_hand',
+  'reorder_level',
+  'is_active',
+  'notes',
+  'drug_catalog_medication_name',
+  'drug_catalog_rxnorm_code',
+  'low_stock',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const STOCK_MOVEMENT_KEYS = [
+  'id',
+  'clinic_id',
+  'inventory_item_id',
+  'prescription_id',
+  'medication_dispense_id',
+  'movement_type',
+  'quantity',
+  'quantity_before',
+  'quantity_after',
+  'reason',
+  'performed_by_user_id',
+  'moved_at',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'created_at',
+  'deleted_at',
+] as const;
+
+const MEDICATION_DISPENSE_KEYS = [
+  'id',
+  'clinic_id',
+  'prescription_id',
+  'inventory_item_id',
+  'status',
+  'quantity',
+  'dispensed_at',
+  'dispensed_by_user_id',
+  'notes',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const USER_KEYS = [
   'id',
   'clinic_id',
@@ -632,6 +687,30 @@ export function toDrugInteractionRuleDto(row: unknown): Record<string, unknown> 
 
 export function toDrugInteractionRuleDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toDrugInteractionRuleDto(row));
+}
+
+export function toInventoryItemDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_ITEM_KEYS]);
+}
+
+export function toInventoryItemDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryItemDto(row));
+}
+
+export function toStockMovementDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...STOCK_MOVEMENT_KEYS]);
+}
+
+export function toStockMovementDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toStockMovementDto(row));
+}
+
+export function toMedicationDispenseDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...MEDICATION_DISPENSE_KEYS]);
+}
+
+export function toMedicationDispenseDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toMedicationDispenseDto(row));
 }
 
 export function toUserDto(row: unknown): Record<string, unknown> {

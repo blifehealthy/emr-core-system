@@ -17,6 +17,11 @@ import {
   toDrugCatalogItemDtos,
   toDrugInteractionRuleDto,
   toDrugInteractionRuleDtos,
+  toInventoryItemDto,
+  toInventoryItemDtos,
+  toMedicationDispenseDto,
+  toMedicationDispenseDtos,
+  toStockMovementDtos,
   toEncounterDto,
   toFileAssetDto,
   toFileAssetDtos,
@@ -59,6 +64,10 @@ import {
   validateCreateDiagnosisBody,
   validateCreateDrugCatalogItemBody,
   validateCreateDrugInteractionRuleBody,
+  validateCreateInventoryItemBody,
+  validateUpdateInventoryItemBody,
+  validateAdjustInventoryStockBody,
+  validateDispensePrescriptionBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
   validateCreatePatientFlagBody,
@@ -2013,6 +2022,174 @@ export async function handleUpdateDrugCatalogItem(
   }
 }
 
+export async function handleListInventoryItems(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryItems) {
+    return mapError(new Error('Inventory item list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+  const lowStock = readOptionalBooleanQuery(request, 'lowStock');
+  if (!lowStock.ok) return validationError(lowStock.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const items = await dependencies.listInventoryItems({
+    clinicId,
+    search: search.value,
+    active: active.value,
+    lowStock: lowStock.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryItemDtos(items.rows), meta: items.meta },
+  };
+}
+
+export async function handleCreateInventoryItem(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryItem) {
+    return mapError(new Error('Inventory item create dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryItemBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const item = await dependencies.createInventoryItem(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_item',
+      entityId: (item as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { itemCode: validation.value.itemCode },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateInventoryItem(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  inventoryItemId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInventoryItem) {
+    return mapError(new Error('Inventory item update dependency is not configured'));
+  }
+
+  const validation = validateUpdateInventoryItemBody(request.body, inventoryItemId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const item = await dependencies.updateInventoryItem(validation.value);
+    if (!item) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_item',
+      entityId: inventoryItemId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleAdjustInventoryStock(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  inventoryItemId: string
+): Promise<HttpResponse> {
+  if (!dependencies.adjustInventoryStock) {
+    return mapError(new Error('Inventory stock adjustment dependency is not configured'));
+  }
+
+  const validation = validateAdjustInventoryStockBody(request.body, inventoryItemId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const item = await dependencies.adjustInventoryStock(validation.value);
+    if (!item) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_item',
+      entityId: inventoryItemId,
+      action: 'stock_adjusted',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        movementType: validation.value.movementType,
+        quantity: validation.value.quantity,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListStockMovements(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listStockMovements) {
+    return mapError(new Error('Stock movement list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
+  if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const movements = await dependencies.listStockMovements({
+    clinicId,
+    inventoryItemId: inventoryItemId.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toStockMovementDtos(movements.rows), meta: movements.meta },
+  };
+}
+
 export async function handleAssessPrescriptionSafety(
   request: HttpRequest,
   dependencies: Dependencies
@@ -3038,6 +3215,77 @@ export async function handleUpdatePrescription(
   return { status: 200, headers: JSON_HEADERS, body: { data: toPrescriptionDto(prescription) } };
 }
 
+export async function handleListMedicationDispenses(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  prescriptionId?: string
+): Promise<HttpResponse> {
+  if (!dependencies.listMedicationDispenses) {
+    return mapError(new Error('Medication dispense list dependency is not configured'));
+  }
+
+  const clinicId = readOptionalQueryString(request, 'clinicId');
+  if (!clinicId.ok) return validationError(clinicId.error);
+  if (!prescriptionId && !clinicId.value) {
+    return validationError('clinicId is required query parameter');
+  }
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const dispenses = await dependencies.listMedicationDispenses({
+    clinicId: clinicId.value,
+    prescriptionId,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toMedicationDispenseDtos(dispenses.rows), meta: dispenses.meta },
+  };
+}
+
+export async function handleDispensePrescription(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  prescriptionId: string
+): Promise<HttpResponse> {
+  if (!dependencies.dispensePrescription) {
+    return mapError(new Error('Medication dispense dependency is not configured'));
+  }
+
+  const validation = validateDispensePrescriptionBody(request.body, prescriptionId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const dispense = await dependencies.dispensePrescription(validation.value);
+    if (!dispense) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Prescription or inventory item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'medication_dispense',
+      entityId: (dispense as { id: string }).id,
+      action: 'dispensed',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        prescriptionId,
+        inventoryItemId: validation.value.inventoryItemId,
+        quantity: validation.value.quantity,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toMedicationDispenseDto(dispense) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
 export async function handleGetSoapNote(
   _request: HttpRequest,
   dependencies: Dependencies,
@@ -3596,6 +3844,23 @@ function readOptionalEnumQuery<T extends string>(
   }
 
   return { ok: true, value: value as T };
+}
+
+function readOptionalBooleanQuery(
+  request: HttpRequest,
+  fieldName: string
+): { ok: true; value: boolean | undefined } | { ok: false; error: string } {
+  const value = request.query?.[fieldName];
+
+  if (value === undefined) {
+    return { ok: true, value: undefined };
+  }
+
+  if (value !== 'true' && value !== 'false') {
+    return { ok: false, error: `${fieldName} must be true or false` };
+  }
+
+  return { ok: true, value: value === 'true' };
 }
 
 function readRequiredEnumQuery<T extends string>(

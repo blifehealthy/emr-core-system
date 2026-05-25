@@ -44,6 +44,7 @@ let currentClinicSettings = null;
 let currentLogoAssets = [];
 let currentFileAssetStoragePolicy = null;
 let currentDrugCatalog = [];
+let currentInventoryItems = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -346,6 +347,7 @@ searchForm.addEventListener('submit', async (event) => {
     const profile = await fetchPatientProfileBundle(patient, apiToken);
     currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
     currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -757,6 +759,27 @@ async function fetchDrugCatalog(clinicId, apiToken, search = '') {
   if (search) params.set('search', search);
 
   const response = await fetch(`/api/drug-catalog?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryItems(clinicId, apiToken, search = '') {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+  if (search) params.set('search', search);
+
+  const response = await fetch(`/api/inventory-items?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2261,6 +2284,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   const profile = await fetchPatientProfileBundle(patient, apiToken);
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -3617,6 +3641,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   const profile = await fetchPatientProfileBundle(refreshed, apiToken);
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(refreshed.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryItems = await fetchInventoryItems(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -3781,6 +3806,7 @@ function renderProfileSection(container, label, section) {
   }
 
   if (label === 'Prescriptions' && currentPatient) {
+    container.append(createPharmacyInventoryPanel(currentPatient));
     container.append(createPrescriptionEntryForm(currentPatient));
   }
 
@@ -3800,6 +3826,153 @@ function renderProfileSection(container, label, section) {
   }
 
   container.append(list);
+}
+
+function createPharmacyInventoryPanel(patient) {
+  const section = document.createElement('section');
+  section.className = 'inline-profile-form pharmacy-inventory-panel';
+
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'Pharmacy inventory';
+  const hint = document.createElement('span');
+  hint.textContent = 'Phase 3C';
+  heading.append(title, hint);
+  section.append(heading);
+
+  section.append(createMetricGrid([
+    ['Inventory items', currentInventoryItems.length],
+    ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
+  ]));
+
+  const form = document.createElement('form');
+  form.className = 'nested-inline-form';
+  form.append(
+    createDrugCatalogField(),
+    createFormField('itemCode', 'Item code', 'input', true),
+    createFormField('displayName', 'Display name', 'input', true),
+    createFormField('unit', 'Unit', 'input'),
+    createFormField('quantityOnHand', 'Quantity on hand', 'input'),
+    createFormField('reorderLevel', 'Reorder level', 'input')
+  );
+  form.elements.drugCatalogId.addEventListener('change', () => applyDrugCatalogInventorySelection(form));
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'secondary-button compact-button';
+  submit.textContent = 'เพิ่ม inventory item';
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInventoryItemFromForm(patient, form, submit);
+  });
+  section.append(form);
+
+  const list = document.createElement('div');
+  list.className = 'record-list';
+  for (const item of currentInventoryItems.slice(0, 6)) {
+    list.append(createInventoryItemCard(item));
+  }
+  if (currentInventoryItems.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-text';
+    empty.textContent = 'ยังไม่มี inventory item';
+    section.append(empty);
+  } else {
+    section.append(list);
+  }
+
+  return section;
+}
+
+function applyDrugCatalogInventorySelection(form) {
+  const selected = currentDrugCatalog.find((item) => item.id === form.elements.drugCatalogId.value);
+  if (!selected) return;
+  form.elements.displayName.value = selected.medication_name ?? form.elements.displayName.value;
+  form.elements.itemCode.value = selected.rxnorm_code ?? form.elements.itemCode.value;
+  form.elements.unit.value = selected.dosage_form ?? form.elements.unit.value;
+}
+
+function createInventoryItemCard(item) {
+  const card = createRecordCard(item, inventoryItemSummary, [
+    'item_code',
+    'quantity_on_hand',
+    'reorder_level',
+    'unit',
+    'low_stock',
+  ]);
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const adjustIn = document.createElement('button');
+  adjustIn.type = 'button';
+  adjustIn.className = 'secondary-button small-button';
+  adjustIn.textContent = 'รับเข้า';
+  adjustIn.addEventListener('click', () => adjustInventoryStockPrompt(item, 'adjustment_in'));
+  const adjustOut = document.createElement('button');
+  adjustOut.type = 'button';
+  adjustOut.className = 'secondary-button small-button';
+  adjustOut.textContent = 'ตัดออก';
+  adjustOut.addEventListener('click', () => adjustInventoryStockPrompt(item, 'adjustment_out'));
+  actions.append(adjustIn, adjustOut);
+  card.append(actions);
+  return card;
+}
+
+async function createInventoryItemFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/inventory-items', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        drugCatalogId: values.drugCatalogId,
+        itemCode: values.itemCode,
+        displayName: values.displayName,
+        unit: values.unit || 'unit',
+        quantityOnHand: values.quantityOnHand || '0',
+        reorderLevel: values.reorderLevel || '0',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม inventory item แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม inventory item ไม่สำเร็จ');
+    setStatus('เพิ่ม inventory item ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม inventory item';
+  }
+}
+
+async function adjustInventoryStockPrompt(item, movementType) {
+  const quantity = window.prompt('Quantity', '1');
+  if (!quantity) return;
+  const reason = window.prompt('Reason', movementType === 'adjustment_in' ? 'Stock received' : 'Manual adjustment');
+  setStatus('กำลังปรับ stock', '');
+  try {
+    const response = await fetch(`/api/inventory-items/${item.id}/stock`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        movementType,
+        quantity,
+        reason,
+        performedByUserId: readValue('userId'),
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('ปรับ stock แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ปรับ stock ไม่สำเร็จ', 'error');
+  }
 }
 
 function createProfileForm(sectionLabel, config, initialValues = null) {
@@ -4292,8 +4465,52 @@ function createPrescriptionActions(prescription) {
   printButton.addEventListener('click', async () => {
     await openPrescriptionPrint(prescription);
   });
-  actions.append(printButton);
+  const dispenseButton = document.createElement('button');
+  dispenseButton.type = 'button';
+  dispenseButton.className = 'primary-button small-button';
+  dispenseButton.textContent = 'จ่ายยา';
+  dispenseButton.addEventListener('click', async () => {
+    await dispensePrescriptionPrompt(prescription);
+  });
+  actions.append(printButton, dispenseButton);
   return actions;
+}
+
+async function dispensePrescriptionPrompt(prescription) {
+  if (currentInventoryItems.length === 0) {
+    setStatus('ยังไม่มี inventory item สำหรับจ่ายยา', 'error');
+    return;
+  }
+  const matched =
+    currentInventoryItems.find((item) => item.drug_catalog_id && item.drug_catalog_id === prescription.drug_catalog_id) ??
+    currentInventoryItems.find((item) =>
+      String(item.display_name ?? '').toLowerCase().includes(String(prescription.medication_name ?? '').toLowerCase())
+    ) ??
+    currentInventoryItems[0];
+  const inventoryItemId = window.prompt('Inventory item ID', matched?.id ?? '');
+  if (!inventoryItemId) return;
+  const quantity = window.prompt('Quantity to dispense', '1');
+  if (!quantity) return;
+
+  setStatus('กำลังจ่ายยา', '');
+  try {
+    const response = await fetch(`/api/prescriptions/${prescription.id}/dispenses`, {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        inventoryItemId,
+        quantity,
+        dispensedByUserId: readValue('userId'),
+        notes: 'Dispensed from patient record',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('จ่ายยาแล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'จ่ายยาไม่สำเร็จ', 'error');
+  }
 }
 
 async function openPrescriptionPrint(prescription) {
@@ -5032,6 +5249,10 @@ function vitalSummary(item) {
 
 function prescriptionSummary(item) {
   return item.medication_name ?? item.rxnorm_code ?? item.id;
+}
+
+function inventoryItemSummary(item) {
+  return `${item.display_name ?? item.item_code ?? item.id}${item.low_stock ? ' · low stock' : ''}`;
 }
 
 function invoiceSummary(item) {

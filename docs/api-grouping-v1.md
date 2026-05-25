@@ -89,12 +89,20 @@ All routes except `GET /health` can be protected by bearer token when
 | `DELETE` | `/api/vital-signs/:vitalSignId` | Soft delete vital sign. |
 | `GET` | `/api/encounters/:encounterId/prescriptions` | List prescriptions for an encounter. |
 | `GET` | `/api/prescriptions/:prescriptionId` | Read one prescription. |
+| `GET` | `/api/prescriptions/:prescriptionId/dispenses` | List dispense records for one prescription. |
 | `POST` | `/api/prescriptions` | Create prescription. |
+| `POST` | `/api/prescriptions/:prescriptionId/dispenses` | Dispense medication from inventory for one prescription. |
 | `PATCH` | `/api/prescriptions/:prescriptionId` | Update prescription. |
 | `DELETE` | `/api/prescriptions/:prescriptionId` | Soft delete prescription. |
 | `GET` | `/api/drug-catalog` | List clinic drug catalog items with search, active status, and pagination filters. |
 | `POST` | `/api/drug-catalog` | Create clinic drug catalog item. |
 | `PATCH` | `/api/drug-catalog/:drugCatalogId` | Update or deactivate clinic drug catalog item. |
+| `GET` | `/api/inventory-items` | List inventory items with active, low-stock, search, and pagination filters. |
+| `POST` | `/api/inventory-items` | Create inventory item linked optionally to drug catalog. |
+| `PATCH` | `/api/inventory-items/:inventoryItemId` | Update inventory metadata and reorder level. |
+| `PATCH` | `/api/inventory-items/:inventoryItemId/stock` | Record manual stock adjustment and update quantity on hand. |
+| `GET` | `/api/stock-movements` | List stock movement audit rows by clinic and optional inventory item. |
+| `GET` | `/api/medication-dispenses` | List medication dispense rows by clinic. |
 | `GET` | `/api/drug-interaction-rules` | List clinic-managed interaction rules. |
 | `POST` | `/api/drug-interaction-rules` | Create clinic-managed interaction rule. |
 | `PATCH` | `/api/drug-interaction-rules/:interactionRuleId` | Update or deactivate clinic-managed interaction rule. |
@@ -208,6 +216,17 @@ All routes except `GET /health` can be protected by bearer token when
   cash, and variance for daily close.
 - The Cashier tab exposes Phase 3B summary metrics, number sequence actions, and
   reconciliation open/close controls.
+
+## Phase 3C Additions
+
+- Pharmacy inventory tables now track inventory items, medication dispenses, and
+  stock movements.
+- Inventory items can be linked to drug catalog and carry quantity on hand,
+  reorder level, unit, and low-stock state.
+- Dispensing from a prescription reduces stock and writes dispense plus stock
+  movement records.
+- The Prescriptions tab exposes inventory setup, stock adjustment, and dispense
+  controls for pilot workflows.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

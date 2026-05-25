@@ -17,11 +17,12 @@ real UAT findings, but the likely product directions are below.
 
 ### Pharmacy And Inventory
 
-- stock item model
-- dispensing workflow
-- prescription-to-dispense handoff
-- stock movement audit
-- low-stock reporting
+- Phase 3C completed the first stock item model, dispensing workflow,
+  prescription-to-dispense handoff, stock movement audit, and low-stock
+  visibility.
+- Remaining pharmacy follow-up should come from UAT: lot/expiry, purchase
+  receiving, supplier workflow, multi-location stock, barcode scanning, or
+  controlled substance workflow.
 
 ### Patient Communication
 

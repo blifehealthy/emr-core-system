@@ -55,6 +55,7 @@ const migrations = [
   '0023_add_billing_refunds_and_charge_templates.up.sql',
   '0024_add_phase_3a_completion_billing.up.sql',
   '0025_add_phase_3b_billing_operations.up.sql',
+  '0026_add_phase_3c_pharmacy_inventory.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -851,6 +852,73 @@ async function main() {
     assert.equal(createdPrescription.data.status, 'active');
     assert.equal(createdPrescription.data.drug_catalog_id, '10000000-0000-0000-0000-000000020001');
     assert.equal(createdPrescription.data.safety_warnings[0].type, 'allergy');
+
+    const inventoryItem = await requestJson<{
+      id: string;
+      item_code: string;
+      quantity_on_hand: string;
+      low_stock: boolean;
+    }>(
+      '/api/inventory-items',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        drugCatalogId: '10000000-0000-0000-0000-000000020001',
+        itemCode: `AMOX-STOCK-${Date.now()}`,
+        displayName: 'Amoxicillin 500mg stock',
+        unit: 'tablet',
+        quantityOnHand: 10,
+        reorderLevel: 5,
+      }
+    );
+    assert.equal(Number(inventoryItem.data.quantity_on_hand), 10);
+
+    const adjustedInventoryItem = await requestJson<{ id: string; quantity_on_hand: string }>(
+      `/api/inventory-items/${inventoryItem.data.id}/stock`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        movementType: 'adjustment_in',
+        quantity: 5,
+        reason: 'Smoke stock receive',
+      }
+    );
+    assert.equal(Number(adjustedInventoryItem.data.quantity_on_hand), 15);
+
+    const inventoryItems = await requestJson<Array<{ id: string; low_stock: boolean }>>(
+      '/api/inventory-items?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=20',
+      adminHeaders
+    );
+    assert.ok(inventoryItems.data.some((item) => item.id === inventoryItem.data.id));
+
+    const dispense = await requestJson<{ id: string; quantity: string; inventory_item_id: string }>(
+      `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
+      adminHeaders,
+      'POST',
+      201,
+      {
+        inventoryItemId: inventoryItem.data.id,
+        quantity: 2,
+        notes: 'Smoke dispense',
+      }
+    );
+    assert.equal(dispense.data.inventory_item_id, inventoryItem.data.id);
+    assert.equal(Number(dispense.data.quantity), 2);
+
+    const dispenses = await requestJson<Array<{ id: string }>>(
+      `/api/prescriptions/${createdPrescription.data.id}/dispenses?limit=10`,
+      adminHeaders
+    );
+    assert.ok(dispenses.data.some((item) => item.id === dispense.data.id));
+
+    const stockMovements = await requestJson<Array<{ inventory_item_id: string; movement_type: string }>>(
+      `/api/stock-movements?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&limit=10`,
+      adminHeaders
+    );
+    assert.ok(stockMovements.data.some((item) => item.movement_type === 'dispense'));
 
     const chargeTemplate = await requestJson<{
       id: string;

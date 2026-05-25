@@ -517,6 +517,7 @@ export type InsuranceClaimStatus = 'draft' | 'submitted' | 'accepted' | 'rejecte
 export type BillingDocumentType = 'invoice' | 'receipt' | 'tax_invoice' | 'claim';
 export type CashierReconciliationStatus = 'open' | 'closed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
+export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' | 'return';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
   severity: 'critical' | 'warning';
@@ -603,6 +604,37 @@ export type UpdateDrugCatalogItemInput = {
   isActive?: boolean;
 };
 
+export type CreateInventoryItemInput = {
+  clinicId: string;
+  drugCatalogId?: string | null;
+  itemCode: string;
+  displayName: string;
+  unit?: string;
+  quantityOnHand?: number | string;
+  reorderLevel?: number | string;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdateInventoryItemInput = {
+  inventoryItemId: string;
+  drugCatalogId?: string | null;
+  itemCode?: string;
+  displayName?: string;
+  unit?: string;
+  reorderLevel?: number | string;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type AdjustInventoryStockInput = {
+  inventoryItemId: string;
+  movementType: Exclude<StockMovementType, 'dispense'>;
+  quantity: number | string;
+  reason?: string | null;
+  performedByUserId?: string | null;
+};
+
 export type CreateDrugInteractionRuleInput = {
   clinicId: string;
   primaryDrugCatalogId?: string | null;
@@ -685,6 +717,14 @@ export type UpdatePrescriptionInput = {
   safetyOverriddenAt?: string | null;
   safetyOverriddenByUserId?: string | null;
   safetyOverriddenByPractitionerId?: string | null;
+};
+
+export type DispensePrescriptionInput = {
+  prescriptionId: string;
+  inventoryItemId: string;
+  quantity: number | string;
+  dispensedByUserId?: string | null;
+  notes?: string | null;
 };
 
 export type CreateInvoiceInput = {
@@ -993,6 +1033,23 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createDrugCatalogItem?: (input: CreateDrugCatalogItemInput) => Promise<unknown>;
   updateDrugCatalogItem?: (input: UpdateDrugCatalogItemInput) => Promise<unknown | null>;
+  listInventoryItems?: (input: {
+    clinicId: string;
+    search?: string;
+    active?: DrugCatalogActiveFilter;
+    lowStock?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInventoryItem?: (input: CreateInventoryItemInput) => Promise<unknown>;
+  updateInventoryItem?: (input: UpdateInventoryItemInput) => Promise<unknown | null>;
+  adjustInventoryStock?: (input: AdjustInventoryStockInput) => Promise<unknown | null>;
+  listStockMovements?: (input: {
+    clinicId: string;
+    inventoryItemId?: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
   listDrugInteractionRules?: (input: {
     clinicId: string;
     active?: DrugCatalogActiveFilter;
@@ -1017,6 +1074,13 @@ export type Dependencies = {
   createVitalSign?: (input: CreateVitalSignInput) => Promise<unknown>;
   createPrescription: (input: CreatePrescriptionInput) => Promise<unknown>;
   updatePrescription: (input: UpdatePrescriptionInput) => Promise<unknown | null>;
+  listMedicationDispenses?: (input: {
+    clinicId?: string;
+    prescriptionId?: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  dispensePrescription?: (input: DispensePrescriptionInput) => Promise<unknown | null>;
   listInvoices?: (input: {
     clinicId: string;
     patientId?: string;

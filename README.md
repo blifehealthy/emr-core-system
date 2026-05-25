@@ -160,6 +160,18 @@ Current scope and review docs are tracked in:
 - `docs/phase-3b-uat-checklist-th.md`
 - `docs/phase-3b-closure-summary-th.md`
 
+## Phase 3C
+
+Phase 3C closes the first pharmacy/inventory foundation. It adds inventory
+items linked to drug catalog, quantity and reorder tracking, stock movement
+audit, and prescription dispense workflow that reduces stock. Current scope and
+review docs are tracked in:
+
+- `docs/phase-3c-plan.md`
+- `docs/phase-3c-clinician-summary-th.md`
+- `docs/phase-3c-uat-checklist-th.md`
+- `docs/phase-3c-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

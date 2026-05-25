@@ -71,6 +71,17 @@ import { listConsentRecordsByPatient } from '../backend/services/listConsentReco
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
 import { listDrugCatalog } from '../backend/services/listDrugCatalog.ts';
 import { listDrugInteractionRules } from '../backend/services/listDrugInteractionRules.ts';
+import {
+  adjustInventoryStock,
+  createInventoryItem,
+  listInventoryItems,
+  updateInventoryItem,
+} from '../backend/services/inventoryItems.ts';
+import {
+  dispensePrescription,
+  listMedicationDispenses,
+} from '../backend/services/medicationDispenses.ts';
+import { listStockMovements } from '../backend/services/stockMovements.ts';
 import { listFileAssets } from '../backend/services/listFileAssets.ts';
 import { listInvoices } from '../backend/services/listInvoices.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
@@ -206,12 +217,19 @@ const server = createNodeServer({
   listDrugCatalog: listDrugCatalog(db),
   createDrugCatalogItem: createDrugCatalogItem(db),
   updateDrugCatalogItem: updateDrugCatalogItem(db),
+  listInventoryItems: listInventoryItems(db),
+  createInventoryItem: createInventoryItem(db),
+  updateInventoryItem: updateInventoryItem(db),
+  adjustInventoryStock: adjustInventoryStock(db),
+  listStockMovements: listStockMovements(db),
   listDrugInteractionRules: listDrugInteractionRules(db),
   createDrugInteractionRule: createDrugInteractionRule(db),
   updateDrugInteractionRule: updateDrugInteractionRule(db),
   assessPrescriptionSafety: assessPrescriptionSafety(db),
   listPrescriptionsByEncounter: listPrescriptionsByEncounter(db),
   createPrescription: createPrescription(db),
+  listMedicationDispenses: listMedicationDispenses(db),
+  dispensePrescription: dispensePrescription(db),
   listInvoices: listInvoices(db),
   getInvoiceById: getInvoiceById(db),
   createInvoice: createInvoice(db),

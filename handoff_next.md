@@ -570,11 +570,11 @@ Phase 3A billing/payment foundation implementation scope is complete:
 
 Recommended next work:
 
-1. Run Phase 3A/3B UAT with cashier, front desk, and accounting users.
-2. Start Phase 3C after UAT direction is clear.
-3. Prefer Pharmacy/Inventory foundation if medication stock is the bigger pilot
-   blocker, or accounting/claim export integration if accounting handoff is the
-   bigger blocker.
+1. Run Phase 3A/3B/3C UAT with cashier, accounting, pharmacy, and clinical users.
+2. Start Phase 3D after UAT direction is clear.
+3. Prefer lot/expiry and pharmacy receiving if medication stock control is the
+   bigger pilot blocker, or accounting/claim export integration if accounting
+   handoff is the bigger blocker.
 
 The deliverables added in this worktree are:
 
@@ -617,6 +617,10 @@ The deliverables added in this worktree are:
 - `docs/phase-3b-clinician-summary-th.md`
 - `docs/phase-3b-uat-checklist-th.md`
 - `docs/phase-3b-closure-summary-th.md`
+- `docs/phase-3c-plan.md`
+- `docs/phase-3c-clinician-summary-th.md`
+- `docs/phase-3c-uat-checklist-th.md`
+- `docs/phase-3c-closure-summary-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -626,7 +630,7 @@ The deliverables added in this worktree are:
 - patient flag services, DTOs, validation, routes, and API smoke coverage
 - active patient flag aggregation in patient detail
 - patient registration API with unit, DB, and API smoke coverage
-- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, SOAP template management, clinic branding settings, audit log lookup, queue board with practitioner/room filters, claim controls, operations summary, daily report metrics and charts, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow with loaded queue sync, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, clinic-branded prescription print/export, and dev proxy
+- frontend patient registration, patient lookup, patient snapshot, clinic user/practitioner administration with API-backed search/status filters/pagination/deactivate controls, SOAP template management, clinic branding settings, audit log lookup, queue board with practitioner/room filters, claim controls, operations summary, daily report metrics and charts, visit lifecycle controls, queue-to-encounter start/open actions, clinical profile subviews, profile create/update/delete controls, appointment/check-in workflow, appointment edit/reschedule, practitioner picker, encounter/SOAP entry, encounter status workflow with loaded queue sync, encounter metadata edit, patient timeline, SOAP read/update/templates, note finalize/sign, clinic-branded prescription print/export, pharmacy inventory controls, prescription dispense, and dev proxy
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
@@ -665,6 +669,6 @@ Start by reading:
 
 Then produce:
 
-1. Run Phase 3A/3B cashier and accounting UAT.
-2. Start Phase 3C Pharmacy/Inventory foundation, unless UAT says accounting or
-   claim export integration is more urgent.
+1. Run Phase 3A/3B/3C cashier, accounting, pharmacy, and clinical UAT.
+2. Start Phase 3D lot/expiry and pharmacy receiving, unless UAT says accounting
+   or claim export integration is more urgent.

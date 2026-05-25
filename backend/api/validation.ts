@@ -18,6 +18,10 @@ import type {
   CreateFileAssetInput,
   CreateDrugCatalogItemInput,
   CreateDrugInteractionRuleInput,
+  CreateInventoryItemInput,
+  UpdateInventoryItemInput,
+  AdjustInventoryStockInput,
+  DispensePrescriptionInput,
   UploadFileAssetInput,
   CreatePatientInput,
   CreatePatientAllergyInput,
@@ -78,6 +82,7 @@ import type {
   BillingDocumentType,
   CashierReconciliationStatus,
   PaymentMethod,
+  StockMovementType,
 } from './types.ts';
 
 const clinicVisitStatuses: ClinicVisitStatus[] = [
@@ -115,6 +120,11 @@ const paymentMethods: PaymentMethod[] = [
 ];
 const billingDocumentTypes: BillingDocumentType[] = ['invoice', 'receipt', 'tax_invoice', 'claim'];
 const cashierReconciliationStatuses: CashierReconciliationStatus[] = ['open', 'closed', 'cancelled'];
+const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = [
+  'adjustment_in',
+  'adjustment_out',
+  'return',
+];
 
 export function validateCreateAuthSessionBody(body: unknown):
   | { ok: true; value: { clinicId: string; username: string; loginCode: string } }
@@ -2442,6 +2452,163 @@ export function validateUpdateDrugCatalogItemBody(body: unknown, drugCatalogId: 
         ? { allergenTags: allergenTags.value }
         : {}),
       ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+    },
+  };
+}
+
+export function validateCreateInventoryItemBody(body: unknown):
+  | { ok: true; value: CreateInventoryItemInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const itemCode = readRequiredString(candidate.itemCode, 'itemCode');
+  if (!itemCode.ok) return itemCode;
+  const displayName = readRequiredString(candidate.displayName, 'displayName');
+  if (!displayName.ok) return displayName;
+  const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
+  if (!drugCatalogId.ok) return drugCatalogId;
+  const unit = readOptionalTrimmedStringField(candidate, 'unit');
+  if (!unit.ok) return unit;
+  const quantityOnHand = readOptionalNonNegativeNumberLikeField(candidate, 'quantityOnHand');
+  if (!quantityOnHand.ok) return quantityOnHand;
+  const reorderLevel = readOptionalNonNegativeNumberLikeField(candidate, 'reorderLevel');
+  if (!reorderLevel.ok) return reorderLevel;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      itemCode: itemCode.value,
+      displayName: displayName.value,
+      drugCatalogId: drugCatalogId.value,
+      unit: unit.value,
+      quantityOnHand: quantityOnHand.value ?? undefined,
+      reorderLevel: reorderLevel.value ?? undefined,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateInventoryItemBody(
+  body: unknown,
+  inventoryItemId: string
+): { ok: true; value: UpdateInventoryItemInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'drugCatalogId',
+    'itemCode',
+    'displayName',
+    'unit',
+    'reorderLevel',
+    'isActive',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) return { ok: false, error: 'At least one inventory item field must be provided for update' };
+
+  const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
+  if (!drugCatalogId.ok) return drugCatalogId;
+  const itemCode = readOptionalTrimmedStringField(candidate, 'itemCode');
+  if (!itemCode.ok) return itemCode;
+  const displayName = readOptionalTrimmedStringField(candidate, 'displayName');
+  if (!displayName.ok) return displayName;
+  const unit = readOptionalTrimmedStringField(candidate, 'unit');
+  if (!unit.ok) return unit;
+  const reorderLevel = readOptionalNonNegativeNumberLikeField(candidate, 'reorderLevel');
+  if (!reorderLevel.ok) return reorderLevel;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      inventoryItemId,
+      ...(Object.hasOwn(candidate, 'drugCatalogId') ? { drugCatalogId: drugCatalogId.value } : {}),
+      ...(Object.hasOwn(candidate, 'itemCode') ? { itemCode: itemCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
+      ...(Object.hasOwn(candidate, 'unit') ? { unit: unit.value } : {}),
+      ...(Object.hasOwn(candidate, 'reorderLevel') ? { reorderLevel: reorderLevel.value ?? undefined } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
+    },
+  };
+}
+
+export function validateAdjustInventoryStockBody(
+  body: unknown,
+  inventoryItemId: string
+): { ok: true; value: AdjustInventoryStockInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const movementType = readRequiredEnumValue<Exclude<StockMovementType, 'dispense'>>(
+    candidate.movementType,
+    'movementType',
+    manualStockMovementTypes
+  );
+  if (!movementType.ok) return movementType;
+  const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
+  if (!quantity.ok) return quantity;
+  const reason = readOptionalNullableStringField(candidate, 'reason');
+  if (!reason.ok) return reason;
+  const performedByUserId = readOptionalNullableStringField(candidate, 'performedByUserId');
+  if (!performedByUserId.ok) return performedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      inventoryItemId,
+      movementType: movementType.value,
+      quantity: quantity.value,
+      reason: reason.value,
+      performedByUserId: performedByUserId.value,
+    },
+  };
+}
+
+export function validateDispensePrescriptionBody(
+  body: unknown,
+  prescriptionId: string
+): { ok: true; value: DispensePrescriptionInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const inventoryItemId = readRequiredString(candidate.inventoryItemId, 'inventoryItemId');
+  if (!inventoryItemId.ok) return inventoryItemId;
+  const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
+  if (!quantity.ok) return quantity;
+  const dispensedByUserId = readOptionalNullableStringField(candidate, 'dispensedByUserId');
+  if (!dispensedByUserId.ok) return dispensedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      prescriptionId,
+      inventoryItemId: inventoryItemId.value,
+      quantity: quantity.value,
+      dispensedByUserId: dispensedByUserId.value,
+      notes: notes.value,
     },
   };
 }

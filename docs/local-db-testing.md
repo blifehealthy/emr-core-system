@@ -98,6 +98,7 @@ The script applies these migrations in order:
 - `0023_add_billing_refunds_and_charge_templates.up.sql`
 - `0024_add_phase_3a_completion_billing.up.sql`
 - `0025_add_phase_3b_billing_operations.up.sql`
+- `0026_add_phase_3c_pharmacy_inventory.up.sql`
 
 Then it runs:
 
