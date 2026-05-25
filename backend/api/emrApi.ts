@@ -7,6 +7,7 @@ import {
   handleCreateConsentRecord,
   handleCreateFileAsset,
   handleCreateDiagnosis,
+  handleCreateDrugCatalogItem,
   handleCreatePatientAllergy,
   handleCreatePatientCondition,
   handleCreatePatientFlag,
@@ -34,6 +35,7 @@ import {
   handleGetDailyOperationsReport,
   handleGetDailyOperationsReportCsv,
   handleGetDiagnosis,
+  handleAssessPrescriptionSafety,
   handleGetEncounter,
   handleGetFileAsset,
   handleGetFileAssetStoragePolicy,
@@ -53,6 +55,7 @@ import {
   handleListClinicalNoteTemplates,
   handleListConsentRecordsByPatient,
   handleListDiagnosesByEncounter,
+  handleListDrugCatalog,
   handleListFileAssets,
   handleListPatientAllergies,
   handleListPatientConditions,
@@ -67,6 +70,7 @@ import {
   handleUpdateClinicVisit,
   handleUpdateClinicalNoteTemplate,
   handleUpdateConsentRecord,
+  handleUpdateDrugCatalogItem,
   handleUpsertClinicSettings,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
@@ -180,6 +184,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'practitioner_read');
       if (roleError) return roleError;
       return handleListPractitioners(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/drug-catalog') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListDrugCatalog(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/clinical-note-templates') {
@@ -448,6 +458,18 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreatePractitioner(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/drug-catalog') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateDrugCatalogItem(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/prescription-safety-checks') {
+      const roleError = requireRole(actorAwareRequest, 'prescription_write');
+      if (roleError) return roleError;
+      return handleAssessPrescriptionSafety(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/prescriptions') {
       const roleError = requireRole(actorAwareRequest, 'prescription_write');
       if (roleError) return roleError;
@@ -527,6 +549,13 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'practitioner_write');
         if (roleError) return roleError;
         return handleUpdatePractitioner(actorAwareRequest, dependencies, practitionerMatch[1]);
+      }
+
+      const drugCatalogMatch = request.path.match(/^\/api\/drug-catalog\/([^/]+)$/);
+      if (drugCatalogMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdateDrugCatalogItem(actorAwareRequest, dependencies, drugCatalogMatch[1]);
       }
 
       const appointmentMatch = request.path.match(/^\/api\/appointments\/([^/]+)$/);

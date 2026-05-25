@@ -469,6 +469,17 @@ export type CreatePractitionerValidatedInput = CreatePractitionerInput;
 export type UpdatePractitionerValidatedInput = UpdatePractitionerInput;
 
 export type PrescriptionStatus = 'active' | 'completed' | 'cancelled';
+export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
+export type PrescriptionSafetyWarning = {
+  type: 'allergy';
+  severity: 'critical' | 'warning';
+  message: string;
+  allergyId: string;
+  allergenName: string;
+  medicationName: string;
+  matchedOn: string;
+  reaction?: string | null;
+};
 
 export type FinalizeClinicalNoteInput = {
   clinicalNoteId: string;
@@ -515,10 +526,48 @@ export type UpdatePractitionerInput = {
   isActive?: boolean;
 };
 
+export type CreateDrugCatalogItemInput = {
+  clinicId: string;
+  medicationName: string;
+  rxnormCode?: string | null;
+  genericName?: string | null;
+  strength?: string | null;
+  dosageForm?: string | null;
+  route?: string | null;
+  allergenTags?: string[];
+  isActive?: boolean;
+};
+
+export type UpdateDrugCatalogItemInput = {
+  drugCatalogId: string;
+  medicationName?: string;
+  rxnormCode?: string | null;
+  genericName?: string | null;
+  strength?: string | null;
+  dosageForm?: string | null;
+  route?: string | null;
+  allergenTags?: string[];
+  isActive?: boolean;
+};
+
+export type AssessPrescriptionSafetyInput = {
+  patientId: string;
+  medicationName: string;
+  rxnormCode?: string | null;
+  drugCatalogId?: string | null;
+};
+
+export type AssessPrescriptionSafetyResult = {
+  warnings: PrescriptionSafetyWarning[];
+  checkedAt: string;
+  drugCatalogId?: string | null;
+};
+
 export type CreatePrescriptionInput = {
   encounterId: string;
   clinicalNoteId?: string | null;
   prescribedByPractitionerId?: string | null;
+  drugCatalogId?: string | null;
   medicationName: string;
   rxnormCode?: string | null;
   dosage?: string | null;
@@ -529,11 +578,13 @@ export type CreatePrescriptionInput = {
   status?: PrescriptionStatus;
   startDate?: string | null;
   endDate?: string | null;
+  safetyWarnings?: unknown[];
 };
 
 export type UpdatePrescriptionInput = {
   prescriptionId: string;
   prescribedByPractitionerId?: string | null;
+  drugCatalogId?: string | null;
   medicationName?: string;
   rxnormCode?: string | null;
   dosage?: string | null;
@@ -544,6 +595,7 @@ export type UpdatePrescriptionInput = {
   status?: PrescriptionStatus;
   startDate?: string | null;
   endDate?: string | null;
+  safetyWarnings?: unknown[];
 };
 
 export type Dependencies = {
@@ -681,6 +733,18 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createPractitioner: (input: CreatePractitionerInput) => Promise<unknown>;
   updatePractitioner: (input: UpdatePractitionerInput) => Promise<unknown | null>;
+  listDrugCatalog?: (input: {
+    clinicId: string;
+    search?: string;
+    active?: DrugCatalogActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createDrugCatalogItem?: (input: CreateDrugCatalogItemInput) => Promise<unknown>;
+  updateDrugCatalogItem?: (input: UpdateDrugCatalogItemInput) => Promise<unknown | null>;
+  assessPrescriptionSafety?: (
+    input: AssessPrescriptionSafetyInput
+  ) => Promise<AssessPrescriptionSafetyResult>;
   listPrescriptionsByEncounter: (input: {
     encounterId: string;
     clinicalNoteId?: string;

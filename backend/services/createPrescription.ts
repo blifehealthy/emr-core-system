@@ -5,6 +5,7 @@ export function createPrescription(db: {
     encounterId: string;
     clinicalNoteId?: string | null;
     prescribedByPractitionerId?: string | null;
+    drugCatalogId?: string | null;
     medicationName: string;
     rxnormCode?: string | null;
     dosage?: string | null;
@@ -15,6 +16,7 @@ export function createPrescription(db: {
     status?: 'active' | 'completed' | 'cancelled';
     startDate?: string | null;
     endDate?: string | null;
+    safetyWarnings?: unknown[];
   }) {
     const result = await db.query(
       `
@@ -22,23 +24,7 @@ export function createPrescription(db: {
           encounter_id,
           clinical_note_id,
           prescribed_by_practitioner_id,
-          medication_name,
-          rxnorm_code,
-          dosage,
-          route,
-          frequency,
-          duration_text,
-          instructions,
-          status,
-          start_date,
-          end_date
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        RETURNING
-          id,
-          encounter_id,
-          clinical_note_id,
-          prescribed_by_practitioner_id,
+          drug_catalog_id,
           medication_name,
           rxnorm_code,
           dosage,
@@ -49,6 +35,26 @@ export function createPrescription(db: {
           status,
           start_date,
           end_date,
+          safety_warnings
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING
+          id,
+          encounter_id,
+          clinical_note_id,
+          prescribed_by_practitioner_id,
+          drug_catalog_id,
+          medication_name,
+          rxnorm_code,
+          dosage,
+          route,
+          frequency,
+          duration_text,
+          instructions,
+          status,
+          start_date,
+          end_date,
+          safety_warnings,
           created_at,
           updated_at,
           deleted_at
@@ -57,6 +63,7 @@ export function createPrescription(db: {
         input.encounterId,
         input.clinicalNoteId ?? null,
         input.prescribedByPractitionerId ?? null,
+        input.drugCatalogId ?? null,
         input.medicationName,
         input.rxnormCode ?? null,
         input.dosage ?? null,
@@ -67,6 +74,7 @@ export function createPrescription(db: {
         input.status ?? 'active',
         input.startDate ?? null,
         input.endDate ?? null,
+        JSON.stringify(input.safetyWarnings ?? []),
       ]
     );
 

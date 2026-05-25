@@ -55,6 +55,8 @@ const permissions: Record<string, UserRole[]> = {
   user_write: ['admin'],
   practitioner_read: ['doctor', 'nurse', 'admin'],
   practitioner_write: ['admin'],
+  drug_catalog_read: ['doctor', 'nurse', 'admin'],
+  drug_catalog_write: ['admin'],
   prescription_read: ['doctor', 'nurse', 'admin'],
   prescription_write: ['doctor', 'admin'],
   soap_update: ['doctor', 'admin'],

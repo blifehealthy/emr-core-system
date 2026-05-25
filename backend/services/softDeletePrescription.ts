@@ -13,6 +13,7 @@ export function softDeletePrescription(db: {
           encounter_id,
           clinical_note_id,
           prescribed_by_practitioner_id,
+          drug_catalog_id,
           medication_name,
           rxnorm_code,
           dosage,
@@ -23,6 +24,7 @@ export function softDeletePrescription(db: {
           status,
           start_date,
           end_date,
+          safety_warnings,
           created_at,
           updated_at,
           deleted_at

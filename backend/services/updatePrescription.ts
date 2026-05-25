@@ -4,6 +4,7 @@ export function updatePrescription(db: {
   return async function run(input: {
     prescriptionId: string;
     prescribedByPractitionerId?: string | null;
+    drugCatalogId?: string | null;
     medicationName?: string;
     rxnormCode?: string | null;
     dosage?: string | null;
@@ -14,6 +15,7 @@ export function updatePrescription(db: {
     status?: 'active' | 'completed' | 'cancelled';
     startDate?: string | null;
     endDate?: string | null;
+    safetyWarnings?: unknown[];
   }) {
     const assignments: string[] = [];
     const params: unknown[] = [input.prescriptionId];
@@ -21,6 +23,11 @@ export function updatePrescription(db: {
     if (Object.hasOwn(input, 'prescribedByPractitionerId')) {
       params.push(input.prescribedByPractitionerId ?? null);
       assignments.push(`prescribed_by_practitioner_id = $${params.length}`);
+    }
+
+    if (Object.hasOwn(input, 'drugCatalogId')) {
+      params.push(input.drugCatalogId ?? null);
+      assignments.push(`drug_catalog_id = $${params.length}`);
     }
 
     if (Object.hasOwn(input, 'medicationName')) {
@@ -73,6 +80,11 @@ export function updatePrescription(db: {
       assignments.push(`end_date = $${params.length}`);
     }
 
+    if (Object.hasOwn(input, 'safetyWarnings')) {
+      params.push(JSON.stringify(input.safetyWarnings ?? []));
+      assignments.push(`safety_warnings = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE prescriptions
@@ -84,6 +96,7 @@ export function updatePrescription(db: {
           encounter_id,
           clinical_note_id,
           prescribed_by_practitioner_id,
+          drug_catalog_id,
           medication_name,
           rxnorm_code,
           dosage,
@@ -94,6 +107,7 @@ export function updatePrescription(db: {
           status,
           start_date,
           end_date,
+          safety_warnings,
           created_at,
           updated_at,
           deleted_at

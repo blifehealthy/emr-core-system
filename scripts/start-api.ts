@@ -7,6 +7,7 @@ import { createClinicalNoteTemplate } from '../backend/services/createClinicalNo
 import { createAttachmentLink } from '../backend/services/createAttachmentLink.ts';
 import { createConsentRecord } from '../backend/services/createConsentRecord.ts';
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
+import { createDrugCatalogItem } from '../backend/services/createDrugCatalogItem.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPatient } from '../backend/services/createPatient.ts';
@@ -18,6 +19,7 @@ import { createPractitioner } from '../backend/services/createPractitioner.ts';
 import { createPrescription } from '../backend/services/createPrescription.ts';
 import { createUser } from '../backend/services/createUser.ts';
 import { createVitalSign } from '../backend/services/createVitalSign.ts';
+import { assessPrescriptionSafety } from '../backend/services/assessPrescriptionSafety.ts';
 import { finalizeClinicalNote } from '../backend/services/finalizeClinicalNote.ts';
 import {
   createDownloadFileAssetContentService,
@@ -47,6 +49,7 @@ import { listClinicQueue } from '../backend/services/listClinicQueue.ts';
 import { listClinicalNoteTemplates } from '../backend/services/listClinicalNoteTemplates.ts';
 import { listConsentRecordsByPatient } from '../backend/services/listConsentRecordsByPatient.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
+import { listDrugCatalog } from '../backend/services/listDrugCatalog.ts';
 import { listFileAssets } from '../backend/services/listFileAssets.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
 import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
@@ -70,6 +73,7 @@ import { updateClinicVisit } from '../backend/services/updateClinicVisit.ts';
 import { updateClinicalNoteTemplate } from '../backend/services/updateClinicalNoteTemplate.ts';
 import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
+import { updateDrugCatalogItem } from '../backend/services/updateDrugCatalogItem.ts';
 import { updateEncounter } from '../backend/services/updateEncounter.ts';
 import { updatePatientAllergy } from '../backend/services/updatePatientAllergy.ts';
 import { updatePatientCondition } from '../backend/services/updatePatientCondition.ts';
@@ -153,6 +157,10 @@ const server = createNodeServer({
   listPractitioners: listPractitioners(db),
   createPractitioner: createPractitioner(db),
   updatePractitioner: updatePractitioner(db),
+  listDrugCatalog: listDrugCatalog(db),
+  createDrugCatalogItem: createDrugCatalogItem(db),
+  updateDrugCatalogItem: updateDrugCatalogItem(db),
+  assessPrescriptionSafety: assessPrescriptionSafety(db),
   listPrescriptionsByEncounter: listPrescriptionsByEncounter(db),
   createPrescription: createPrescription(db),
   createDiagnosis: createDiagnosis(db),

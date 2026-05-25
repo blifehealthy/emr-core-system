@@ -201,4 +201,4 @@ Phase 2A ควรถูก sign off เชิง product/clinical ถ้าท�
 4. Reporting depth: PDF reports, department grouping, trend dashboards, financial/operational KPIs
 5. Integrations: lab, pharmacy, imaging, LINE/telemedicine
 
-ข้อเสนอเริ่มต้น: ถ้าต้องการ pilot ในคลินิกจริง ให้ให้ความสำคัญกับ production readiness และ clinical safety ก่อนเพิ่ม integration ใหญ่
+ข้อเสนอเริ่มต้น: ถ้าต้องการ pilot ในคลินิกจริง ให้ให้ความสำคัญกับ production readiness และ clinical safety ก่อนเพิ่ม integration ใหญ่ โดย Phase 2B เริ่มวาง foundation ของ drug catalog และ allergy warning แล้วใน `docs/phase-2b-plan.md`

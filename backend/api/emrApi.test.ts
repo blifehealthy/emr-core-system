@@ -1921,6 +1921,111 @@ test('PATCH /api/users preserves omitted role field', async () => {
   assert.equal(response.status, 200);
 });
 
+test('drug catalog and prescription safety APIs enforce safety workflow', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async listDrugCatalog(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.search, 'amox');
+        return {
+          rows: [{ id: 'drug-1', medication_name: 'Amoxicillin' }],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
+      async createDrugCatalogItem(input) {
+        assert.deepEqual(input.allergenTags, ['penicillin']);
+        return { id: 'drug-1', medication_name: input.medicationName };
+      },
+      async updateDrugCatalogItem(input) {
+        assert.equal(input.drugCatalogId, 'drug-1');
+        assert.equal(input.isActive, false);
+        return { id: 'drug-1', is_active: false };
+      },
+      async assessPrescriptionSafety(input) {
+        assert.equal(input.patientId, 'patient-1');
+        assert.equal(input.medicationName, 'Amoxicillin');
+        return {
+          checkedAt: '2026-05-25T00:00:00.000Z',
+          drugCatalogId: input.drugCatalogId ?? 'drug-1',
+          warnings: [
+            {
+              type: 'allergy',
+              severity: 'critical',
+              message: 'Patient has active allergy to Penicillin',
+              allergyId: 'allergy-1',
+              allergenName: 'Penicillin',
+              medicationName: 'Amoxicillin',
+              matchedOn: 'penicillin',
+            },
+          ],
+        };
+      },
+      async getEncounterById() {
+        return { id: 'encounter-1', patient_id: 'patient-1' };
+      },
+      async createPrescription(input) {
+        assert.equal(input.drugCatalogId, 'drug-1');
+        assert.equal(input.safetyWarnings?.length, 1);
+        return {
+          id: 'prescription-1',
+          drug_catalog_id: input.drugCatalogId,
+          safety_warnings: input.safetyWarnings,
+        };
+      },
+    })
+  );
+
+  const listCatalog = await api({
+    method: 'GET',
+    path: '/api/drug-catalog',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', search: 'amox' },
+  });
+  assert.equal(listCatalog.status, 200);
+
+  const createCatalog = await api({
+    method: 'POST',
+    path: '/api/drug-catalog',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: {
+      clinicId: 'clinic-1',
+      medicationName: 'Amoxicillin',
+      allergenTags: ['penicillin'],
+    },
+  });
+  assert.equal(createCatalog.status, 201);
+
+  const updateCatalog = await api({
+    method: 'PATCH',
+    path: '/api/drug-catalog/drug-1',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { isActive: false },
+  });
+  assert.equal(updateCatalog.status, 200);
+
+  const check = await api({
+    method: 'POST',
+    path: '/api/prescription-safety-checks',
+    headers: { 'x-user-role': 'doctor' },
+    body: { patientId: 'patient-1', medicationName: 'Amoxicillin', drugCatalogId: 'drug-1' },
+  });
+  assert.equal(check.status, 200);
+  assert.equal((check.body as { data: { warnings: unknown[] } }).data.warnings.length, 1);
+
+  const createPrescription = await api({
+    method: 'POST',
+    path: '/api/prescriptions',
+    headers: { 'x-user-role': 'doctor', 'x-practitioner-id': 'practitioner-1' },
+    body: { encounterId: 'encounter-1', medicationName: 'Amoxicillin', drugCatalogId: 'drug-1' },
+  });
+  assert.equal(createPrescription.status, 201);
+  assert.equal(
+    (createPrescription.body as { data: { safety_warnings: unknown[] } }).data.safety_warnings
+      .length,
+    1
+  );
+});
+
 test('entity validators reject empty or invalid patch bodies', async () => {
   const api = createEmrApi(makeDeps());
 

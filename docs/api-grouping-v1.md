@@ -86,6 +86,10 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/prescriptions` | Create prescription. |
 | `PATCH` | `/api/prescriptions/:prescriptionId` | Update prescription. |
 | `DELETE` | `/api/prescriptions/:prescriptionId` | Soft delete prescription. |
+| `GET` | `/api/drug-catalog` | List clinic drug catalog items with search, active status, and pagination filters. |
+| `POST` | `/api/drug-catalog` | Create clinic drug catalog item. |
+| `PATCH` | `/api/drug-catalog/:drugCatalogId` | Update or deactivate clinic drug catalog item. |
+| `POST` | `/api/prescription-safety-checks` | Check a medication against active patient allergies and catalog allergen tags. |
 
 ## Files, Consent, and Audit
 
@@ -133,6 +137,12 @@ All routes except `GET /health` can be protected by bearer token when
 - Prescription cards include a clinic-branded print/export view.
 - Queue board includes operations summary metrics.
 - Patient detail includes a compact timeline panel.
+
+## Phase 2B Additions
+
+- Drug catalog items can carry RxNorm/generic fields and allergen tags.
+- Prescription safety checks return allergy warnings before prescribing.
+- Prescriptions can store warning snapshots in `safety_warnings`.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

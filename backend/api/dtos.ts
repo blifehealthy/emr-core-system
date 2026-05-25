@@ -82,6 +82,7 @@ const PRESCRIPTION_KEYS = [
   'encounter_id',
   'clinical_note_id',
   'prescribed_by_practitioner_id',
+  'drug_catalog_id',
   'medication_name',
   'rxnorm_code',
   'dosage',
@@ -92,6 +93,23 @@ const PRESCRIPTION_KEYS = [
   'status',
   'start_date',
   'end_date',
+  'safety_warnings',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const DRUG_CATALOG_KEYS = [
+  'id',
+  'clinic_id',
+  'medication_name',
+  'rxnorm_code',
+  'generic_name',
+  'strength',
+  'dosage_form',
+  'route',
+  'allergen_tags',
+  'is_active',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -370,6 +388,14 @@ export function toPrescriptionDto(row: unknown): Record<string, unknown> {
 
 export function toPrescriptionDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPrescriptionDto(row));
+}
+
+export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...DRUG_CATALOG_KEYS]);
+}
+
+export function toDrugCatalogItemDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toDrugCatalogItemDto(row));
 }
 
 export function toUserDto(row: unknown): Record<string, unknown> {

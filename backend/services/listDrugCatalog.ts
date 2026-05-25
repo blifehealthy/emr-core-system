@@ -1,26 +1,32 @@
-export function listPrescriptionsByEncounter(db: {
+export function listDrugCatalog(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
 }) {
   return async function run(input: {
-    encounterId: string;
-    clinicalNoteId?: string;
-    status?: 'active' | 'completed' | 'cancelled';
+    clinicId: string;
+    search?: string;
+    active?: 'active' | 'inactive' | 'all';
     limit?: number;
     offset?: number;
   }) {
     const effectiveLimit = input.limit ?? 50;
     const effectiveOffset = input.offset ?? 0;
-    const conditions = ['encounter_id = $1', 'deleted_at IS NULL'];
-    const params: unknown[] = [input.encounterId];
+    const conditions = ['clinic_id = $1', 'deleted_at IS NULL'];
+    const params: unknown[] = [input.clinicId];
 
-    if (input.clinicalNoteId !== undefined) {
-      params.push(input.clinicalNoteId);
-      conditions.push(`clinical_note_id = $${params.length}`);
+    if (input.active === 'active') {
+      conditions.push('is_active IS TRUE');
+    } else if (input.active === 'inactive') {
+      conditions.push('is_active IS FALSE');
     }
 
-    if (input.status !== undefined) {
-      params.push(input.status);
-      conditions.push(`status = $${params.length}`);
+    if (input.search !== undefined) {
+      params.push(`%${input.search}%`);
+      conditions.push(`(
+        medication_name ILIKE $${params.length}
+        OR generic_name ILIKE $${params.length}
+        OR rxnorm_code ILIKE $${params.length}
+        OR array_to_string(allergen_tags, ' ') ILIKE $${params.length}
+      )`);
     }
 
     params.push(effectiveLimit + 1);
@@ -32,27 +38,21 @@ export function listPrescriptionsByEncounter(db: {
       `
         SELECT
           id,
-          encounter_id,
-          clinical_note_id,
-          prescribed_by_practitioner_id,
-          drug_catalog_id,
+          clinic_id,
           medication_name,
           rxnorm_code,
-          dosage,
+          generic_name,
+          strength,
+          dosage_form,
           route,
-          frequency,
-          duration_text,
-          instructions,
-          status,
-          start_date,
-          end_date,
-          safety_warnings,
+          allergen_tags,
+          is_active,
           created_at,
           updated_at,
           deleted_at
-        FROM prescriptions
+        FROM drug_catalog
         WHERE ${conditions.join('\n          AND ')}
-        ORDER BY created_at DESC
+        ORDER BY medication_name ASC, created_at DESC
         LIMIT $${limitParamIndex}
         OFFSET $${offsetParamIndex}
       `,

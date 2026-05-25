@@ -367,8 +367,8 @@ Remaining Phase 2A follow-ups:
 
 If coming back fresh after this pass:
 
-1. run Phase 2A clinician UAT using `docs/phase-2a-clinician-summary-th.md`
-2. tune chart labels/workflow wording from UAT feedback, then sign off Phase 2A if accepted
+1. continue Phase 2B frontend safety work: drug catalog picker and visible prescription warning banner
+2. add warning override reason workflow and medication interaction rules after allergy warnings
 
 The deliverables added in this worktree are:
 
@@ -378,6 +378,8 @@ The deliverables added in this worktree are:
 - `docs/phase-1-clinician-summary-th.md`
 - `docs/phase-2a-plan.md`
 - `docs/phase-2a-clinician-summary-th.md`
+- `docs/phase-2b-plan.md`
+- `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
 - `database/migrations/0015_add_clinic_settings.*`
@@ -397,6 +399,7 @@ The deliverables added in this worktree are:
 - queue operations charts and deterministic frontend workflow smoke script
 - browser-driven queue and prescription print workflow smoke script
 - expanded API-backed browser workflow smoke script
+- Phase 2B drug catalog and allergy warning foundation with prescription safety warning snapshots
 
 This was the highest-leverage next move because:
 
@@ -420,5 +423,5 @@ Start by reading:
 
 Then produce:
 
-1. Clinic UAT feedback for queue wording, SOAP templates, prescription print, and daily operations charts
-2. Phase 2A signoff decision or a short blocker list from clinician UAT
+1. frontend drug catalog picker and prescription safety warning banner
+2. warning override reason workflow for prescriptions created despite active warnings

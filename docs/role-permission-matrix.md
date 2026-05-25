@@ -42,6 +42,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `user_write` | No | No | Yes | User create/update |
 | `practitioner_read` | Yes | Yes | Yes | Practitioner listing |
 | `practitioner_write` | No | No | Yes | Practitioner create/update |
+| `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog listing |
+| `drug_catalog_write` | No | No | Yes | Clinic drug catalog create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
 | `prescription_write` | Yes | No | Yes | Prescription create/update/delete |
 | `soap_update` | Yes | No | Yes | SOAP update/delete |
@@ -100,6 +102,10 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `POST` | `/api/prescriptions` | `prescription_write` |
 | `PATCH` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
 | `DELETE` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
+| `GET` | `/api/drug-catalog` | `drug_catalog_read` |
+| `POST` | `/api/drug-catalog` | `drug_catalog_write` |
+| `PATCH` | `/api/drug-catalog/:drugCatalogId` | `drug_catalog_write` |
+| `POST` | `/api/prescription-safety-checks` | `prescription_write` |
 | `GET` | `/api/consents/:consentId` | `consent_read` |
 | `POST` | `/api/consents` | `consent_write` |
 | `PATCH` | `/api/consents/:consentId` | `consent_write` |

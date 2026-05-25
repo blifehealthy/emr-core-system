@@ -92,6 +92,50 @@ VALUES (
     'Needs assistance when walking'
 );
 
+INSERT INTO patient_allergies (
+    id,
+    patient_id,
+    allergen_name,
+    allergen_category,
+    reaction,
+    severity,
+    status,
+    criticality
+)
+VALUES (
+    '10000000-0000-0000-0000-000000012101',
+    '10000000-0000-0000-0000-000000001001',
+    'Penicillin',
+    'drug',
+    'Rash',
+    'severe',
+    'active',
+    'high'
+);
+
+INSERT INTO drug_catalog (
+    id,
+    clinic_id,
+    medication_name,
+    rxnorm_code,
+    generic_name,
+    strength,
+    dosage_form,
+    route,
+    allergen_tags
+)
+VALUES (
+    '10000000-0000-0000-0000-000000020001',
+    '10000000-0000-0000-0000-000000000101',
+    'Amoxicillin',
+    'RX-AMOX',
+    'amoxicillin',
+    '500 mg',
+    'capsule',
+    'oral',
+    ARRAY['penicillin']
+);
+
 INSERT INTO encounters (
     id,
     encounter_number,

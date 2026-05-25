@@ -16,6 +16,7 @@ import type {
   CreateClinicalNoteTemplateInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
+  CreateDrugCatalogItemInput,
   UploadFileAssetInput,
   CreatePatientInput,
   CreatePatientAllergyInput,
@@ -33,6 +34,7 @@ import type {
   EncounterClass,
   EncounterStatus,
   UpdateEncounterInput,
+  UpdateDrugCatalogItemInput,
   UpdateDiagnosisInput,
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
@@ -52,6 +54,7 @@ import type {
   UpdateVitalSignInput,
   UserRole,
   PrescriptionStatus,
+  AssessPrescriptionSafetyInput,
 } from './types.ts';
 
 const clinicVisitStatuses: ClinicVisitStatus[] = [
@@ -1445,6 +1448,9 @@ export function validateCreatePrescriptionBody(body: unknown):
   );
   if (!prescribedByPractitionerId.ok) return prescribedByPractitionerId;
 
+  const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
+  if (!drugCatalogId.ok) return drugCatalogId;
+
   const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
   if (!rxnormCode.ok) return rxnormCode;
 
@@ -1482,6 +1488,7 @@ export function validateCreatePrescriptionBody(body: unknown):
       encounterId: encounterId.value,
       clinicalNoteId: clinicalNoteId.value,
       prescribedByPractitionerId: prescribedByPractitionerId.value,
+      drugCatalogId: drugCatalogId.value,
       medicationName: medicationName.value,
       rxnormCode: rxnormCode.value,
       dosage: dosage.value,
@@ -1506,6 +1513,7 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
 
   const hasChanges = [
     'prescribedByPractitionerId',
+    'drugCatalogId',
     'medicationName',
     'rxnormCode',
     'dosage',
@@ -1526,6 +1534,9 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
     'prescribedByPractitionerId'
   );
   if (!prescribedByPractitionerId.ok) return prescribedByPractitionerId;
+
+  const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
+  if (!drugCatalogId.ok) return drugCatalogId;
 
   const medicationName = readOptionalTrimmedStringField(candidate, 'medicationName');
   if (!medicationName.ok) return medicationName;
@@ -1568,6 +1579,9 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
       ...(Object.hasOwn(candidate, 'prescribedByPractitionerId')
         ? { prescribedByPractitionerId: prescribedByPractitionerId.value }
         : {}),
+      ...(Object.hasOwn(candidate, 'drugCatalogId')
+        ? { drugCatalogId: drugCatalogId.value }
+        : {}),
       ...(Object.hasOwn(candidate, 'medicationName')
         ? { medicationName: medicationName.value }
         : {}),
@@ -1582,6 +1596,154 @@ export function validateUpdatePrescriptionBody(body: unknown, prescriptionId: st
       ...(Object.hasOwn(candidate, 'status') ? { status: status.value } : {}),
       ...(Object.hasOwn(candidate, 'startDate') ? { startDate: startDate.value } : {}),
       ...(Object.hasOwn(candidate, 'endDate') ? { endDate: endDate.value } : {}),
+    },
+  };
+}
+
+export function validateCreateDrugCatalogItemBody(body: unknown):
+  | { ok: true; value: CreateDrugCatalogItemInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const medicationName = readRequiredString(candidate.medicationName, 'medicationName');
+  if (!medicationName.ok) return medicationName;
+
+  const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
+  if (!rxnormCode.ok) return rxnormCode;
+
+  const genericName = readOptionalNullableStringField(candidate, 'genericName');
+  if (!genericName.ok) return genericName;
+
+  const strength = readOptionalNullableStringField(candidate, 'strength');
+  if (!strength.ok) return strength;
+
+  const dosageForm = readOptionalNullableStringField(candidate, 'dosageForm');
+  if (!dosageForm.ok) return dosageForm;
+
+  const route = readOptionalNullableStringField(candidate, 'route');
+  if (!route.ok) return route;
+
+  const allergenTags = readOptionalStringArrayField(candidate, 'allergenTags');
+  if (!allergenTags.ok) return allergenTags;
+
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      medicationName: medicationName.value,
+      rxnormCode: rxnormCode.value,
+      genericName: genericName.value,
+      strength: strength.value,
+      dosageForm: dosageForm.value,
+      route: route.value,
+      allergenTags: allergenTags.value,
+      isActive: isActive.value,
+    },
+  };
+}
+
+export function validateUpdateDrugCatalogItemBody(body: unknown, drugCatalogId: string):
+  | { ok: true; value: UpdateDrugCatalogItemInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'medicationName',
+    'rxnormCode',
+    'genericName',
+    'strength',
+    'dosageForm',
+    'route',
+    'allergenTags',
+    'isActive',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one drug catalog field must be provided for update' };
+  }
+
+  const medicationName = readOptionalTrimmedStringField(candidate, 'medicationName');
+  if (!medicationName.ok) return medicationName;
+
+  const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
+  if (!rxnormCode.ok) return rxnormCode;
+
+  const genericName = readOptionalNullableStringField(candidate, 'genericName');
+  if (!genericName.ok) return genericName;
+
+  const strength = readOptionalNullableStringField(candidate, 'strength');
+  if (!strength.ok) return strength;
+
+  const dosageForm = readOptionalNullableStringField(candidate, 'dosageForm');
+  if (!dosageForm.ok) return dosageForm;
+
+  const route = readOptionalNullableStringField(candidate, 'route');
+  if (!route.ok) return route;
+
+  const allergenTags = readOptionalStringArrayField(candidate, 'allergenTags');
+  if (!allergenTags.ok) return allergenTags;
+
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      drugCatalogId,
+      ...(Object.hasOwn(candidate, 'medicationName')
+        ? { medicationName: medicationName.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'rxnormCode') ? { rxnormCode: rxnormCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'genericName') ? { genericName: genericName.value } : {}),
+      ...(Object.hasOwn(candidate, 'strength') ? { strength: strength.value } : {}),
+      ...(Object.hasOwn(candidate, 'dosageForm') ? { dosageForm: dosageForm.value } : {}),
+      ...(Object.hasOwn(candidate, 'route') ? { route: route.value } : {}),
+      ...(Object.hasOwn(candidate, 'allergenTags')
+        ? { allergenTags: allergenTags.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+    },
+  };
+}
+
+export function validateAssessPrescriptionSafetyBody(body: unknown):
+  | { ok: true; value: AssessPrescriptionSafetyInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+
+  const medicationName = readRequiredString(candidate.medicationName, 'medicationName');
+  if (!medicationName.ok) return medicationName;
+
+  const rxnormCode = readOptionalNullableStringField(candidate, 'rxnormCode');
+  if (!rxnormCode.ok) return rxnormCode;
+
+  const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
+  if (!drugCatalogId.ok) return drugCatalogId;
+
+  return {
+    ok: true,
+    value: {
+      patientId: patientId.value,
+      medicationName: medicationName.value,
+      rxnormCode: rxnormCode.value,
+      drugCatalogId: drugCatalogId.value,
     },
   };
 }
@@ -2430,6 +2592,31 @@ function readOptionalBooleanField(
   }
 
   return { ok: true, value };
+}
+
+function readOptionalStringArrayField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: string[] | undefined } | { ok: false; error: string } {
+  const value = candidate[fieldName];
+
+  if (value === undefined) {
+    return { ok: true, value: undefined };
+  }
+
+  if (!Array.isArray(value)) {
+    return { ok: false, error: `${fieldName} must be an array of strings` };
+  }
+
+  const strings: string[] = [];
+  for (const item of value) {
+    if (typeof item !== 'string' || item.trim().length === 0) {
+      return { ok: false, error: `${fieldName} must be an array of non-empty strings` };
+    }
+    strings.push(item.trim());
+  }
+
+  return { ok: true, value: strings };
 }
 
 function readOptionalIntegerField(

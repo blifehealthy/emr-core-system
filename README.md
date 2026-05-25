@@ -52,6 +52,14 @@ Current scope, UAT follow-ups, and the Thai clinician summary are tracked in:
 - `docs/phase-2a-plan.md`
 - `docs/phase-2a-clinician-summary-th.md`
 
+## Phase 2B
+
+Phase 2B has started pilot-readiness work. The first slice adds a clinic drug
+catalog, prescription allergy safety checks, and warning snapshots on
+prescriptions. Current scope and follow-ups are tracked in:
+
+- `docs/phase-2b-plan.md`
+
 ## Current Scope
 
 Included in this initialization phase:
@@ -101,6 +109,10 @@ Not included yet:
 - `GET /api/practitioners?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/practitioners`
 - `PATCH /api/practitioners/:id`
+- `GET /api/drug-catalog?clinicId=...&search=...&active=...&limit=...&offset=...`
+- `POST /api/drug-catalog`
+- `PATCH /api/drug-catalog/:id`
+- `POST /api/prescription-safety-checks`
 - `GET /api/queue?clinicId=...&status=...&practitionerId=...&roomName=...&limit=...`
 - `POST /api/visits`
 - `PATCH /api/visits/:id`

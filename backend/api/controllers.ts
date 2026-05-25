@@ -13,6 +13,8 @@ import {
   toConsentRecordDtos,
   toDiagnosisDto,
   toDiagnosisDtos,
+  toDrugCatalogItemDto,
+  toDrugCatalogItemDtos,
   toEncounterDto,
   toFileAssetDto,
   toFileAssetDtos,
@@ -42,6 +44,7 @@ import {
   validateCreateClinicalNoteTemplateBody,
   validateCreateConsentRecordBody,
   validateCreateDiagnosisBody,
+  validateCreateDrugCatalogItemBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
   validateCreatePatientFlagBody,
@@ -50,6 +53,7 @@ import {
   validateCreatePrescriptionBody,
   validateCreateUserBody,
   validateCreateVitalSignBody,
+  validateAssessPrescriptionSafetyBody,
   validateCreateEncounterBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
@@ -60,6 +64,7 @@ import {
   validateUpdateClinicVisitBody,
   validateUpdateClinicalNoteTemplateBody,
   validateUpdateConsentRecordBody,
+  validateUpdateDrugCatalogItemBody,
   validateUpsertClinicSettingsBody,
   validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
@@ -99,6 +104,24 @@ const encounterTransitions: Record<EncounterStatus, EncounterStatus[]> = {
   signed: [],
   cancelled: [],
 };
+
+function readPatientId(row: unknown): string | null {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  const value = (row as Record<string, unknown>).patient_id;
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
+
+function readEncounterId(row: unknown): string | null {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  const value = (row as Record<string, unknown>).encounter_id;
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
+}
 const clinicVisitTransitions: Record<ClinicVisitStatus, ClinicVisitStatus[]> = {
   waiting: ['in_room', 'with_doctor', 'cancelled'],
   in_room: ['with_doctor', 'cancelled'],
@@ -1678,6 +1701,131 @@ export async function handleUpdatePractitioner(
   }
 }
 
+export async function handleListDrugCatalog(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listDrugCatalog) {
+    return mapError(new Error('Drug catalog list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+
+  if (!clinicId) {
+    return validationError('clinicId is required query parameter');
+  }
+
+  const search = readOptionalQueryString(request, 'search');
+  if (!search.ok) return validationError(search.error);
+
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const catalog = await dependencies.listDrugCatalog({
+    clinicId,
+    search: search.value,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toDrugCatalogItemDtos(catalog.rows), meta: catalog.meta },
+  };
+}
+
+export async function handleCreateDrugCatalogItem(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createDrugCatalogItem) {
+    return mapError(new Error('Drug catalog create dependency is not configured'));
+  }
+
+  const validation = validateCreateDrugCatalogItemBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const item = await dependencies.createDrugCatalogItem(validation.value);
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'drug_catalog',
+      entityId: (item as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { medicationName: validation.value.medicationName },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toDrugCatalogItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateDrugCatalogItem(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  drugCatalogId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateDrugCatalogItem) {
+    return mapError(new Error('Drug catalog update dependency is not configured'));
+  }
+
+  const validation = validateUpdateDrugCatalogItemBody(request.body, drugCatalogId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const item = await dependencies.updateDrugCatalogItem(validation.value);
+
+    if (!item) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Drug catalog item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'drug_catalog',
+      entityId: drugCatalogId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toDrugCatalogItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleAssessPrescriptionSafety(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.assessPrescriptionSafety) {
+    return mapError(new Error('Prescription safety dependency is not configured'));
+  }
+
+  const validation = validateAssessPrescriptionSafetyBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const assessment = await dependencies.assessPrescriptionSafety(validation.value);
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: assessment },
+  };
+}
+
 export async function handleListPrescriptionsByEncounter(
   request: HttpRequest,
   dependencies: Dependencies,
@@ -1791,10 +1939,33 @@ export async function handleCreatePrescription(
   if (!validation.ok) return validationError(validation.error);
 
   const actor = getActorContext(request);
+  let safetyWarnings: unknown[] = [];
+  let assessedDrugCatalogId = validation.value.drugCatalogId ?? null;
+
+  if (dependencies.assessPrescriptionSafety && dependencies.getEncounterById) {
+    const encounter = await dependencies.getEncounterById({
+      encounterId: validation.value.encounterId,
+    });
+    const patientId = readPatientId(encounter);
+
+    if (patientId) {
+      const assessment = await dependencies.assessPrescriptionSafety({
+        patientId,
+        medicationName: validation.value.medicationName,
+        rxnormCode: validation.value.rxnormCode,
+        drugCatalogId: validation.value.drugCatalogId,
+      });
+      safetyWarnings = assessment.warnings;
+      assessedDrugCatalogId = assessment.drugCatalogId ?? assessedDrugCatalogId;
+    }
+  }
+
   const prescription = await dependencies.createPrescription({
     ...validation.value,
     prescribedByPractitionerId:
       validation.value.prescribedByPractitionerId ?? actor.practitionerId ?? null,
+    drugCatalogId: assessedDrugCatalogId,
+    safetyWarnings,
   });
 
   await dependencies.createAuditLog({
@@ -1803,7 +1974,10 @@ export async function handleCreatePrescription(
     action: 'created',
     actorUserId: actor.userId,
     actorPractitionerId: actor.practitionerId,
-    metadata: { medicationName: validation.value.medicationName },
+    metadata: {
+      medicationName: validation.value.medicationName,
+      safetyWarningCount: safetyWarnings.length,
+    },
   });
 
   return { status: 201, headers: JSON_HEADERS, body: { data: toPrescriptionDto(prescription) } };
@@ -1873,7 +2047,56 @@ export async function handleUpdatePrescription(
   const validation = validateUpdatePrescriptionBody(request.body, prescriptionId);
   if (!validation.ok) return validationError(validation.error);
 
-  const prescription = await dependencies.updatePrescription(validation.value);
+  let safetyWarnings: unknown[] | undefined;
+  let assessedDrugCatalogId = validation.value.drugCatalogId;
+
+  if (
+    dependencies.assessPrescriptionSafety &&
+    dependencies.getPrescriptionById &&
+    dependencies.getEncounterById &&
+    (Object.hasOwn(validation.value, 'medicationName') ||
+      Object.hasOwn(validation.value, 'rxnormCode') ||
+      Object.hasOwn(validation.value, 'drugCatalogId'))
+  ) {
+    const existing = await dependencies.getPrescriptionById({ prescriptionId });
+    const encounterId = readEncounterId(existing);
+
+    if (existing && encounterId) {
+      const encounter = await dependencies.getEncounterById({ encounterId });
+      const patientId = readPatientId(encounter);
+
+      if (patientId) {
+        const existingRow = existing as Record<string, unknown>;
+        const medicationName =
+          validation.value.medicationName ??
+          (typeof existingRow.medication_name === 'string' ? existingRow.medication_name : '');
+        const rxnormCode = Object.hasOwn(validation.value, 'rxnormCode')
+          ? validation.value.rxnormCode
+          : typeof existingRow.rxnorm_code === 'string'
+            ? existingRow.rxnorm_code
+            : null;
+        const drugCatalogId = Object.hasOwn(validation.value, 'drugCatalogId')
+          ? validation.value.drugCatalogId
+          : typeof existingRow.drug_catalog_id === 'string'
+            ? existingRow.drug_catalog_id
+            : null;
+        const assessment = await dependencies.assessPrescriptionSafety({
+          patientId,
+          medicationName,
+          rxnormCode,
+          drugCatalogId,
+        });
+        safetyWarnings = assessment.warnings;
+        assessedDrugCatalogId = assessment.drugCatalogId ?? drugCatalogId;
+      }
+    }
+  }
+
+  const prescription = await dependencies.updatePrescription({
+    ...validation.value,
+    ...(assessedDrugCatalogId !== undefined ? { drugCatalogId: assessedDrugCatalogId } : {}),
+    ...(safetyWarnings !== undefined ? { safetyWarnings } : {}),
+  });
 
   if (!prescription) {
     return { status: 404, headers: JSON_HEADERS, body: { error: 'Prescription not found' } };

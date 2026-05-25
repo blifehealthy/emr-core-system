@@ -38,6 +38,7 @@ const migrations = [
   '0014_add_clinical_note_templates.up.sql',
   '0015_add_clinic_settings.up.sql',
   '0016_add_clinic_logo_asset.up.sql',
+  '0017_add_drug_catalog_and_safety_warnings.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -649,6 +650,36 @@ async function main() {
     assert.equal(dailyReportCsv.statusCode, 200);
     assert.match(dailyReportCsv.body, /visits_total,/);
 
+    const drugCatalog = await requestJson<
+      Array<{
+        id: string;
+        medication_name: string;
+        allergen_tags: string[];
+      }>
+    >(
+      '/api/drug-catalog?clinicId=10000000-0000-0000-0000-000000000101&search=amox&active=active&limit=5&offset=0',
+      authHeaders
+    );
+    assert.ok(drugCatalog.data.some((item) => item.medication_name === 'Amoxicillin'));
+
+    const safetyCheck = await requestJson<{
+      warnings: Array<{ type: string; severity: string; allergenName: string }>;
+      drugCatalogId: string | null;
+    }>(
+      '/api/prescription-safety-checks',
+      authHeaders,
+      'POST',
+      200,
+      {
+        patientId: '10000000-0000-0000-0000-000000001001',
+        medicationName: 'Amoxicillin',
+        drugCatalogId: '10000000-0000-0000-0000-000000020001',
+      }
+    );
+    assert.equal(safetyCheck.data.drugCatalogId, '10000000-0000-0000-0000-000000020001');
+    assert.equal(safetyCheck.data.warnings[0].type, 'allergy');
+    assert.equal(safetyCheck.data.warnings[0].severity, 'critical');
+
     const updatedEncounter = await requestJson<{
       id: string;
       status: string;
@@ -685,8 +716,10 @@ async function main() {
 
     const createdPrescription = await requestJson<{
       id: string;
+      drug_catalog_id: string | null;
       medication_name: string;
       status: string;
+      safety_warnings: Array<{ type: string; severity: string }>;
     }>(
       '/api/prescriptions',
       authHeaders,
@@ -695,19 +728,23 @@ async function main() {
       {
         encounterId: '10000000-0000-0000-0000-000000002001',
         clinicalNoteId: '10000000-0000-0000-0000-000000003001',
-        medicationName: 'Cetirizine',
-        dosage: '10 mg',
+        drugCatalogId: '10000000-0000-0000-0000-000000020001',
+        medicationName: 'Amoxicillin',
+        rxnormCode: 'RX-AMOX',
+        dosage: '500 mg',
         route: 'oral',
-        frequency: 'daily',
+        frequency: 'three times daily',
         durationText: '7 days',
-        instructions: 'after dinner',
+        instructions: 'safety warning expected for smoke test',
         status: 'active',
         startDate: '2026-01-04',
         endDate: '2026-01-10',
       }
     );
-    assert.equal(createdPrescription.data.medication_name, 'Cetirizine');
+    assert.equal(createdPrescription.data.medication_name, 'Amoxicillin');
     assert.equal(createdPrescription.data.status, 'active');
+    assert.equal(createdPrescription.data.drug_catalog_id, '10000000-0000-0000-0000-000000020001');
+    assert.equal(createdPrescription.data.safety_warnings[0].type, 'allergy');
 
     const updatedPrescription = await requestJson<{
       id: string;
