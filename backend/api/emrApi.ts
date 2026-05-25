@@ -18,6 +18,7 @@ import {
   handleCreateUser,
   handleCreateVitalSign,
   handleDeleteDiagnosis,
+  handleDownloadFileAsset,
   handleDeletePatientAllergy,
   handleDeletePatientCondition,
   handleDeletePatientFlag,
@@ -77,6 +78,7 @@ import {
   handleUpdateSoapNote,
   handleUpdateUser,
   handleUpdateVitalSign,
+  handleUploadFileAsset,
   notFound,
 } from './controllers.ts';
 import { requireRole } from './auth.ts';
@@ -355,6 +357,14 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleGetConsentRecord(actorAwareRequest, dependencies, consentReadMatch[1]);
     }
 
+    const fileAssetDownloadMatch =
+      request.method === 'GET' ? request.path.match(/^\/api\/file-assets\/([^/]+)\/download$/) : null;
+    if (fileAssetDownloadMatch) {
+      const roleError = requireRole(actorAwareRequest, 'attachment_read');
+      if (roleError) return roleError;
+      return handleDownloadFileAsset(actorAwareRequest, dependencies, fileAssetDownloadMatch[1]);
+    }
+
     const fileAssetReadMatch =
       request.method === 'GET' ? request.path.match(/^\/api\/file-assets\/([^/]+)$/) : null;
     if (fileAssetReadMatch) {
@@ -447,6 +457,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'attachment_write');
       if (roleError) return roleError;
       return handleCreateFileAsset(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/file-assets/upload') {
+      const roleError = requireRole(actorAwareRequest, 'attachment_write');
+      if (roleError) return roleError;
+      return handleUploadFileAsset(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/attachments') {

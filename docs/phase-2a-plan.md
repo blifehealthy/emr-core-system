@@ -33,8 +33,8 @@ and clinician usability.
 - Queue board shows active queue, waiting, with-doctor, provider, and room
   summary metrics.
 - Clinic branding settings drive prescription print headers and footers.
-- Clinic branding can list/create logo file assets and bind one to settings
-  before prescription print.
+- Clinic branding can list/create/upload/download logo file assets and bind one
+  to settings before prescription print.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
   count, provider workload, room workload, prescriber workload, and top
   diagnoses, with date-range filtering and CSV export.
@@ -42,5 +42,5 @@ and clinician usability.
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Add binary upload/storage integration behind the logo asset metadata flow.
+- Add production storage adapter policy for file assets beyond local disk.
 - Add visual report charts after operational metrics stabilize.

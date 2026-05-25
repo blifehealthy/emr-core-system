@@ -104,7 +104,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `PATCH` | `/api/consents/:consentId` | Update consent record. |
 | `GET` | `/api/file-assets` | List active clinic file assets for attachment and branding pickers. |
 | `GET` | `/api/file-assets/:fileAssetId` | Read one file asset. |
+| `GET` | `/api/file-assets/:fileAssetId/download` | Download stored file asset bytes. |
 | `POST` | `/api/file-assets` | Create file asset metadata. |
+| `POST` | `/api/file-assets/upload` | Upload base64 file content and create file asset metadata. |
 | `GET` | `/api/attachments` | List attachment links by target. |
 | `POST` | `/api/attachments` | Create attachment link. |
 | `GET` | `/api/audit-logs` | Read audit logs by entity with optional limit. |

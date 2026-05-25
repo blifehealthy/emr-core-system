@@ -52,6 +52,7 @@ import {
   validateCreateVitalSignBody,
   validateCreateEncounterBody,
   validateCreateFileAssetBody,
+  validateUploadFileAssetBody,
   validateCreatePatientBody,
   validateFinalizeClinicalNoteBody,
   validateSignClinicalNoteBody,
@@ -953,6 +954,30 @@ export async function handleGetFileAsset(
   return { status: 200, headers: JSON_HEADERS, body: { data: toFileAssetDto(fileAsset) } };
 }
 
+export async function handleDownloadFileAsset(
+  _request: HttpRequest,
+  dependencies: Dependencies,
+  fileAssetId: string
+): Promise<HttpResponse> {
+  if (!dependencies.downloadFileAssetContent) {
+    return mapError(new Error('File asset download dependency is not configured'));
+  }
+
+  const downloaded = await dependencies.downloadFileAssetContent({ fileAssetId });
+  if (!downloaded) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'File asset content not found' } };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      'content-type': downloaded.mimeType || 'application/octet-stream',
+      'cache-control': 'private, max-age=300',
+    },
+    body: downloaded.content,
+  };
+}
+
 export async function handleListFileAssets(
   request: HttpRequest,
   dependencies: Dependencies
@@ -1009,6 +1034,39 @@ export async function handleCreateFileAsset(
     metadata: {
       storageKey: validation.value.storageKey,
       originalFilename: validation.value.originalFilename,
+    },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toFileAssetDto(fileAsset) } };
+}
+
+export async function handleUploadFileAsset(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.uploadFileAsset) {
+    return mapError(new Error('File asset upload dependency is not configured'));
+  }
+
+  const validation = validateUploadFileAssetBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const fileAsset = await dependencies.uploadFileAsset({
+    ...validation.value,
+    uploadedByUserId: validation.value.uploadedByUserId ?? actor.userId ?? null,
+  });
+
+  await dependencies.createAuditLog({
+    entityType: 'file_asset',
+    entityId: (fileAsset as { id: string }).id,
+    action: 'uploaded',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      storageKey: validation.value.storageKey,
+      originalFilename: validation.value.originalFilename,
+      byteSize: (fileAsset as { byte_size?: number }).byte_size ?? validation.value.byteSize,
     },
   });
 

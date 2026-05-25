@@ -29,6 +29,7 @@ let currentQueue = [];
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
+const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
   usersSearch: '',
@@ -582,6 +583,54 @@ async function createFileAsset(payload, apiToken) {
   if (!response.ok) throw createApiError(response, result);
 
   return result.data;
+}
+
+async function uploadFileAsset(payload, apiToken) {
+  const response = await fetch('/api/file-assets/upload', {
+    method: 'POST',
+    headers: buildHeaders(apiToken),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) throw createApiError(response, result);
+
+  return result.data;
+}
+
+async function fetchFileAssetDataUrl(fileAssetId, apiToken) {
+  if (logoAssetDataUrls.has(fileAssetId)) return logoAssetDataUrls.get(fileAssetId);
+
+  const response = await fetch(`/api/file-assets/${fileAssetId}/download`, {
+    headers: buildHeaders(apiToken),
+  });
+  if (!response.ok) return '';
+
+  const blob = await response.blob();
+  const dataUrl = await blobToDataUrl(blob);
+  logoAssetDataUrls.set(fileAssetId, dataUrl);
+  return dataUrl;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('อ่านไฟล์ไม่สำเร็จ')));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const result = String(reader.result ?? '');
+      resolve(result.includes(',') ? result.split(',').pop() ?? '' : result);
+    });
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('อ่านไฟล์ไม่สำเร็จ')));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function exportDailyOperationsCsv() {
@@ -1159,6 +1208,10 @@ function createLogoAssetPicker(clinicId) {
   const byteSize = createAdminInput('logoAssetByteSize', 'Byte size', '0');
   byteSize.querySelector('input').type = 'number';
   byteSize.querySelector('input').min = '0';
+  const fileField = createFormField('logoAssetFile', 'Upload logo file');
+  const fileInput = fileField.querySelector('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
 
   const createButton = document.createElement('button');
   createButton.type = 'button';
@@ -1182,6 +1235,7 @@ function createLogoAssetPicker(clinicId) {
     originalFilename,
     mimeType,
     byteSize,
+    fileField,
     createButton,
     status
   );
@@ -1194,8 +1248,10 @@ function refreshLogoAssetOptions(panel) {
   if (!select) return;
 
   const selected = currentClinicSettings?.logo_file_asset_id ?? select.value;
+  const selectedAssetIsListed = currentLogoAssets.some((asset) => asset.id === selected);
   const options = [
     ['', 'ไม่ใช้ logo asset'],
+    ...(selected && !selectedAssetIsListed ? [[selected, `Current logo asset (${selected})`]] : []),
     ...currentLogoAssets.map((asset) => [
       asset.id,
       `${asset.original_filename ?? asset.storage_key ?? asset.id} (${asset.mime_type ?? 'file'})`,
@@ -1232,32 +1288,47 @@ async function createClinicLogoAsset(clinicId, panel) {
   const originalFilename = panel.querySelector('input[name="logoAssetOriginalFilename"]')?.value?.trim();
   const mimeType = panel.querySelector('input[name="logoAssetMimeType"]')?.value?.trim();
   const byteSizeValue = panel.querySelector('input[name="logoAssetByteSize"]')?.value?.trim();
+  const file = panel.querySelector('input[name="logoAssetFile"]')?.files?.[0];
   const byteSize = byteSizeValue ? Number(byteSizeValue) : 0;
 
-  if (!storageKey || !originalFilename || !Number.isInteger(byteSize) || byteSize < 0) {
+  if (!storageKey || (!originalFilename && !file) || !Number.isInteger(byteSize) || byteSize < 0) {
     setAssetPickerStatus(panel, 'กรุณากรอก storage key, filename และ byte size ให้ถูกต้อง', 'error');
     return;
   }
 
-  setAssetPickerStatus(panel, 'กำลังสร้าง logo asset', '');
+  setAssetPickerStatus(panel, file ? 'กำลัง upload logo asset' : 'กำลังสร้าง logo asset', '');
 
   try {
-    const asset = await createFileAsset(
-      compactPayload({
-        clinicId,
-        storageKey,
-        originalFilename,
-        mimeType,
-        byteSize,
-      }),
-      currentApiToken || readValue('apiToken')
-    );
+    const apiToken = currentApiToken || readValue('apiToken');
+    const asset = file
+      ? await uploadFileAsset(
+          compactPayload({
+            clinicId,
+            storageKey,
+            originalFilename: originalFilename || file.name,
+            mimeType: mimeType || file.type || 'application/octet-stream',
+            byteSize: file.size,
+            contentBase64: await fileToBase64(file),
+          }),
+          apiToken
+        )
+      : await createFileAsset(
+          compactPayload({
+            clinicId,
+            storageKey,
+            originalFilename,
+            mimeType,
+            byteSize,
+          }),
+          apiToken
+        );
     currentLogoAssets = [asset, ...currentLogoAssets.filter((item) => item.id !== asset.id)];
+    logoAssetDataUrls.delete(asset.id);
     refreshLogoAssetOptions(panel);
     panel.querySelector('select[name="logoFileAssetId"]').value = asset.id;
-    setAssetPickerStatus(panel, 'สร้าง logo asset แล้ว', 'success');
+    setAssetPickerStatus(panel, file ? 'upload logo asset แล้ว' : 'สร้าง logo asset แล้ว', 'success');
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'สร้าง logo asset ไม่สำเร็จ';
+    const message = error instanceof Error ? error.message : 'บันทึก logo asset ไม่สำเร็จ';
     setAssetPickerStatus(panel, message, 'error');
   }
 }
@@ -2746,14 +2817,14 @@ function createPrescriptionActions(prescription) {
   printButton.type = 'button';
   printButton.className = 'secondary-button small-button';
   printButton.textContent = 'พิมพ์ใบสั่งยา';
-  printButton.addEventListener('click', () => {
-    openPrescriptionPrint(prescription);
+  printButton.addEventListener('click', async () => {
+    await openPrescriptionPrint(prescription);
   });
   actions.append(printButton);
   return actions;
 }
 
-function openPrescriptionPrint(prescription) {
+async function openPrescriptionPrint(prescription) {
   const printWindow = window.open('', '_blank', 'width=720,height=840');
   if (!printWindow) return;
 
@@ -2772,7 +2843,10 @@ function openPrescriptionPrint(prescription) {
     currentClinicSettings?.website,
   ].filter(Boolean).join(' | ');
   const footer = currentClinicSettings?.prescription_footer ?? 'ลงชื่อแพทย์ / Pharmacist verification';
-  const logoUrl = currentClinicSettings?.logo_url ?? '';
+  const logoUrl = currentClinicSettings?.logo_url
+    || (currentClinicSettings?.logo_file_asset_id
+      ? await fetchFileAssetDataUrl(currentClinicSettings.logo_file_asset_id, currentApiToken || readValue('apiToken'))
+      : '');
   const logoMarkup = logoUrl
     ? `<img class="clinic-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(clinicName)} logo" />`
     : '';

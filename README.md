@@ -117,12 +117,18 @@ Not included yet:
 - `PATCH /api/prescriptions/:id`
 - `DELETE /api/prescriptions/:id`
 - `GET /api/file-assets?clinicId=...&search=...&limit=...&offset=...`
+- `GET /api/file-assets/:id/download`
+- `POST /api/file-assets/upload`
 
 Run locally with:
 
 ```bash
 DATABASE_URL=postgres://localhost:5432/emr_core npm run start:api
 ```
+
+File asset uploads are stored on local disk by default under
+`/tmp/emr-core-file-assets`. Set `FILE_STORAGE_DIR=/path/to/assets` when
+starting the API to use a different storage root.
 
 Run the frontend patient registration and lookup MVP:
 

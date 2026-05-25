@@ -256,6 +256,10 @@ export type CreateFileAssetInput = {
   uploadedByUserId?: string | null;
 };
 
+export type UploadFileAssetInput = CreateFileAssetInput & {
+  contentBase64: string;
+};
+
 export type CreateAttachmentLinkInput = {
   fileAssetId: string;
   targetType: AttachmentTargetType;
@@ -604,6 +608,11 @@ export type Dependencies = {
     targetId: string;
   }) => Promise<unknown[]>;
   createFileAsset: (input: CreateFileAssetInput) => Promise<unknown>;
+  uploadFileAsset?: (input: UploadFileAssetInput) => Promise<unknown>;
+  downloadFileAssetContent?: (input: {
+    fileAssetId?: string;
+    storageKey?: string;
+  }) => Promise<{ content: Buffer; mimeType?: string | null } | null>;
   createAttachmentLink: (input: CreateAttachmentLinkInput) => Promise<unknown>;
   listPatientAllergies: (input: {
     patientId: string;

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { request as httpRequest } from 'node:http';
@@ -18,6 +18,7 @@ const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD ?? 'postgres';
 const POSTGRES_HOST = process.env.POSTGRES_HOST ?? '127.0.0.1';
 const POSTGRES_PORT = process.env.POSTGRES_PORT ?? '5432';
 const TEMP_DB = process.env.POSTGRES_DB ?? `emr_core_api_smoke_${randomUUID().replace(/-/g, '')}`;
+const FILE_STORAGE_DIR = process.env.FILE_STORAGE_DIR ?? join('/tmp', `${TEMP_DB}_files`);
 
 const migrations = [
   '0000_organization_clinic_foundation.up.sql',
@@ -63,6 +64,7 @@ async function main() {
           DATABASE_URL: databaseUrl,
           API_TOKEN,
           PORT: String(PORT),
+          FILE_STORAGE_DIR,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
       }
@@ -560,8 +562,9 @@ async function main() {
     );
     assert.equal(inactiveTemplate.data.is_active, false);
 
-    const logoAsset = await requestJson<{ id: string; original_filename: string }>(
-      '/api/file-assets',
+    const logoBytes = Buffer.from('smoke-logo-bytes');
+    const logoAsset = await requestJson<{ id: string; original_filename: string; byte_size: number }>(
+      '/api/file-assets/upload',
       adminHeaders,
       'POST',
       201,
@@ -570,11 +573,17 @@ async function main() {
         storageKey: `clinic-logo-${randomUUID()}.png`,
         originalFilename: 'clinic-logo.png',
         mimeType: 'image/png',
-        byteSize: 128,
+        byteSize: logoBytes.length,
+        contentBase64: logoBytes.toString('base64'),
         uploadedByUserId: '10000000-0000-0000-0000-000000000202',
       }
     );
     assert.equal(logoAsset.data.original_filename, 'clinic-logo.png');
+    assert.equal(Number(logoAsset.data.byte_size), logoBytes.length);
+
+    const logoDownload = await requestText(`/api/file-assets/${logoAsset.data.id}/download`, authHeaders);
+    assert.equal(logoDownload.statusCode, 200);
+    assert.equal(logoDownload.body, 'smoke-logo-bytes');
 
     const clinicSettings = await requestJson<{
       clinic_id: string;
@@ -829,6 +838,7 @@ async function main() {
     } catch (error) {
       console.error(`failed to drop temp db ${TEMP_DB}:`, error);
     }
+    rmSync(FILE_STORAGE_DIR, { recursive: true, force: true });
   }
 }
 
@@ -932,6 +942,8 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /fetchDailyOperationsReport/);
   assert.match(app.body, /exportDailyOperationsCsv/);
   assert.match(app.body, /fetchFileAssets/);
+  assert.match(app.body, /uploadFileAsset/);
+  assert.match(app.body, /fetchFileAssetDataUrl/);
   assert.match(app.body, /createClinicLogoAsset/);
   assert.match(app.body, /clinic-logo-asset-picker/);
   assert.match(app.body, /queueReportStartDate/);

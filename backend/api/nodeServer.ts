@@ -58,6 +58,10 @@ function writeResponse(
   headers?: Record<string, string>
 ) {
   res.writeHead(status, headers);
+  if (Buffer.isBuffer(body)) {
+    res.end(body);
+    return;
+  }
   if (typeof body === 'string' && !headers?.['content-type']?.includes('application/json')) {
     res.end(body);
     return;

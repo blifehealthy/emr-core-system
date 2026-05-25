@@ -16,6 +16,7 @@ import type {
   CreateClinicalNoteTemplateInput,
   CreateConsentRecordInput,
   CreateFileAssetInput,
+  UploadFileAssetInput,
   CreatePatientInput,
   CreatePatientAllergyInput,
   CreatePatientConditionInput,
@@ -1627,6 +1628,29 @@ export function validateCreateFileAssetBody(body: unknown):
       byteSize: byteSize.value,
       checksumSha256: checksumSha256.value,
       uploadedByUserId: uploadedByUserId.value,
+    },
+  };
+}
+
+export function validateUploadFileAssetBody(body: unknown):
+  | { ok: true; value: UploadFileAssetInput }
+  | { ok: false; error: string } {
+  const base = validateCreateFileAssetBody(body);
+  if (!base.ok) return base;
+
+  const candidate = asObject(body);
+  const contentBase64 = readRequiredString(candidate?.contentBase64, 'contentBase64');
+  if (!contentBase64.ok) return contentBase64;
+
+  if (contentBase64.value.length > 10 * 1024 * 1024) {
+    return { ok: false, error: 'contentBase64 is too large' };
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...base.value,
+      contentBase64: contentBase64.value,
     },
   };
 }

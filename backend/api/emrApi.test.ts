@@ -96,6 +96,12 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async createFileAsset() {
       return { id: 'file-1' };
     },
+    async uploadFileAsset() {
+      return { id: 'file-1' };
+    },
+    async downloadFileAssetContent() {
+      return { content: Buffer.from('file-bytes'), mimeType: 'application/octet-stream' };
+    },
     async createAttachmentLink() {
       return { id: 'attachment-1' };
     },
@@ -860,6 +866,15 @@ test('attachment APIs work and enforce roles', async () => {
         assert.equal(input.storageKey, 'uploads/file-1.pdf');
         return { id: 'file-1' };
       },
+      async uploadFileAsset(input) {
+        assert.equal(input.storageKey, 'uploads/logo.png');
+        assert.equal(input.contentBase64, Buffer.from('logo').toString('base64'));
+        return { id: 'file-2', storage_key: input.storageKey, byte_size: 4 };
+      },
+      async downloadFileAssetContent(input) {
+        assert.equal(input.fileAssetId, 'file-2');
+        return { content: Buffer.from('logo'), mimeType: 'image/png' };
+      },
       async createAttachmentLink(input) {
         assert.equal(input.fileAssetId, 'file-1');
         assert.equal(input.targetType, 'patient');
@@ -907,6 +922,30 @@ test('attachment APIs work and enforce roles', async () => {
     },
   });
   assert.equal(createFile.status, 201);
+
+  const uploadedFile = await api({
+    method: 'POST',
+    path: '/api/file-assets/upload',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: {
+      clinicId: 'clinic-1',
+      storageKey: 'uploads/logo.png',
+      originalFilename: 'logo.png',
+      mimeType: 'image/png',
+      byteSize: 4,
+      contentBase64: Buffer.from('logo').toString('base64'),
+    },
+  });
+  assert.equal(uploadedFile.status, 201);
+
+  const downloadedFile = await api({
+    method: 'GET',
+    path: '/api/file-assets/file-2/download',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(downloadedFile.status, 200);
+  assert.equal((downloadedFile.body as Buffer).toString('utf8'), 'logo');
+  assert.equal(downloadedFile.headers?.['content-type'], 'image/png');
 
   const createLink = await api({
     method: 'POST',

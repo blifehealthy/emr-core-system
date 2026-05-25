@@ -19,6 +19,10 @@ import { createPrescription } from '../backend/services/createPrescription.ts';
 import { createUser } from '../backend/services/createUser.ts';
 import { createVitalSign } from '../backend/services/createVitalSign.ts';
 import { finalizeClinicalNote } from '../backend/services/finalizeClinicalNote.ts';
+import {
+  createDownloadFileAssetContentService,
+  createUploadFileAssetService,
+} from '../backend/services/fileAssetStorage.ts';
 import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.ts';
 import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
 import { getClinicSettings } from '../backend/services/getClinicSettings.ts';
@@ -85,6 +89,7 @@ if (!databaseUrl) {
 }
 
 const db = createPostgresDb(databaseUrl);
+const fileStorageRoot = process.env.FILE_STORAGE_DIR ?? '/tmp/emr-core-file-assets';
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
@@ -121,6 +126,8 @@ const server = createNodeServer({
   createAttachmentLink: createAttachmentLink(db),
   createConsentRecord: createConsentRecord(db),
   createFileAsset: createFileAsset(db),
+  uploadFileAsset: createUploadFileAssetService(db, fileStorageRoot),
+  downloadFileAssetContent: createDownloadFileAssetContentService(db, fileStorageRoot),
   createPatientAllergy: createPatientAllergy(db),
   createPatientCondition: createPatientCondition(db),
   createPatientFlag: createPatientFlag(db),
