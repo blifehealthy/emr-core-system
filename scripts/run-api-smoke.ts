@@ -56,6 +56,7 @@ const migrations = [
   '0024_add_phase_3a_completion_billing.up.sql',
   '0025_add_phase_3b_billing_operations.up.sql',
   '0026_add_phase_3c_pharmacy_inventory.up.sql',
+  '0027_add_phase_3d_inventory_lots.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -894,18 +895,53 @@ async function main() {
     );
     assert.ok(inventoryItems.data.some((item) => item.id === inventoryItem.data.id));
 
-    const dispense = await requestJson<{ id: string; quantity: string; inventory_item_id: string }>(
+    const inventoryLot = await requestJson<{
+      id: string;
+      lot_number: string;
+      quantity_on_hand: string;
+      inventory_item_id: string;
+    }>(
+      '/api/inventory-lots/receive',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        inventoryItemId: inventoryItem.data.id,
+        lotNumber: `AMOX-LOT-${Date.now()}`,
+        expiresOn: '2026-12-31',
+        quantity: 6,
+        supplierName: 'Smoke supplier',
+        referenceNumber: 'PO-SMOKE',
+      }
+    );
+    assert.equal(inventoryLot.data.inventory_item_id, inventoryItem.data.id);
+    assert.equal(Number(inventoryLot.data.quantity_on_hand), 6);
+
+    const inventoryLots = await requestJson<Array<{ id: string; lot_number: string }>>(
+      `/api/inventory-lots?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&includeEmpty=true&limit=10`,
+      adminHeaders
+    );
+    assert.ok(inventoryLots.data.some((lot) => lot.id === inventoryLot.data.id));
+
+    const dispense = await requestJson<{
+      id: string;
+      quantity: string;
+      inventory_item_id: string;
+      inventory_lot_id: string;
+    }>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
       adminHeaders,
       'POST',
       201,
       {
         inventoryItemId: inventoryItem.data.id,
+        inventoryLotId: inventoryLot.data.id,
         quantity: 2,
         notes: 'Smoke dispense',
       }
     );
     assert.equal(dispense.data.inventory_item_id, inventoryItem.data.id);
+    assert.equal(dispense.data.inventory_lot_id, inventoryLot.data.id);
     assert.equal(Number(dispense.data.quantity), 2);
 
     const dispenses = await requestJson<Array<{ id: string }>>(
@@ -914,11 +950,15 @@ async function main() {
     );
     assert.ok(dispenses.data.some((item) => item.id === dispense.data.id));
 
-    const stockMovements = await requestJson<Array<{ inventory_item_id: string; movement_type: string }>>(
+    const stockMovements = await requestJson<Array<{
+      inventory_item_id: string;
+      inventory_lot_id: string | null;
+      movement_type: string;
+    }>>(
       `/api/stock-movements?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&limit=10`,
       adminHeaders
     );
-    assert.ok(stockMovements.data.some((item) => item.movement_type === 'dispense'));
+    assert.ok(stockMovements.data.some((item) => item.movement_type === 'dispense' && item.inventory_lot_id === inventoryLot.data.id));
 
     const chargeTemplate = await requestJson<{
       id: string;

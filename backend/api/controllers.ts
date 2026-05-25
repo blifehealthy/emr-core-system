@@ -19,6 +19,8 @@ import {
   toDrugInteractionRuleDtos,
   toInventoryItemDto,
   toInventoryItemDtos,
+  toInventoryLotDto,
+  toInventoryLotDtos,
   toMedicationDispenseDto,
   toMedicationDispenseDtos,
   toStockMovementDtos,
@@ -67,6 +69,7 @@ import {
   validateCreateInventoryItemBody,
   validateUpdateInventoryItemBody,
   validateAdjustInventoryStockBody,
+  validateReceiveInventoryLotBody,
   validateDispensePrescriptionBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
@@ -2154,6 +2157,80 @@ export async function handleAdjustInventoryStock(
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryItemDto(item) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListInventoryLots(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryLots) {
+    return mapError(new Error('Inventory lot list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
+  if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const expiringBefore = readOptionalQueryString(request, 'expiringBefore');
+  if (!expiringBefore.ok) return validationError(expiringBefore.error);
+  const includeEmpty = readOptionalBooleanQuery(request, 'includeEmpty');
+  if (!includeEmpty.ok) return validationError(includeEmpty.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const lots = await dependencies.listInventoryLots({
+    clinicId,
+    inventoryItemId: inventoryItemId.value,
+    expiringBefore: expiringBefore.value,
+    includeEmpty: includeEmpty.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryLotDtos(lots.rows), meta: lots.meta },
+  };
+}
+
+export async function handleReceiveInventoryLot(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.receiveInventoryLot) {
+    return mapError(new Error('Inventory lot receiving dependency is not configured'));
+  }
+
+  const validation = validateReceiveInventoryLotBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const lot = await dependencies.receiveInventoryLot(validation.value);
+    if (!lot) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory item not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_lot',
+      entityId: (lot as { id: string }).id,
+      action: 'received',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        inventoryItemId: validation.value.inventoryItemId,
+        lotNumber: validation.value.lotNumber,
+        quantity: validation.value.quantity,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryLotDto(lot) } };
   } catch (error) {
     return mapError(error);
   }

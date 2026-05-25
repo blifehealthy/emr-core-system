@@ -669,6 +669,9 @@ Start by reading:
 
 Then produce:
 
-1. Run Phase 3A/3B/3C cashier, accounting, pharmacy, and clinical UAT.
-2. Start Phase 3D lot/expiry and pharmacy receiving, unless UAT says accounting
-   or claim export integration is more urgent.
+1. Run Phase 3A/3B/3C/3D cashier, accounting, pharmacy, and clinical UAT.
+2. Start the next Phase 3 pharmacy follow-up from UAT findings: barcode
+   scanning, multi-location stock, supplier master/purchase order workflow, or
+   controlled-substance register.
+3. If pharmacy UAT is not the blocker, switch to accounting or payer export
+   integration from the billing track.

@@ -299,10 +299,33 @@ const INVENTORY_ITEM_KEYS = [
   'deleted_at',
 ] as const;
 
+const INVENTORY_LOT_KEYS = [
+  'id',
+  'clinic_id',
+  'inventory_item_id',
+  'lot_number',
+  'expires_on',
+  'received_quantity',
+  'quantity_on_hand',
+  'received_at',
+  'supplier_name',
+  'reference_number',
+  'received_by_user_id',
+  'notes',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'expired',
+  'expiring_soon',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const STOCK_MOVEMENT_KEYS = [
   'id',
   'clinic_id',
   'inventory_item_id',
+  'inventory_lot_id',
   'prescription_id',
   'medication_dispense_id',
   'movement_type',
@@ -314,6 +337,8 @@ const STOCK_MOVEMENT_KEYS = [
   'moved_at',
   'inventory_item_display_name',
   'inventory_item_code',
+  'inventory_lot_number',
+  'inventory_lot_expires_on',
   'created_at',
   'deleted_at',
 ] as const;
@@ -323,6 +348,7 @@ const MEDICATION_DISPENSE_KEYS = [
   'clinic_id',
   'prescription_id',
   'inventory_item_id',
+  'inventory_lot_id',
   'status',
   'quantity',
   'dispensed_at',
@@ -330,6 +356,8 @@ const MEDICATION_DISPENSE_KEYS = [
   'notes',
   'inventory_item_display_name',
   'inventory_item_code',
+  'inventory_lot_number',
+  'inventory_lot_expires_on',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -695,6 +723,14 @@ export function toInventoryItemDto(row: unknown): Record<string, unknown> {
 
 export function toInventoryItemDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryItemDto(row));
+}
+
+export function toInventoryLotDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_LOT_KEYS]);
+}
+
+export function toInventoryLotDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryLotDto(row));
 }
 
 export function toStockMovementDto(row: unknown): Record<string, unknown> {

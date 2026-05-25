@@ -28,6 +28,10 @@ assertContains(app, 'ใบสั่งยา / Prescription', 'prescription pri
 assertContains(app, 'function createPrescriptionEntryForm(', 'prescription entry form');
 assertContains(app, '/api/prescription-safety-checks', 'prescription safety check endpoint');
 assertContains(app, 'function fetchDrugCatalog(', 'drug catalog loader');
+assertContains(app, 'function fetchInventoryLots(', 'inventory lot loader');
+assertContains(app, '/api/inventory-lots/receive', 'inventory lot receiving endpoint');
+assertContains(app, 'function receiveInventoryLotFromForm(', 'inventory lot receiving form handler');
+assertContains(app, 'inventoryLotId', 'lot-aware dispense payload');
 assertContains(app, 'safetyOverrideReason', 'prescription safety override reason field');
 assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');

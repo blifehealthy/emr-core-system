@@ -45,6 +45,7 @@ let currentLogoAssets = [];
 let currentFileAssetStoragePolicy = null;
 let currentDrugCatalog = [];
 let currentInventoryItems = [];
+let currentInventoryLots = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -348,6 +349,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
     currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -780,6 +782,27 @@ async function fetchInventoryItems(clinicId, apiToken, search = '') {
   if (search) params.set('search', search);
 
   const response = await fetch(`/api/inventory-items?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryLots(clinicId, apiToken, inventoryItemId = '') {
+  const params = new URLSearchParams({
+    clinicId,
+    includeEmpty: 'true',
+    limit: '200',
+    offset: '0',
+  });
+  if (inventoryItemId) params.set('inventoryItemId', inventoryItemId);
+
+  const response = await fetch(`/api/inventory-lots?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2285,6 +2308,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -3642,6 +3666,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(refreshed.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryLots = await fetchInventoryLots(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -3837,13 +3862,15 @@ function createPharmacyInventoryPanel(patient) {
   const title = document.createElement('h3');
   title.textContent = 'Pharmacy inventory';
   const hint = document.createElement('span');
-  hint.textContent = 'Phase 3C';
+  hint.textContent = 'Phase 3D';
   heading.append(title, hint);
   section.append(heading);
 
   section.append(createMetricGrid([
     ['Inventory items', currentInventoryItems.length],
     ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
+    ['Lots', currentInventoryLots.length],
+    ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
   ]));
 
   const form = document.createElement('form');
@@ -3868,6 +3895,29 @@ function createPharmacyInventoryPanel(patient) {
   });
   section.append(form);
 
+  const receiveForm = document.createElement('form');
+  receiveForm.className = 'nested-inline-form';
+  const expiresOnField = createFormField('expiresOn', 'Expires on', 'input');
+  expiresOnField.querySelector('input').type = 'date';
+  receiveForm.append(
+    createInventoryItemSelectField('inventoryItemId', 'Inventory item', true),
+    createFormField('lotNumber', 'Lot number', 'input', true),
+    expiresOnField,
+    createFormField('quantity', 'Receive quantity', 'input', true),
+    createFormField('supplierName', 'Supplier', 'input'),
+    createFormField('referenceNumber', 'Reference number', 'input')
+  );
+  const receiveSubmit = document.createElement('button');
+  receiveSubmit.type = 'submit';
+  receiveSubmit.className = 'secondary-button compact-button';
+  receiveSubmit.textContent = 'รับเข้า lot';
+  receiveForm.append(receiveSubmit);
+  receiveForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await receiveInventoryLotFromForm(patient, receiveForm, receiveSubmit);
+  });
+  section.append(receiveForm);
+
   const list = document.createElement('div');
   list.className = 'record-list';
   for (const item of currentInventoryItems.slice(0, 6)) {
@@ -3882,7 +3932,32 @@ function createPharmacyInventoryPanel(patient) {
     section.append(list);
   }
 
+  const lotList = document.createElement('div');
+  lotList.className = 'record-list';
+  for (const lot of currentInventoryLots.slice(0, 6)) {
+    lotList.append(createInventoryLotCard(lot));
+  }
+  if (currentInventoryLots.length > 0) {
+    section.append(lotList);
+  }
+
   return section;
+}
+
+function createInventoryItemSelectField(name, labelText, required = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  select.required = required;
+  for (const item of currentInventoryItems) {
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = `${item.display_name ?? item.item_code ?? item.id} (${item.quantity_on_hand ?? 0})`;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
 }
 
 function applyDrugCatalogInventorySelection(form) {
@@ -3918,6 +3993,18 @@ function createInventoryItemCard(item) {
   return card;
 }
 
+function createInventoryLotCard(lot) {
+  return createRecordCard(lot, inventoryLotSummary, [
+    'inventory_item_display_name',
+    'lot_number',
+    'expires_on',
+    'quantity_on_hand',
+    'supplier_name',
+    'expiring_soon',
+    'expired',
+  ]);
+}
+
 async function createInventoryItemFromForm(patient, form, submit) {
   const values = Object.fromEntries(new FormData(form).entries());
   submit.disabled = true;
@@ -3947,6 +4034,38 @@ async function createInventoryItemFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'เพิ่ม inventory item';
+  }
+}
+
+async function receiveInventoryLotFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังรับเข้า';
+  try {
+    const response = await fetch('/api/inventory-lots/receive', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        inventoryItemId: values.inventoryItemId,
+        lotNumber: values.lotNumber,
+        expiresOn: values.expiresOn,
+        quantity: values.quantity,
+        supplierName: values.supplierName,
+        referenceNumber: values.referenceNumber,
+        receivedByUserId: readValue('userId'),
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('รับเข้า lot แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'รับเข้า lot ไม่สำเร็จ');
+    setStatus('รับเข้า lot ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'รับเข้า lot';
   }
 }
 
@@ -4489,6 +4608,12 @@ async function dispensePrescriptionPrompt(prescription) {
     currentInventoryItems[0];
   const inventoryItemId = window.prompt('Inventory item ID', matched?.id ?? '');
   if (!inventoryItemId) return;
+  const matchedLot =
+    currentInventoryLots.find(
+      (lot) => lot.inventory_item_id === inventoryItemId && Number(lot.quantity_on_hand ?? 0) > 0 && !lot.expired
+    ) ??
+    currentInventoryLots.find((lot) => lot.inventory_item_id === inventoryItemId && Number(lot.quantity_on_hand ?? 0) > 0);
+  const inventoryLotId = window.prompt('Inventory lot ID (optional)', matchedLot?.id ?? '');
   const quantity = window.prompt('Quantity to dispense', '1');
   if (!quantity) return;
 
@@ -4499,6 +4624,7 @@ async function dispensePrescriptionPrompt(prescription) {
       headers: buildHeaders(currentApiToken || readValue('apiToken')),
       body: JSON.stringify(compactPayload({
         inventoryItemId,
+        inventoryLotId,
         quantity,
         dispensedByUserId: readValue('userId'),
         notes: 'Dispensed from patient record',
@@ -5253,6 +5379,12 @@ function prescriptionSummary(item) {
 
 function inventoryItemSummary(item) {
   return `${item.display_name ?? item.item_code ?? item.id}${item.low_stock ? ' · low stock' : ''}`;
+}
+
+function inventoryLotSummary(item) {
+  const expiry = item.expires_on ? ` · exp ${formatValue(item.expires_on)}` : '';
+  const alert = item.expired ? ' · expired' : item.expiring_soon ? ' · expiring' : '';
+  return `${item.lot_number ?? item.id}${expiry}${alert}`;
 }
 
 function invoiceSummary(item) {

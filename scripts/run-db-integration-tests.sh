@@ -65,7 +65,8 @@ for migration in \
   "$MIGRATIONS_DIR/0023_add_billing_refunds_and_charge_templates.up.sql" \
   "$MIGRATIONS_DIR/0024_add_phase_3a_completion_billing.up.sql" \
   "$MIGRATIONS_DIR/0025_add_phase_3b_billing_operations.up.sql" \
-  "$MIGRATIONS_DIR/0026_add_phase_3c_pharmacy_inventory.up.sql"
+  "$MIGRATIONS_DIR/0026_add_phase_3c_pharmacy_inventory.up.sql" \
+  "$MIGRATIONS_DIR/0027_add_phase_3d_inventory_lots.up.sql"
 do
   run_psql "$migration"
 done

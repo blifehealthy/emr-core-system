@@ -16,6 +16,7 @@
 - Phase 3A billing/payment foundation adds invoices, multi-line editing, encounter charge capture, payment/refund recording, invoice voiding, charge templates, receipt/tax invoice numbering, insurance claims, cashier UI, receipt print, and billing audit events
 - Phase 3B billing operations adds billing summary JSON/CSV export, billing number sequences, cashier reconciliation, Cashier tab controls, and API smoke coverage
 - Phase 3C pharmacy/inventory foundation adds inventory items, stock movements, prescription dispensing, Prescriptions tab controls, and API smoke coverage
+- Phase 3D pharmacy lot/expiry foundation adds inventory lots, receiving, lot-aware dispensing, lot cards, and API smoke coverage
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -43,6 +44,7 @@
 - Review `docs/phase-3a-plan.md`, `docs/phase-3a-clinician-summary-th.md`, `docs/phase-3a-uat-checklist-th.md`, and `docs/phase-3a-closure-summary-th.md` with cashier/front desk users
 - Review `docs/phase-3b-plan.md`, `docs/phase-3b-clinician-summary-th.md`, `docs/phase-3b-uat-checklist-th.md`, and `docs/phase-3b-closure-summary-th.md` with cashier and accounting users
 - Review `docs/phase-3c-plan.md`, `docs/phase-3c-clinician-summary-th.md`, `docs/phase-3c-uat-checklist-th.md`, and `docs/phase-3c-closure-summary-th.md` with pharmacy and clinical users
+- Review `docs/phase-3d-plan.md`, `docs/phase-3d-clinician-summary-th.md`, `docs/phase-3d-uat-checklist-th.md`, and `docs/phase-3d-closure-summary-th.md` with pharmacy and clinical users
 
 ## Verified
 
@@ -63,4 +65,5 @@
 - Phase 3A targeted billing service, API, frontend syntax, and migration tests pass
 - Phase 3B targeted billing operations service, API, frontend syntax, and migration tests pass
 - Phase 3C targeted pharmacy/inventory service, API, frontend syntax, and migration tests pass
+- Phase 3D targeted pharmacy lot/expiry service, API, frontend syntax, and migration tests pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

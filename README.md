@@ -172,6 +172,18 @@ review docs are tracked in:
 - `docs/phase-3c-uat-checklist-th.md`
 - `docs/phase-3c-closure-summary-th.md`
 
+## Phase 3D
+
+Phase 3D closes the first lot/expiry and pharmacy receiving foundation. It adds
+inventory lots, expiry visibility, receiving into lots, lot-aware stock
+movements, and optional lot selection during prescription dispense. Current
+scope and review docs are tracked in:
+
+- `docs/phase-3d-plan.md`
+- `docs/phase-3d-clinician-summary-th.md`
+- `docs/phase-3d-uat-checklist-th.md`
+- `docs/phase-3d-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

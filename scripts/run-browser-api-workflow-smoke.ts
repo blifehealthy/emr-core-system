@@ -61,6 +61,7 @@ const migrations = [
   '0024_add_phase_3a_completion_billing.up.sql',
   '0025_add_phase_3b_billing_operations.up.sql',
   '0026_add_phase_3c_pharmacy_inventory.up.sql',
+  '0027_add_phase_3d_inventory_lots.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {

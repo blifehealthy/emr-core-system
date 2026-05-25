@@ -20,9 +20,11 @@ real UAT findings, but the likely product directions are below.
 - Phase 3C completed the first stock item model, dispensing workflow,
   prescription-to-dispense handoff, stock movement audit, and low-stock
   visibility.
-- Remaining pharmacy follow-up should come from UAT: lot/expiry, purchase
-  receiving, supplier workflow, multi-location stock, barcode scanning, or
-  controlled substance workflow.
+- Phase 3D completed lot/expiry tracking, pharmacy receiving into lots, and
+  lot-aware prescription dispensing.
+- Remaining pharmacy follow-up should come from UAT: supplier master workflow,
+  purchase order approval, multi-location stock, barcode scanning, or controlled
+  substance workflow.
 
 ### Patient Communication
 

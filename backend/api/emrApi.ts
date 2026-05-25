@@ -71,6 +71,7 @@ import {
   handleListDrugCatalog,
   handleListDrugInteractionRules,
   handleListInventoryItems,
+  handleListInventoryLots,
   handleListMedicationDispenses,
   handleListStockMovements,
   handleListFileAssets,
@@ -110,6 +111,7 @@ import {
   handleRecordInvoicePayment,
   handleRecordInvoiceRefund,
   handleAdjustInventoryStock,
+  handleReceiveInventoryLot,
   handleDispensePrescription,
   handleIssueBillingNumber,
   handleCloseCashierReconciliation,
@@ -274,6 +276,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListInventoryItems(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/inventory-lots') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListInventoryLots(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/stock-movements') {
@@ -628,6 +636,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
       return handleCreateInventoryItem(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/inventory-lots/receive') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleReceiveInventoryLot(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/prescription-safety-checks') {

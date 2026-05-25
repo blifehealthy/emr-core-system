@@ -23,9 +23,12 @@ export function listStockMovements(db: {
         SELECT
           m.*,
           i.display_name AS inventory_item_display_name,
-          i.item_code AS inventory_item_code
+          i.item_code AS inventory_item_code,
+          l.lot_number AS inventory_lot_number,
+          l.expires_on AS inventory_lot_expires_on
         FROM stock_movements m
         JOIN inventory_items i ON i.id = m.inventory_item_id
+        LEFT JOIN inventory_lots l ON l.id = m.inventory_lot_id
         WHERE ${conditions.join('\n          AND ')}
         ORDER BY m.moved_at DESC, m.created_at DESC
         LIMIT $${params.length - 1}

@@ -117,6 +117,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0026_add_phase_3c_pharmacy_inventory.up.sql'),
     'expected Phase 3C pharmacy inventory migration'
   );
+  assert.ok(
+    filenames.includes('0027_add_phase_3d_inventory_lots.up.sql'),
+    'expected Phase 3D inventory lots migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

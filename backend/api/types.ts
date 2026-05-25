@@ -635,6 +635,17 @@ export type AdjustInventoryStockInput = {
   performedByUserId?: string | null;
 };
 
+export type ReceiveInventoryLotInput = {
+  inventoryItemId: string;
+  lotNumber: string;
+  expiresOn?: string | null;
+  quantity: number | string;
+  supplierName?: string | null;
+  referenceNumber?: string | null;
+  receivedByUserId?: string | null;
+  notes?: string | null;
+};
+
 export type CreateDrugInteractionRuleInput = {
   clinicId: string;
   primaryDrugCatalogId?: string | null;
@@ -722,6 +733,7 @@ export type UpdatePrescriptionInput = {
 export type DispensePrescriptionInput = {
   prescriptionId: string;
   inventoryItemId: string;
+  inventoryLotId?: string | null;
   quantity: number | string;
   dispensedByUserId?: string | null;
   notes?: string | null;
@@ -1044,6 +1056,15 @@ export type Dependencies = {
   createInventoryItem?: (input: CreateInventoryItemInput) => Promise<unknown>;
   updateInventoryItem?: (input: UpdateInventoryItemInput) => Promise<unknown | null>;
   adjustInventoryStock?: (input: AdjustInventoryStockInput) => Promise<unknown | null>;
+  listInventoryLots?: (input: {
+    clinicId: string;
+    inventoryItemId?: string;
+    expiringBefore?: string;
+    includeEmpty?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  receiveInventoryLot?: (input: ReceiveInventoryLotInput) => Promise<unknown | null>;
   listStockMovements?: (input: {
     clinicId: string;
     inventoryItemId?: string;

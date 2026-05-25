@@ -19,6 +19,7 @@ import type {
   CreateDrugCatalogItemInput,
   CreateDrugInteractionRuleInput,
   CreateInventoryItemInput,
+  ReceiveInventoryLotInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
   DispensePrescriptionInput,
@@ -2583,6 +2584,46 @@ export function validateAdjustInventoryStockBody(
   };
 }
 
+export function validateReceiveInventoryLotBody(body: unknown):
+  | { ok: true; value: ReceiveInventoryLotInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const inventoryItemId = readRequiredString(candidate.inventoryItemId, 'inventoryItemId');
+  if (!inventoryItemId.ok) return inventoryItemId;
+  const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
+  if (!lotNumber.ok) return lotNumber;
+  const expiresOn = readOptionalNullableDateField(candidate, 'expiresOn');
+  if (!expiresOn.ok) return expiresOn;
+  const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
+  if (!quantity.ok) return quantity;
+  const supplierName = readOptionalNullableStringField(candidate, 'supplierName');
+  if (!supplierName.ok) return supplierName;
+  const referenceNumber = readOptionalNullableStringField(candidate, 'referenceNumber');
+  if (!referenceNumber.ok) return referenceNumber;
+  const receivedByUserId = readOptionalNullableStringField(candidate, 'receivedByUserId');
+  if (!receivedByUserId.ok) return receivedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      inventoryItemId: inventoryItemId.value,
+      lotNumber: lotNumber.value,
+      expiresOn: expiresOn.value,
+      quantity: quantity.value,
+      supplierName: supplierName.value,
+      referenceNumber: referenceNumber.value,
+      receivedByUserId: receivedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
 export function validateDispensePrescriptionBody(
   body: unknown,
   prescriptionId: string
@@ -2594,6 +2635,8 @@ export function validateDispensePrescriptionBody(
 
   const inventoryItemId = readRequiredString(candidate.inventoryItemId, 'inventoryItemId');
   if (!inventoryItemId.ok) return inventoryItemId;
+  const inventoryLotId = readOptionalNullableStringField(candidate, 'inventoryLotId');
+  if (!inventoryLotId.ok) return inventoryLotId;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
   const dispensedByUserId = readOptionalNullableStringField(candidate, 'dispensedByUserId');
@@ -2606,6 +2649,7 @@ export function validateDispensePrescriptionBody(
     value: {
       prescriptionId,
       inventoryItemId: inventoryItemId.value,
+      inventoryLotId: inventoryLotId.value,
       quantity: quantity.value,
       dispensedByUserId: dispensedByUserId.value,
       notes: notes.value,
@@ -3597,6 +3641,21 @@ function readOptionalTrimmedStringField(
   }
 
   return { ok: true, value: value.trim() };
+}
+
+function readOptionalNullableDateField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: string | null | undefined } | { ok: false; error: string } {
+  const value = readOptionalNullableStringField(candidate, fieldName);
+  if (!value.ok) return value;
+  if (value.value === undefined || value.value === null || value.value === '') {
+    return { ok: true, value: value.value === '' ? null : value.value };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value.value)) {
+    return { ok: false, error: `${fieldName} must be a date string in YYYY-MM-DD format` };
+  }
+  return { ok: true, value: value.value };
 }
 
 function readEnumValue<T extends string>(

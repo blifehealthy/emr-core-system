@@ -78,6 +78,10 @@ import {
   updateInventoryItem,
 } from '../backend/services/inventoryItems.ts';
 import {
+  listInventoryLots,
+  receiveInventoryLot,
+} from '../backend/services/inventoryLots.ts';
+import {
   dispensePrescription,
   listMedicationDispenses,
 } from '../backend/services/medicationDispenses.ts';
@@ -221,6 +225,8 @@ const server = createNodeServer({
   createInventoryItem: createInventoryItem(db),
   updateInventoryItem: updateInventoryItem(db),
   adjustInventoryStock: adjustInventoryStock(db),
+  listInventoryLots: listInventoryLots(db),
+  receiveInventoryLot: receiveInventoryLot(db),
   listStockMovements: listStockMovements(db),
   listDrugInteractionRules: listDrugInteractionRules(db),
   createDrugInteractionRule: createDrugInteractionRule(db),

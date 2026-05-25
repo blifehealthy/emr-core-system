@@ -30,9 +30,12 @@ export function listMedicationDispenses(db: {
         SELECT
           d.*,
           i.display_name AS inventory_item_display_name,
-          i.item_code AS inventory_item_code
+          i.item_code AS inventory_item_code,
+          l.lot_number AS inventory_lot_number,
+          l.expires_on AS inventory_lot_expires_on
         FROM medication_dispenses d
         JOIN inventory_items i ON i.id = d.inventory_item_id
+        LEFT JOIN inventory_lots l ON l.id = d.inventory_lot_id
         WHERE ${conditions.join('\n          AND ')}
         ORDER BY d.dispensed_at DESC, d.created_at DESC
         LIMIT $${params.length - 1}
@@ -97,6 +100,39 @@ export function dispensePrescription(db: {
       throw new Error('Inventory quantity cannot go below zero');
     }
 
+    if (input.inventoryLotId) {
+      const lotResult = await db.query<{
+        id: string;
+        quantity_on_hand: string;
+      }>(
+        `
+          SELECT id, quantity_on_hand
+          FROM inventory_lots
+          WHERE id = $1
+            AND inventory_item_id = $2
+            AND deleted_at IS NULL
+        `,
+        [input.inventoryLotId, input.inventoryItemId]
+      );
+      const lot = lotResult.rows[0];
+      if (!lot) return null;
+
+      const lotQuantityBefore = Number(lot.quantity_on_hand);
+      const lotQuantityAfter = Number((lotQuantityBefore - quantity).toFixed(2));
+      if (lotQuantityAfter < 0) {
+        throw new Error('Inventory lot quantity cannot go below zero');
+      }
+
+      await db.query(
+        `
+          UPDATE inventory_lots
+          SET quantity_on_hand = $2
+          WHERE id = $1
+        `,
+        [input.inventoryLotId, lotQuantityAfter]
+      );
+    }
+
     await db.query(
       `
         UPDATE inventory_items
@@ -112,17 +148,19 @@ export function dispensePrescription(db: {
           clinic_id,
           prescription_id,
           inventory_item_id,
+          inventory_lot_id,
           quantity,
           dispensed_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
       `,
       [
         item.clinic_id,
         input.prescriptionId,
         input.inventoryItemId,
+        input.inventoryLotId ?? null,
         quantity,
         input.dispensedByUserId ?? null,
         input.notes ?? null,
@@ -135,6 +173,7 @@ export function dispensePrescription(db: {
         INSERT INTO stock_movements (
           clinic_id,
           inventory_item_id,
+          inventory_lot_id,
           prescription_id,
           medication_dispense_id,
           movement_type,
@@ -144,11 +183,12 @@ export function dispensePrescription(db: {
           reason,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, $4, 'dispense', $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, 'dispense', $6, $7, $8, $9, $10)
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
+        input.inventoryLotId ?? null,
         input.prescriptionId,
         dispenseId,
         quantity,
@@ -164,9 +204,12 @@ export function dispensePrescription(db: {
         SELECT
           d.*,
           i.display_name AS inventory_item_display_name,
-          i.item_code AS inventory_item_code
+          i.item_code AS inventory_item_code,
+          l.lot_number AS inventory_lot_number,
+          l.expires_on AS inventory_lot_expires_on
         FROM medication_dispenses d
         JOIN inventory_items i ON i.id = d.inventory_item_id
+        LEFT JOIN inventory_lots l ON l.id = d.inventory_lot_id
         WHERE d.id = $1
       `,
       [dispenseId]
