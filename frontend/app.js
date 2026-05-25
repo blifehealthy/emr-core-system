@@ -29,6 +29,7 @@ let currentQueue = [];
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
+let currentFileAssetStoragePolicy = null;
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -176,6 +177,7 @@ adminForm.addEventListener('submit', async (event) => {
   try {
     currentAdmin = await fetchAdminBundle(clinicId, apiToken);
     currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
+    currentFileAssetStoragePolicy = await fetchFileAssetStoragePolicy(apiToken).catch(() => null);
     renderAdminWorkspace(clinicId);
     setStatus('โหลดทีมแล้ว', 'success');
   } catch (error) {
@@ -590,6 +592,17 @@ async function uploadFileAsset(payload, apiToken) {
     method: 'POST',
     headers: buildHeaders(apiToken),
     body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) throw createApiError(response, result);
+
+  return result.data;
+}
+
+async function fetchFileAssetStoragePolicy(apiToken) {
+  const response = await fetch('/api/file-assets/storage-policy', {
+    headers: buildHeaders(apiToken),
   });
   const result = await response.json();
 
@@ -1211,7 +1224,8 @@ function createLogoAssetPicker(clinicId) {
   const fileField = createFormField('logoAssetFile', 'Upload logo file');
   const fileInput = fileField.querySelector('input');
   fileInput.type = 'file';
-  fileInput.accept = 'image/*';
+  fileInput.accept = acceptedLogoMimeTypes().join(',');
+  fileInput.addEventListener('change', () => syncLogoFileMetadata(panel, fileInput.files?.[0]));
 
   const createButton = document.createElement('button');
   createButton.type = 'button';
@@ -1291,6 +1305,14 @@ async function createClinicLogoAsset(clinicId, panel) {
   const file = panel.querySelector('input[name="logoAssetFile"]')?.files?.[0];
   const byteSize = byteSizeValue ? Number(byteSizeValue) : 0;
 
+  if (file) {
+    const policyError = validateLogoFileAgainstPolicy(file);
+    if (policyError) {
+      setAssetPickerStatus(panel, policyError, 'error');
+      return;
+    }
+  }
+
   if (!storageKey || (!originalFilename && !file) || !Number.isInteger(byteSize) || byteSize < 0) {
     setAssetPickerStatus(panel, 'กรุณากรอก storage key, filename และ byte size ให้ถูกต้อง', 'error');
     return;
@@ -1339,6 +1361,40 @@ function setAssetPickerStatus(panel, message, mode) {
   status.hidden = false;
   status.textContent = message;
   status.className = mode === 'success' ? 'status-pill success' : mode === 'error' ? 'inline-error' : 'status-pill';
+}
+
+function syncLogoFileMetadata(panel, file) {
+  if (!file) return;
+
+  const storageKeyInput = panel.querySelector('input[name="logoAssetStorageKey"]');
+  const originalFilenameInput = panel.querySelector('input[name="logoAssetOriginalFilename"]');
+  const mimeTypeInput = panel.querySelector('input[name="logoAssetMimeType"]');
+  const byteSizeInput = panel.querySelector('input[name="logoAssetByteSize"]');
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '-');
+
+  storageKeyInput.value = `clinic-logos/${Date.now()}-${safeName}`;
+  originalFilenameInput.value = file.name;
+  mimeTypeInput.value = file.type || 'application/octet-stream';
+  byteSizeInput.value = String(file.size);
+}
+
+function validateLogoFileAgainstPolicy(file) {
+  if (!currentFileAssetStoragePolicy) return '';
+
+  if (file.size > currentFileAssetStoragePolicy.maxUploadBytes) {
+    return `ไฟล์ใหญ่เกิน ${currentFileAssetStoragePolicy.maxUploadBytes} bytes`;
+  }
+
+  if (!acceptedLogoMimeTypes().includes(file.type)) {
+    return 'ชนิดไฟล์นี้ยังไม่ถูกเปิดให้ upload';
+  }
+
+  return '';
+}
+
+function acceptedLogoMimeTypes() {
+  const policyTypes = currentFileAssetStoragePolicy?.allowedMimeTypes ?? ['image/png', 'image/jpeg', 'image/webp'];
+  return policyTypes.filter((mimeType) => mimeType.startsWith('image/'));
 }
 
 function createTemplateAdminSection(clinicId) {

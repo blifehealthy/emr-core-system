@@ -35,6 +35,8 @@ and clinician usability.
 - Clinic branding settings drive prescription print headers and footers.
 - Clinic branding can list/create/upload/download logo file assets and bind one
   to settings before prescription print.
+- File asset storage exposes a local-driver policy for max upload size and
+  allowed MIME types so frontend upload controls can validate before submit.
 - Daily operations reporting summarizes visits, diagnosis count, prescription
   count, provider workload, room workload, prescriber workload, and top
   diagnoses, with date-range filtering and CSV export.
@@ -42,5 +44,5 @@ and clinician usability.
 ## Remaining Phase 2A Follow-ups
 
 - Add real browser automation for queue and print workflows.
-- Add production storage adapter policy for file assets beyond local disk.
+- Add production object-storage adapter after local-driver policy stabilizes.
 - Add visual report charts after operational metrics stabilize.

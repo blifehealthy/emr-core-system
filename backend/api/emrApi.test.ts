@@ -102,6 +102,13 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async downloadFileAssetContent() {
       return { content: Buffer.from('file-bytes'), mimeType: 'application/octet-stream' };
     },
+    getFileAssetStoragePolicy() {
+      return {
+        driver: 'local',
+        maxUploadBytes: 1024,
+        allowedMimeTypes: ['image/png'],
+      };
+    },
     async createAttachmentLink() {
       return { id: 'attachment-1' };
     },
@@ -908,6 +915,16 @@ test('attachment APIs work and enforce roles', async () => {
   assert.deepEqual(fileAssets.body, {
     data: [{ id: 'file-1', clinic_id: 'clinic-1', original_filename: 'logo.png' }],
     meta: { limit: 1, offset: 0, hasMore: false, nextOffset: null },
+  });
+
+  const storagePolicy = await api({
+    method: 'GET',
+    path: '/api/file-assets/storage-policy',
+    headers: { 'x-user-role': 'doctor' },
+  });
+  assert.equal(storagePolicy.status, 200);
+  assert.deepEqual(storagePolicy.body, {
+    data: { driver: 'local', maxUploadBytes: 1024, allowedMimeTypes: ['image/png'] },
   });
 
   const createFile = await api({

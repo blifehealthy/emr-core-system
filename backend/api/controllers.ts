@@ -1012,6 +1012,21 @@ export async function handleListFileAssets(
   };
 }
 
+export async function handleGetFileAssetStoragePolicy(
+  _request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.getFileAssetStoragePolicy) {
+    return mapError(new Error('File asset storage policy dependency is not configured'));
+  }
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: dependencies.getFileAssetStoragePolicy() },
+  };
+}
+
 export async function handleCreateFileAsset(
   request: HttpRequest,
   dependencies: Dependencies

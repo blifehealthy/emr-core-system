@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add file asset upload storage`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Harden file asset storage policy`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -307,11 +307,14 @@ templates, prescription print/export, clinic branding, and operations reporting.
 The operations report now supports date ranges and CSV export, and clinic
 branding can list/create/upload/download logo file assets and link one for
 printed prescription identity.
+File asset uploads now expose local storage policy for max upload size and
+allowed MIME types, and upload services enforce storage key, MIME, and byte
+limits.
 
 Remaining Phase 2A follow-ups:
 
 1. Add real browser automation for queue and print workflows.
-2. Add production storage adapter policy for file assets beyond local disk.
+2. Add production object-storage adapter after local-driver policy stabilizes.
 3. Add visual report charts once the report metrics settle.
 
 ## Recommended Next Task
@@ -319,7 +322,7 @@ Remaining Phase 2A follow-ups:
 If coming back fresh after this pass:
 
 1. add browser automation for queue and print workflows
-2. add production storage adapter policy for file assets beyond local disk
+2. add production object-storage adapter after local-driver policy stabilizes
 
 The deliverables added in this worktree are:
 
@@ -340,7 +343,7 @@ The deliverables added in this worktree are:
 - appointment state transition guard in `backend/api/controllers.ts`
 - encounter read/update API, service, validation, and transition guard
 - duplicate conflict mapping for user/practitioner writes
-- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset listing/upload/download, daily operations reporting, and encounter edit
+- expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset policy/listing/upload/download, daily operations reporting, and encounter edit
 
 This was the highest-leverage next move because:
 
@@ -365,4 +368,4 @@ Start by reading:
 Then produce:
 
 1. Browser automation for queue and print workflows
-2. Production storage adapter policy for file assets beyond local disk
+2. Production object-storage adapter after local-driver policy stabilizes

@@ -128,7 +128,11 @@ DATABASE_URL=postgres://localhost:5432/emr_core npm run start:api
 
 File asset uploads are stored on local disk by default under
 `/tmp/emr-core-file-assets`. Set `FILE_STORAGE_DIR=/path/to/assets` when
-starting the API to use a different storage root.
+starting the API to use a different storage root. File storage is controlled by:
+
+- `FILE_STORAGE_DRIVER=local`
+- `FILE_STORAGE_MAX_BYTES=5242880`
+- `FILE_STORAGE_ALLOWED_MIME_TYPES=image/png,image/jpeg,image/webp,application/pdf`
 
 Run the frontend patient registration and lookup MVP:
 

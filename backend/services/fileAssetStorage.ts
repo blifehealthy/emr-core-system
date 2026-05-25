@@ -3,13 +3,17 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 import { createFileAsset } from './createFileAsset.ts';
+import type { FileAssetStoragePolicy } from './fileAssetStoragePolicy.ts';
 import { getFileAssetById } from './getFileAssetById.ts';
 
 type Db = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
 };
 
-export function createUploadFileAssetService(db: Db, storageRoot: string) {
+type StoragePolicyInput = string | FileAssetStoragePolicy;
+
+export function createUploadFileAssetService(db: Db, storagePolicy: StoragePolicyInput) {
+  const policy = normalizeStoragePolicy(storagePolicy);
   const createMetadata = createFileAsset(db);
 
   return async function upload(input: {
@@ -22,13 +26,17 @@ export function createUploadFileAssetService(db: Db, storageRoot: string) {
     uploadedByUserId?: string | null;
     contentBase64: string;
   }) {
+    validateStorageKey(input.storageKey);
+    validateMimeType(policy, input.mimeType);
+    validateBase64(input.contentBase64);
+
     const content = Buffer.from(input.contentBase64, 'base64');
-    if (content.length === 0 && input.contentBase64.length > 0) {
-      throw new Error('contentBase64 must be valid base64');
+    if (content.length > policy.maxUploadBytes) {
+      throw new Error(`file exceeds max upload size of ${policy.maxUploadBytes} bytes`);
     }
 
     const checksumSha256 = input.checksumSha256 ?? createHash('sha256').update(content).digest('hex');
-    await writeStoredFile(storageRoot, input.storageKey, content);
+    await writeStoredFile(policy.storageRoot, input.storageKey, content);
 
     return createMetadata({
       clinicId: input.clinicId,
@@ -42,7 +50,8 @@ export function createUploadFileAssetService(db: Db, storageRoot: string) {
   };
 }
 
-export function createDownloadFileAssetContentService(db: Db, storageRoot: string) {
+export function createDownloadFileAssetContentService(db: Db, storagePolicy: StoragePolicyInput) {
+  const policy = normalizeStoragePolicy(storagePolicy);
   const getMetadata = getFileAssetById(db);
 
   return async function download(input: { fileAssetId?: string; storageKey?: string }) {
@@ -50,9 +59,10 @@ export function createDownloadFileAssetContentService(db: Db, storageRoot: strin
     const row = metadata as { storage_key?: string; mime_type?: string | null } | null;
     const storageKey = input.storageKey ?? row?.storage_key;
     if (!storageKey) return null;
+    validateStorageKey(storageKey);
 
     try {
-      const content = await readStoredFile(storageRoot, storageKey);
+      const content = await readStoredFile(policy.storageRoot, storageKey);
       return { content, mimeType: row?.mime_type ?? null };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
@@ -78,4 +88,34 @@ function safeStoragePath(storageRoot: string, storageKey: string) {
     throw new Error('storageKey must stay inside storage root');
   }
   return filepath;
+}
+
+function normalizeStoragePolicy(storagePolicy: StoragePolicyInput): FileAssetStoragePolicy {
+  if (typeof storagePolicy !== 'string') return storagePolicy;
+
+  return {
+    driver: 'local',
+    storageRoot: storagePolicy,
+    maxUploadBytes: 5 * 1024 * 1024,
+    allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'],
+  };
+}
+
+function validateStorageKey(storageKey: string) {
+  if (storageKey.startsWith('/') || storageKey.includes('..') || storageKey.includes('\\')) {
+    throw new Error('storageKey must be a relative path inside storage root');
+  }
+}
+
+function validateMimeType(policy: FileAssetStoragePolicy, mimeType?: string | null) {
+  if (!mimeType) return;
+  if (!policy.allowedMimeTypes.includes(mimeType)) {
+    throw new Error(`mimeType ${mimeType} is not allowed`);
+  }
+}
+
+function validateBase64(contentBase64: string) {
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(contentBase64) || contentBase64.length % 4 !== 0) {
+    throw new Error('contentBase64 must be valid base64');
+  }
 }

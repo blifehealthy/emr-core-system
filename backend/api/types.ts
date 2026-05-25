@@ -260,6 +260,12 @@ export type UploadFileAssetInput = CreateFileAssetInput & {
   contentBase64: string;
 };
 
+export type FileAssetStoragePolicyDto = {
+  driver: 'local';
+  maxUploadBytes: number;
+  allowedMimeTypes: string[];
+};
+
 export type CreateAttachmentLinkInput = {
   fileAssetId: string;
   targetType: AttachmentTargetType;
@@ -613,6 +619,7 @@ export type Dependencies = {
     fileAssetId?: string;
     storageKey?: string;
   }) => Promise<{ content: Buffer; mimeType?: string | null } | null>;
+  getFileAssetStoragePolicy?: () => FileAssetStoragePolicyDto;
   createAttachmentLink: (input: CreateAttachmentLinkInput) => Promise<unknown>;
   listPatientAllergies: (input: {
     patientId: string;

@@ -36,6 +36,7 @@ import {
   handleGetDiagnosis,
   handleGetEncounter,
   handleGetFileAsset,
+  handleGetFileAssetStoragePolicy,
   handleGetPatientDetail,
   handleGetPatientAllergy,
   handleGetPatientCondition,
@@ -161,6 +162,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'attachment_read');
       if (roleError) return roleError;
       return handleListFileAssets(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/file-assets/storage-policy') {
+      const roleError = requireRole(actorAwareRequest, 'attachment_read');
+      if (roleError) return roleError;
+      return handleGetFileAssetStoragePolicy(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/users') {

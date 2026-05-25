@@ -104,6 +104,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `POST` | `/api/consents` | `consent_write` |
 | `PATCH` | `/api/consents/:consentId` | `consent_write` |
 | `GET` | `/api/file-assets` | `attachment_read` |
+| `GET` | `/api/file-assets/storage-policy` | `attachment_read` |
 | `GET` | `/api/file-assets/:fileAssetId` | `attachment_read` |
 | `GET` | `/api/file-assets/:fileAssetId/download` | `attachment_read` |
 | `GET` | `/api/attachments` | `attachment_read` |

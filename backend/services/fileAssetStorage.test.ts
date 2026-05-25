@@ -51,3 +51,59 @@ test('file asset upload stores bytes and metadata', async () => {
     await rm(storageRoot, { recursive: true, force: true });
   }
 });
+
+test('file asset upload enforces storage policy', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'emr-assets-'));
+  const db = {
+    async query<T>() {
+      return { rows: [] as T[] };
+    },
+  };
+
+  try {
+    const upload = createUploadFileAssetService(db, {
+      driver: 'local',
+      storageRoot,
+      maxUploadBytes: 4,
+      allowedMimeTypes: ['image/png'],
+    });
+
+    await assert.rejects(
+      upload({
+        clinicId: 'clinic-1',
+        storageKey: '../logo.png',
+        originalFilename: 'logo.png',
+        mimeType: 'image/png',
+        byteSize: 4,
+        contentBase64: Buffer.from('logo').toString('base64'),
+      }),
+      /storageKey must be a relative path/
+    );
+
+    await assert.rejects(
+      upload({
+        clinicId: 'clinic-1',
+        storageKey: 'logos/logo.gif',
+        originalFilename: 'logo.gif',
+        mimeType: 'image/gif',
+        byteSize: 4,
+        contentBase64: Buffer.from('logo').toString('base64'),
+      }),
+      /mimeType image\/gif is not allowed/
+    );
+
+    await assert.rejects(
+      upload({
+        clinicId: 'clinic-1',
+        storageKey: 'logos/logo.png',
+        originalFilename: 'logo.png',
+        mimeType: 'image/png',
+        byteSize: 5,
+        contentBase64: Buffer.from('large').toString('base64'),
+      }),
+      /file exceeds max upload size/
+    );
+  } finally {
+    await rm(storageRoot, { recursive: true, force: true });
+  }
+});

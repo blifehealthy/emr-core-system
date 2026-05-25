@@ -23,6 +23,7 @@ import {
   createDownloadFileAssetContentService,
   createUploadFileAssetService,
 } from '../backend/services/fileAssetStorage.ts';
+import { createFileAssetStoragePolicy } from '../backend/services/fileAssetStoragePolicy.ts';
 import { getAuditLogsByEntity } from '../backend/services/getAuditLogsByEntity.ts';
 import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
 import { getClinicSettings } from '../backend/services/getClinicSettings.ts';
@@ -89,7 +90,7 @@ if (!databaseUrl) {
 }
 
 const db = createPostgresDb(databaseUrl);
-const fileStorageRoot = process.env.FILE_STORAGE_DIR ?? '/tmp/emr-core-file-assets';
+const fileStoragePolicy = createFileAssetStoragePolicy(process.env);
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
@@ -126,8 +127,13 @@ const server = createNodeServer({
   createAttachmentLink: createAttachmentLink(db),
   createConsentRecord: createConsentRecord(db),
   createFileAsset: createFileAsset(db),
-  uploadFileAsset: createUploadFileAssetService(db, fileStorageRoot),
-  downloadFileAssetContent: createDownloadFileAssetContentService(db, fileStorageRoot),
+  uploadFileAsset: createUploadFileAssetService(db, fileStoragePolicy),
+  downloadFileAssetContent: createDownloadFileAssetContentService(db, fileStoragePolicy),
+  getFileAssetStoragePolicy: () => ({
+    driver: fileStoragePolicy.driver,
+    maxUploadBytes: fileStoragePolicy.maxUploadBytes,
+    allowedMimeTypes: fileStoragePolicy.allowedMimeTypes,
+  }),
   createPatientAllergy: createPatientAllergy(db),
   createPatientCondition: createPatientCondition(db),
   createPatientFlag: createPatientFlag(db),

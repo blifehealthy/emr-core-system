@@ -585,6 +585,15 @@ async function main() {
     assert.equal(logoDownload.statusCode, 200);
     assert.equal(logoDownload.body, 'smoke-logo-bytes');
 
+    const storagePolicy = await requestJson<{
+      driver: string;
+      maxUploadBytes: number;
+      allowedMimeTypes: string[];
+    }>('/api/file-assets/storage-policy', authHeaders);
+    assert.equal(storagePolicy.data.driver, 'local');
+    assert.ok(storagePolicy.data.maxUploadBytes >= logoBytes.length);
+    assert.ok(storagePolicy.data.allowedMimeTypes.includes('image/png'));
+
     const clinicSettings = await requestJson<{
       clinic_id: string;
       display_name: string;
@@ -944,6 +953,8 @@ async function assertFrontendProxySmoke(input: {
   assert.match(app.body, /fetchFileAssets/);
   assert.match(app.body, /uploadFileAsset/);
   assert.match(app.body, /fetchFileAssetDataUrl/);
+  assert.match(app.body, /fetchFileAssetStoragePolicy/);
+  assert.match(app.body, /validateLogoFileAgainstPolicy/);
   assert.match(app.body, /createClinicLogoAsset/);
   assert.match(app.body, /clinic-logo-asset-picker/);
   assert.match(app.body, /queueReportStartDate/);
