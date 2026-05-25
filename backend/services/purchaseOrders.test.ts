@@ -140,6 +140,12 @@ test('submit and approve purchase order update approval state', async () => {
   const db = {
     async query<T = unknown>(sql: string) {
       calls.push(sql);
+      if (sql.includes('SELECT step.id')) {
+        return { rows: [{ id: 'step-1', required_role: 'admin' }] as T[] };
+      }
+      if (sql.includes('FROM purchase_order_approval_steps') && sql.includes("status = 'pending'")) {
+        return { rows: [] as T[] };
+      }
       if (sql.includes('UPDATE purchase_orders')) {
         return { rows: [{ id: 'po-1' }] as T[] };
       }

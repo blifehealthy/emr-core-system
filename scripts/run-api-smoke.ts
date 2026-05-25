@@ -59,6 +59,7 @@ const migrations = [
   '0027_add_phase_3d_inventory_lots.up.sql',
   '0028_add_phase_3e_procurement.up.sql',
   '0029_add_phase_3f_purchase_order_approvals.up.sql',
+  '0030_add_phase_3g_multi_approver_routing.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -949,6 +950,44 @@ async function main() {
     );
     assert.ok(suppliers.data.some((item) => item.id === supplier.data.id));
 
+    const approvalPolicyOne = await requestJson<{ id: string; approval_sequence: number }>(
+      '/api/purchase-order-approval-policies',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        policyName: `Smoke manager approval ${Date.now()}`,
+        minTotalAmount: 0,
+        maxTotalAmount: 1000,
+        approvalSequence: 1,
+        requiredRole: 'admin',
+      }
+    );
+    assert.equal(approvalPolicyOne.data.approval_sequence, 1);
+
+    const approvalPolicyTwo = await requestJson<{ id: string; approval_sequence: number }>(
+      '/api/purchase-order-approval-policies',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        policyName: `Smoke owner approval ${Date.now()}`,
+        minTotalAmount: 0,
+        maxTotalAmount: 1000,
+        approvalSequence: 2,
+        requiredRole: 'admin',
+      }
+    );
+    assert.equal(approvalPolicyTwo.data.approval_sequence, 2);
+
+    const approvalPolicies = await requestJson<Array<{ id: string }>>(
+      '/api/purchase-order-approval-policies?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=10',
+      adminHeaders
+    );
+    assert.ok(approvalPolicies.data.some((item) => item.id === approvalPolicyOne.data.id));
+
     const purchaseOrder = await requestJson<{
       id: string;
       purchase_order_number: string;
@@ -984,6 +1023,7 @@ async function main() {
     const submittedPurchaseOrder = await requestJson<{
       id: string;
       approval_status: string;
+      approval_steps: Array<{ id: string; status: string; approval_sequence: number }>;
     }>(
       `/api/purchase-orders/${purchaseOrder.data.id}/submit`,
       adminHeaders,
@@ -992,20 +1032,45 @@ async function main() {
       { submittedByUserId: '10000000-0000-0000-0000-000000000201' }
     );
     assert.equal(submittedPurchaseOrder.data.approval_status, 'pending_approval');
+    assert.equal(submittedPurchaseOrder.data.approval_steps.length, 2);
 
     const approvedPurchaseOrder = await requestJson<{
       id: string;
       status: string;
       approval_status: string;
+      approval_steps: Array<{ id: string; status: string; approval_sequence: number }>;
     }>(
       `/api/purchase-orders/${purchaseOrder.data.id}/approve`,
       adminHeaders,
       'POST',
       200,
-      { approvedByUserId: '10000000-0000-0000-0000-000000000201' }
+      {
+        approvalStepId: submittedPurchaseOrder.data.approval_steps[0].id,
+        approvedByUserId: '10000000-0000-0000-0000-000000000201',
+        approverRole: 'admin',
+      }
     );
-    assert.equal(approvedPurchaseOrder.data.approval_status, 'approved');
-    assert.equal(approvedPurchaseOrder.data.status, 'ordered');
+    assert.equal(approvedPurchaseOrder.data.approval_status, 'pending_approval');
+    assert.equal(approvedPurchaseOrder.data.status, 'draft');
+
+    const fullyApprovedPurchaseOrder = await requestJson<{
+      id: string;
+      status: string;
+      approval_status: string;
+      approval_steps: Array<{ id: string; status: string; approval_sequence: number }>;
+    }>(
+      `/api/purchase-orders/${purchaseOrder.data.id}/approve`,
+      adminHeaders,
+      'POST',
+      200,
+      {
+        approvalStepId: approvedPurchaseOrder.data.approval_steps.find((step) => step.status === 'pending')?.id,
+        approvedByUserId: '10000000-0000-0000-0000-000000000201',
+        approverRole: 'admin',
+      }
+    );
+    assert.equal(fullyApprovedPurchaseOrder.data.approval_status, 'approved');
+    assert.equal(fullyApprovedPurchaseOrder.data.status, 'ordered');
 
     const receivedPurchaseOrder = await requestJson<{
       id: string;

@@ -530,6 +530,7 @@ export type PurchaseOrderApprovalStatus =
   | 'pending_approval'
   | 'approved'
   | 'rejected';
+export type PurchaseOrderApprovalStepStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
   severity: 'critical' | 'warning';
@@ -727,13 +728,39 @@ export type SubmitPurchaseOrderInput = {
 
 export type ApprovePurchaseOrderInput = {
   purchaseOrderId: string;
+  approvalStepId?: string | null;
   approvedByUserId?: string | null;
+  approverRole?: UserRole | null;
 };
 
 export type RejectPurchaseOrderInput = {
   purchaseOrderId: string;
+  approvalStepId?: string | null;
   rejectedByUserId?: string | null;
+  approverRole?: UserRole | null;
   rejectionReason: string;
+};
+
+export type CreatePurchaseOrderApprovalPolicyInput = {
+  clinicId: string;
+  policyName: string;
+  minTotalAmount?: number | string;
+  maxTotalAmount?: number | string | null;
+  approvalSequence: number;
+  requiredRole?: UserRole;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdatePurchaseOrderApprovalPolicyInput = {
+  policyId: string;
+  policyName?: string;
+  minTotalAmount?: number | string;
+  maxTotalAmount?: number | string | null;
+  approvalSequence?: number;
+  requiredRole?: UserRole;
+  isActive?: boolean;
+  notes?: string | null;
 };
 
 export type CreateDrugInteractionRuleInput = {
@@ -1178,6 +1205,18 @@ export type Dependencies = {
   approvePurchaseOrder?: (input: ApprovePurchaseOrderInput) => Promise<unknown | null>;
   rejectPurchaseOrder?: (input: RejectPurchaseOrderInput) => Promise<unknown | null>;
   receivePurchaseOrder?: (input: ReceivePurchaseOrderInput) => Promise<unknown | null>;
+  listPurchaseOrderApprovalPolicies?: (input: {
+    clinicId: string;
+    active?: AdminActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createPurchaseOrderApprovalPolicy?: (
+    input: CreatePurchaseOrderApprovalPolicyInput
+  ) => Promise<unknown>;
+  updatePurchaseOrderApprovalPolicy?: (
+    input: UpdatePurchaseOrderApprovalPolicyInput
+  ) => Promise<unknown | null>;
   listStockMovements?: (input: {
     clinicId: string;
     inventoryItemId?: string;

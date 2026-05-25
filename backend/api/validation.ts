@@ -28,6 +28,8 @@ import type {
   SubmitPurchaseOrderInput,
   ApprovePurchaseOrderInput,
   RejectPurchaseOrderInput,
+  CreatePurchaseOrderApprovalPolicyInput,
+  UpdatePurchaseOrderApprovalPolicyInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
   DispensePrescriptionInput,
@@ -136,6 +138,7 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
   'adjustment_out',
   'return',
 ];
+const userRoles: UserRole[] = ['doctor', 'nurse', 'admin'];
 const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
 const purchaseOrderStatuses: PurchaseOrderStatus[] = [
   'draft',
@@ -2934,12 +2937,18 @@ export function validateApprovePurchaseOrderBody(
 
   const approvedByUserId = readOptionalNullableStringField(candidate, 'approvedByUserId');
   if (!approvedByUserId.ok) return approvedByUserId;
+  const approvalStepId = readOptionalNullableStringField(candidate, 'approvalStepId');
+  if (!approvalStepId.ok) return approvalStepId;
+  const approverRole = readEnumValue<UserRole>(candidate.approverRole, 'approverRole', userRoles);
+  if (!approverRole.ok) return approverRole;
 
   return {
     ok: true,
     value: {
       purchaseOrderId,
+      approvalStepId: approvalStepId.value,
       approvedByUserId: approvedByUserId.value,
+      approverRole: approverRole.value,
     },
   };
 }
@@ -2955,6 +2964,10 @@ export function validateRejectPurchaseOrderBody(
 
   const rejectedByUserId = readOptionalNullableStringField(candidate, 'rejectedByUserId');
   if (!rejectedByUserId.ok) return rejectedByUserId;
+  const approvalStepId = readOptionalNullableStringField(candidate, 'approvalStepId');
+  if (!approvalStepId.ok) return approvalStepId;
+  const approverRole = readEnumValue<UserRole>(candidate.approverRole, 'approverRole', userRoles);
+  if (!approverRole.ok) return approverRole;
   const rejectionReason = readRequiredString(candidate.rejectionReason, 'rejectionReason');
   if (!rejectionReason.ok) return rejectionReason;
 
@@ -2962,8 +2975,108 @@ export function validateRejectPurchaseOrderBody(
     ok: true,
     value: {
       purchaseOrderId,
+      approvalStepId: approvalStepId.value,
       rejectedByUserId: rejectedByUserId.value,
+      approverRole: approverRole.value,
       rejectionReason: rejectionReason.value,
+    },
+  };
+}
+
+export function validateCreatePurchaseOrderApprovalPolicyBody(body: unknown):
+  | { ok: true; value: CreatePurchaseOrderApprovalPolicyInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const policyName = readRequiredString(candidate.policyName, 'policyName');
+  if (!policyName.ok) return policyName;
+  const minTotalAmount = readOptionalNonNegativeNumberLikeField(candidate, 'minTotalAmount');
+  if (!minTotalAmount.ok) return minTotalAmount;
+  const maxTotalAmount = readOptionalNonNegativeNumberLikeField(candidate, 'maxTotalAmount');
+  if (!maxTotalAmount.ok) return maxTotalAmount;
+  const approvalSequence = readPositiveIntegerValue(candidate.approvalSequence, 'approvalSequence');
+  if (!approvalSequence.ok) return approvalSequence;
+  const requiredRole = readEnumValue<UserRole>(candidate.requiredRole, 'requiredRole', userRoles);
+  if (!requiredRole.ok) return requiredRole;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      policyName: policyName.value,
+      minTotalAmount: minTotalAmount.value ?? undefined,
+      maxTotalAmount: maxTotalAmount.value,
+      approvalSequence: approvalSequence.value,
+      requiredRole: requiredRole.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdatePurchaseOrderApprovalPolicyBody(
+  body: unknown,
+  policyId: string
+): { ok: true; value: UpdatePurchaseOrderApprovalPolicyInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const hasChanges = [
+    'policyName',
+    'minTotalAmount',
+    'maxTotalAmount',
+    'approvalSequence',
+    'requiredRole',
+    'isActive',
+    'notes',
+  ].some((field) => Object.hasOwn(candidate, field));
+  if (!hasChanges) {
+    return { ok: false, error: 'At least one approval policy field must be provided for update' };
+  }
+
+  const policyName = readOptionalTrimmedStringField(candidate, 'policyName');
+  if (!policyName.ok) return policyName;
+  const minTotalAmount = readOptionalNonNegativeNumberLikeField(candidate, 'minTotalAmount');
+  if (!minTotalAmount.ok) return minTotalAmount;
+  const maxTotalAmount = readOptionalNonNegativeNumberLikeField(candidate, 'maxTotalAmount');
+  if (!maxTotalAmount.ok) return maxTotalAmount;
+  const approvalSequence = Object.hasOwn(candidate, 'approvalSequence')
+    ? readPositiveIntegerValue(candidate.approvalSequence, 'approvalSequence')
+    : { ok: true as const, value: undefined };
+  if (!approvalSequence.ok) return approvalSequence;
+  const requiredRole = readEnumValue<UserRole>(candidate.requiredRole, 'requiredRole', userRoles);
+  if (!requiredRole.ok) return requiredRole;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      policyId,
+      ...(Object.hasOwn(candidate, 'policyName') ? { policyName: policyName.value } : {}),
+      ...(Object.hasOwn(candidate, 'minTotalAmount')
+        ? { minTotalAmount: minTotalAmount.value ?? undefined }
+        : {}),
+      ...(Object.hasOwn(candidate, 'maxTotalAmount') ? { maxTotalAmount: maxTotalAmount.value } : {}),
+      ...(Object.hasOwn(candidate, 'approvalSequence')
+        ? { approvalSequence: approvalSequence.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'requiredRole') ? { requiredRole: requiredRole.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
 }
@@ -3931,6 +4044,15 @@ function readRequiredIntegerField(value: unknown, fieldName: string) {
   }
 
   return { ok: true as const, value };
+}
+
+function readPositiveIntegerValue(value: unknown, fieldName: string) {
+  const integer = readRequiredIntegerField(value, fieldName);
+  if (!integer.ok) return integer;
+  if (integer.value <= 0) {
+    return { ok: false as const, error: `${fieldName} must be greater than zero` };
+  }
+  return integer;
 }
 
 function readOptionalNullableString(value: unknown): string | null | undefined {

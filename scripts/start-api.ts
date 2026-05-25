@@ -83,11 +83,14 @@ import {
 } from '../backend/services/inventoryLots.ts';
 import {
   createPurchaseOrder,
+  createPurchaseOrderApprovalPolicy,
   approvePurchaseOrder,
+  listPurchaseOrderApprovalPolicies,
   listPurchaseOrders,
   rejectPurchaseOrder,
   receivePurchaseOrder,
   submitPurchaseOrder,
+  updatePurchaseOrderApprovalPolicy,
   updatePurchaseOrder,
 } from '../backend/services/purchaseOrders.ts';
 import {
@@ -251,6 +254,9 @@ const server = createNodeServer({
   approvePurchaseOrder: approvePurchaseOrder(db),
   rejectPurchaseOrder: rejectPurchaseOrder(db),
   receivePurchaseOrder: receivePurchaseOrder(db),
+  listPurchaseOrderApprovalPolicies: listPurchaseOrderApprovalPolicies(db),
+  createPurchaseOrderApprovalPolicy: createPurchaseOrderApprovalPolicy(db),
+  updatePurchaseOrderApprovalPolicy: updatePurchaseOrderApprovalPolicy(db),
   listStockMovements: listStockMovements(db),
   listDrugInteractionRules: listDrugInteractionRules(db),
   createDrugInteractionRule: createDrugInteractionRule(db),

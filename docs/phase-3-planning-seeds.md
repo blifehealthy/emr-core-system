@@ -26,8 +26,10 @@ real UAT findings, but the likely product directions are below.
   order receiving into inventory lots with stock movement audit.
 - Phase 3F completed purchase order submit/approve/reject controls and blocks
   receiving until a purchase order is approved.
-- Remaining pharmacy follow-up should come from UAT: approval thresholds,
-  multi-approver routing, multi-location stock, barcode scanning, supplier
+- Phase 3G completed approval thresholds, generated approval steps, and
+  multi-step approval routing.
+- Remaining pharmacy follow-up should come from UAT: budget controls,
+  notification integration, multi-location stock, barcode scanning, supplier
   payment handoff, or controlled substance workflow.
 
 ### Patient Communication

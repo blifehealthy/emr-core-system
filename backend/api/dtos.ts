@@ -356,6 +356,39 @@ const PURCHASE_ORDER_LINE_KEYS = [
   'deleted_at',
 ] as const;
 
+const PURCHASE_ORDER_APPROVAL_STEP_KEYS = [
+  'id',
+  'purchase_order_id',
+  'policy_id',
+  'approval_sequence',
+  'required_role',
+  'status',
+  'approved_at',
+  'approved_by_user_id',
+  'rejected_at',
+  'rejected_by_user_id',
+  'rejection_reason',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const PURCHASE_ORDER_APPROVAL_POLICY_KEYS = [
+  'id',
+  'clinic_id',
+  'policy_name',
+  'min_total_amount',
+  'max_total_amount',
+  'approval_sequence',
+  'required_role',
+  'is_active',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const PURCHASE_ORDER_KEYS = [
   'id',
   'clinic_id',
@@ -809,12 +842,25 @@ export function toPurchaseOrderDto(row: unknown): Record<string, unknown> {
     if (Array.isArray(source.lines)) {
       order.lines = source.lines.map((line) => pickKeys(line, [...PURCHASE_ORDER_LINE_KEYS]));
     }
+    if (Array.isArray(source.approval_steps)) {
+      order.approval_steps = source.approval_steps.map((step) =>
+        pickKeys(step, [...PURCHASE_ORDER_APPROVAL_STEP_KEYS])
+      );
+    }
   }
   return order;
 }
 
 export function toPurchaseOrderDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPurchaseOrderDto(row));
+}
+
+export function toPurchaseOrderApprovalPolicyDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...PURCHASE_ORDER_APPROVAL_POLICY_KEYS]);
+}
+
+export function toPurchaseOrderApprovalPolicyDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toPurchaseOrderApprovalPolicyDto(row));
 }
 
 export function toStockMovementDto(row: unknown): Record<string, unknown> {

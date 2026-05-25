@@ -18,6 +18,7 @@ import {
   handleCreateDrugInteractionRule,
   handleCreateInventoryItem,
   handleCreatePurchaseOrder,
+  handleCreatePurchaseOrderApprovalPolicy,
   handleCreateSupplier,
   handleCreatePatientAllergy,
   handleCreatePatientCondition,
@@ -75,6 +76,7 @@ import {
   handleListInventoryItems,
   handleListInventoryLots,
   handleListPurchaseOrders,
+  handleListPurchaseOrderApprovalPolicies,
   handleListSuppliers,
   handleListMedicationDispenses,
   handleListStockMovements,
@@ -100,6 +102,7 @@ import {
   handleUpdateDrugInteractionRule,
   handleUpdateInventoryItem,
   handleUpdatePurchaseOrder,
+  handleUpdatePurchaseOrderApprovalPolicy,
   handleUpdateSupplier,
   handleUpsertClinicSettings,
   handleUpdatePatientAllergy,
@@ -304,6 +307,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListPurchaseOrders(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/purchase-order-approval-policies') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListPurchaseOrderApprovalPolicies(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/stock-movements') {
@@ -678,6 +687,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreatePurchaseOrder(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/purchase-order-approval-policies') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreatePurchaseOrderApprovalPolicy(actorAwareRequest, dependencies);
+    }
+
     const purchaseOrderReceivePostMatch =
       request.method === 'POST'
         ? request.path.match(/^\/api\/purchase-orders\/([^/]+)\/receive$/)
@@ -980,6 +995,17 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
         if (roleError) return roleError;
         return handleUpdatePurchaseOrder(actorAwareRequest, dependencies, purchaseOrderMatch[1]);
+      }
+
+      const approvalPolicyMatch = request.path.match(/^\/api\/purchase-order-approval-policies\/([^/]+)$/);
+      if (approvalPolicyMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdatePurchaseOrderApprovalPolicy(
+          actorAwareRequest,
+          dependencies,
+          approvalPolicyMatch[1]
+        );
       }
 
       const interactionRuleMatch = request.path.match(/^\/api\/drug-interaction-rules\/([^/]+)$/);

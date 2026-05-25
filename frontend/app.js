@@ -48,6 +48,7 @@ let currentInventoryItems = [];
 let currentInventoryLots = [];
 let currentSuppliers = [];
 let currentPurchaseOrders = [];
+let currentPurchaseOrderApprovalPolicies = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -354,6 +355,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
     currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
+    currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -848,6 +850,26 @@ async function fetchPurchaseOrders(clinicId, apiToken, status = 'all') {
   });
 
   const response = await fetch(`/api/purchase-orders?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchPurchaseOrderApprovalPolicies(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/purchase-order-approval-policies?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2356,6 +2378,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
+  currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -3716,6 +3739,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentInventoryLots = await fetchInventoryLots(refreshed.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
+  currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -3922,6 +3946,7 @@ function createPharmacyInventoryPanel(patient) {
     ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
     ['Suppliers', currentSuppliers.length],
     ['PO open', currentPurchaseOrders.filter((order) => !['received', 'cancelled'].includes(order.status)).length],
+    ['Approval policies', currentPurchaseOrderApprovalPolicies.length],
   ]));
 
   const form = document.createElement('form');
@@ -4012,6 +4037,26 @@ function createPharmacyInventoryPanel(patient) {
   });
   section.append(poForm);
 
+  const policyForm = document.createElement('form');
+  policyForm.className = 'nested-inline-form';
+  policyForm.append(
+    createFormField('policyName', 'Approval policy', 'input', true),
+    createFormField('minTotalAmount', 'Min total', 'input'),
+    createFormField('maxTotalAmount', 'Max total', 'input'),
+    createFormField('approvalSequence', 'Sequence', 'input', true),
+    createRoleSelectField('requiredRole', 'Required role')
+  );
+  const policySubmit = document.createElement('button');
+  policySubmit.type = 'submit';
+  policySubmit.className = 'secondary-button compact-button';
+  policySubmit.textContent = 'เพิ่ม approval policy';
+  policyForm.append(policySubmit);
+  policyForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createPurchaseOrderApprovalPolicyFromForm(patient, policyForm, policySubmit);
+  });
+  section.append(policyForm);
+
   const list = document.createElement('div');
   list.className = 'record-list';
   for (const item of currentInventoryItems.slice(0, 6)) {
@@ -4044,7 +4089,30 @@ function createPharmacyInventoryPanel(patient) {
     section.append(poList);
   }
 
+  const policyList = document.createElement('div');
+  policyList.className = 'record-list';
+  for (const policy of currentPurchaseOrderApprovalPolicies.slice(0, 4)) {
+    policyList.append(createRecordCard(policy, approvalPolicySummary, [
+      'policy_name',
+      'min_total_amount',
+      'max_total_amount',
+      'approval_sequence',
+      'required_role',
+    ]));
+  }
+  if (currentPurchaseOrderApprovalPolicies.length > 0) {
+    section.append(policyList);
+  }
+
   return section;
+}
+
+function createRoleSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = createSelect(name, ['admin', 'doctor', 'nurse']);
+  label.append(select);
+  return label;
 }
 
 function createSupplierSelectField(name, labelText, required = false) {
@@ -4145,6 +4213,12 @@ function createPurchaseOrderCard(order) {
     detail.textContent = `${line.inventory_item_display_name ?? line.description}: ${line.received_quantity ?? 0}/${line.ordered_quantity ?? 0}`;
     card.append(detail);
   }
+  for (const step of order.approval_steps ?? []) {
+    const detail = document.createElement('p');
+    detail.className = 'muted-text compact-note';
+    detail.textContent = `Approval ${step.approval_sequence}: ${step.required_role} · ${step.status}`;
+    card.append(detail);
+  }
   if (!['received', 'cancelled'].includes(order.status)) {
     const actions = document.createElement('div');
     actions.className = 'record-actions';
@@ -4164,14 +4238,14 @@ function createPurchaseOrderCard(order) {
       approveButton.className = 'primary-button small-button';
       approveButton.textContent = 'อนุมัติ PO';
       approveButton.addEventListener('click', async () => {
-        await approvePurchaseOrder(order);
+        await approvePurchaseOrder(order, nextPendingApprovalStep(order));
       });
       const rejectButton = document.createElement('button');
       rejectButton.type = 'button';
       rejectButton.className = 'secondary-button small-button';
       rejectButton.textContent = 'ไม่อนุมัติ';
       rejectButton.addEventListener('click', async () => {
-        await rejectPurchaseOrder(order);
+        await rejectPurchaseOrder(order, nextPendingApprovalStep(order));
       });
       actions.append(approveButton, rejectButton);
     }
@@ -4324,23 +4398,62 @@ async function createPurchaseOrderFromForm(patient, form, submit) {
   }
 }
 
+async function createPurchaseOrderApprovalPolicyFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/purchase-order-approval-policies', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        policyName: values.policyName,
+        minTotalAmount: values.minTotalAmount || '0',
+        maxTotalAmount: values.maxTotalAmount,
+        approvalSequence: Number(values.approvalSequence || 1),
+        requiredRole: values.requiredRole || 'admin',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม approval policy แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม approval policy ไม่สำเร็จ');
+    setStatus('เพิ่ม approval policy ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม approval policy';
+  }
+}
+
 async function submitPurchaseOrder(order) {
   await patchPurchaseOrderApproval(order, 'submit', {
     submittedByUserId: readValue('userId'),
   }, 'ส่ง PO เพื่ออนุมัติแล้ว');
 }
 
-async function approvePurchaseOrder(order) {
+function nextPendingApprovalStep(order) {
+  return (order.approval_steps ?? []).find((step) => step.status === 'pending') ?? null;
+}
+
+async function approvePurchaseOrder(order, step = null) {
   await patchPurchaseOrderApproval(order, 'approve', {
+    approvalStepId: step?.id,
     approvedByUserId: readValue('userId'),
+    approverRole: readValue('userRole') || 'admin',
   }, 'อนุมัติ PO แล้ว');
 }
 
-async function rejectPurchaseOrder(order) {
+async function rejectPurchaseOrder(order, step = null) {
   const rejectionReason = window.prompt('Reason', 'ต้องแก้ไขรายการก่อนอนุมัติ');
   if (!rejectionReason) return;
   await patchPurchaseOrderApproval(order, 'reject', {
+    approvalStepId: step?.id,
     rejectedByUserId: readValue('userId'),
+    approverRole: readValue('userRole') || 'admin',
     rejectionReason,
   }, 'ไม่อนุมัติ PO แล้ว');
 }
@@ -5720,6 +5833,10 @@ function inventoryLotSummary(item) {
 
 function purchaseOrderSummary(item) {
   return `${item.purchase_order_number ?? item.id} · ${item.approval_status ?? 'draft'} · ${item.status ?? 'draft'}`;
+}
+
+function approvalPolicySummary(item) {
+  return `${item.policy_name ?? item.id} · ${item.required_role ?? 'admin'} #${item.approval_sequence ?? 1}`;
 }
 
 function invoiceSummary(item) {

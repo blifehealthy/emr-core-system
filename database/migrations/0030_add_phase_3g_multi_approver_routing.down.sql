@@ -1,0 +1,7 @@
+DROP TRIGGER IF EXISTS update_purchase_order_approval_steps_updated_at ON purchase_order_approval_steps;
+DROP TABLE IF EXISTS purchase_order_approval_steps;
+
+DROP TRIGGER IF EXISTS update_purchase_order_approval_policies_updated_at ON purchase_order_approval_policies;
+DROP TABLE IF EXISTS purchase_order_approval_policies;
+
+DROP TYPE IF EXISTS purchase_order_approval_step_status;

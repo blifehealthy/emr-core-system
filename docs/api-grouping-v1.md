@@ -258,6 +258,13 @@ All routes except `GET /health` can be protected by bearer token when
 - Purchase order receiving requires approved purchase orders.
 - The Prescriptions tab exposes approval actions on purchase order cards.
 
+## Phase 3G Additions
+
+- Purchase order approval policies now define threshold-based approval routing.
+- Submitting a purchase order creates approval steps from matching policies.
+- Approval and rejection can target a specific pending step.
+- Purchase orders become approved only after every required step is approved.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while
