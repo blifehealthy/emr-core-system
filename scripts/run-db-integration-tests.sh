@@ -60,7 +60,8 @@ for migration in \
   "$MIGRATIONS_DIR/0018_add_prescription_safety_override.up.sql" \
   "$MIGRATIONS_DIR/0019_add_drug_interaction_rules.up.sql" \
   "$MIGRATIONS_DIR/0020_add_user_login_security.up.sql" \
-  "$MIGRATIONS_DIR/0021_add_user_oidc_subject.up.sql"
+  "$MIGRATIONS_DIR/0021_add_user_oidc_subject.up.sql" \
+  "$MIGRATIONS_DIR/0022_add_billing_foundation.up.sql"
 do
   run_psql "$migration"
 done

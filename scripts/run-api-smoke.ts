@@ -51,6 +51,7 @@ const migrations = [
   '0019_add_drug_interaction_rules.up.sql',
   '0020_add_user_login_security.up.sql',
   '0021_add_user_oidc_subject.up.sql',
+  '0022_add_billing_foundation.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -847,6 +848,74 @@ async function main() {
     assert.equal(createdPrescription.data.status, 'active');
     assert.equal(createdPrescription.data.drug_catalog_id, '10000000-0000-0000-0000-000000020001');
     assert.equal(createdPrescription.data.safety_warnings[0].type, 'allergy');
+
+    const createdInvoice = await requestJson<{
+      id: string;
+      invoice_number: string;
+      total_amount: string;
+      balance_amount: string;
+      line_items: Array<{ description: string }>;
+    }>(
+      '/api/invoices',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        patientId: '10000000-0000-0000-0000-000000001001',
+        encounterId: '10000000-0000-0000-0000-000000002001',
+        invoiceNumber: `INV-SMOKE-${Date.now()}`,
+        status: 'issued',
+        lineItems: [
+          {
+            itemType: 'visit',
+            description: 'Doctor visit smoke charge',
+            quantity: 1,
+            unitPriceAmount: 800,
+            taxAmount: 0,
+          },
+          {
+            itemType: 'medication',
+            description: createdPrescription.data.medication_name,
+            referenceType: 'prescription',
+            referenceId: createdPrescription.data.id,
+            quantity: 1,
+            unitPriceAmount: 120,
+            discountAmount: 20,
+          },
+        ],
+      }
+    );
+    assert.equal(createdInvoice.data.line_items.length, 2);
+    assert.equal(Number(createdInvoice.data.total_amount), 900);
+    assert.equal(Number(createdInvoice.data.balance_amount), 900);
+
+    const recordedPayment = await requestJson<{
+      id: string;
+      status: string;
+      paid_amount: string;
+      balance_amount: string;
+      payments: Array<{ payment_number: string; method: string }>;
+    }>(
+      `/api/invoices/${createdInvoice.data.id}/payments`,
+      adminHeaders,
+      'POST',
+      200,
+      {
+        paymentNumber: `PAY-SMOKE-${Date.now()}`,
+        method: 'cash',
+        amount: 400,
+      }
+    );
+    assert.equal(recordedPayment.data.status, 'partially_paid');
+    assert.equal(Number(recordedPayment.data.paid_amount), 400);
+    assert.equal(Number(recordedPayment.data.balance_amount), 500);
+
+    const invoiceList = await requestJson<Array<{ id: string }>>(
+      '/api/invoices?clinicId=10000000-0000-0000-0000-000000000101&status=partially_paid&limit=5&offset=0',
+      adminHeaders
+    );
+    assert.ok(invoiceList.data.some((item) => item.id === createdInvoice.data.id));
 
     const updatedPrescription = await requestJson<{
       id: string;

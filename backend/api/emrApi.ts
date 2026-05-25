@@ -7,6 +7,7 @@ import {
   handleCreateClinicalNoteTemplate,
   handleCreateConsentRecord,
   handleCreateFileAsset,
+  handleCreateInvoice,
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
@@ -41,6 +42,7 @@ import {
   handleGetEncounter,
   handleGetFileAsset,
   handleGetFileAssetStoragePolicy,
+  handleGetInvoice,
   handleGetPatientDetail,
   handleGetPatientAllergy,
   handleGetPatientCondition,
@@ -60,6 +62,7 @@ import {
   handleListDrugCatalog,
   handleListDrugInteractionRules,
   handleListFileAssets,
+  handleListInvoices,
   handleListPatientAllergies,
   handleListPatientConditions,
   handleListPatientFlags,
@@ -88,6 +91,7 @@ import {
   handleUpdateUser,
   handleUpdateVitalSign,
   handleUploadFileAsset,
+  handleRecordInvoicePayment,
   notFound,
 } from './controllers.ts';
 import { requireRole } from './auth.ts';
@@ -209,6 +213,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'attachment_read');
       if (roleError) return roleError;
       return handleGetFileAssetStoragePolicy(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/invoices') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleListInvoices(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/users') {
@@ -409,6 +419,14 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleGetPrescription(actorAwareRequest, dependencies, prescriptionReadMatch[1]);
     }
 
+    const invoiceReadMatch =
+      request.method === 'GET' ? request.path.match(/^\/api\/invoices\/([^/]+)$/) : null;
+    if (invoiceReadMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleGetInvoice(dependencies, invoiceReadMatch[1]);
+    }
+
     const consentReadMatch =
       request.method === 'GET' ? request.path.match(/^\/api\/consents\/([^/]+)$/) : null;
     if (consentReadMatch) {
@@ -523,6 +541,22 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'prescription_write');
       if (roleError) return roleError;
       return handleCreatePrescription(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/invoices') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateInvoice(actorAwareRequest, dependencies);
+    }
+
+    const invoicePaymentMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/invoices\/([^/]+)\/payments$/)
+        : null;
+    if (invoicePaymentMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleRecordInvoicePayment(actorAwareRequest, dependencies, invoicePaymentMatch[1]);
     }
 
     if (request.method === 'POST' && request.path === '/api/consents') {

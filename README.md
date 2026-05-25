@@ -134,6 +134,16 @@ combined closure docs are tracked in:
 - `docs/phase-2-pilot-go-no-go-th.md`
 - `docs/phase-3-planning-seeds.md`
 
+## Phase 3A
+
+Phase 3A billing/payment foundation has started. The first slice adds invoices,
+invoice line items, payment recording, billing permissions, and audit coverage
+for cashier workflows. Current scope and review docs are tracked in:
+
+- `docs/phase-3a-plan.md`
+- `docs/phase-3a-clinician-summary-th.md`
+- `docs/phase-3a-uat-checklist-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

@@ -97,6 +97,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0021_add_user_oidc_subject.up.sql'),
     'expected OIDC subject mapping migration'
   );
+  assert.ok(
+    filenames.includes('0022_add_billing_foundation.up.sql'),
+    'expected billing foundation migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

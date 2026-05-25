@@ -206,6 +206,18 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async createPrescription() {
       return { id: 'prescription-1' };
     },
+    async listInvoices() {
+      return { rows: [], meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null } };
+    },
+    async getInvoiceById() {
+      return { id: 'invoice-1', line_items: [], payments: [] };
+    },
+    async createInvoice() {
+      return { id: 'invoice-1', invoice_number: 'INV-001', line_items: [], payments: [] };
+    },
+    async recordInvoicePayment() {
+      return { id: 'invoice-1', status: 'paid', line_items: [], payments: [] };
+    },
     async createDiagnosis() {
       return { id: 'diagnosis-1' };
     },
@@ -463,6 +475,140 @@ test('audits role authorization failures as security events', async () => {
     oidcSubject: null,
     role: 'nurse',
   });
+});
+
+test('POST /api/invoices creates invoice and writes audit log', async () => {
+  let invoiceInput: unknown;
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      apiToken: 'expected-token',
+      async createInvoice(input) {
+        invoiceInput = input;
+        return {
+          id: 'invoice-1',
+          clinic_id: input.clinicId,
+          patient_id: input.patientId,
+          invoice_number: input.invoiceNumber,
+          total_amount: '850.00',
+          line_items: [{ id: 'line-1', description: input.lineItems[0].description }],
+          payments: [],
+        };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'POST',
+    path: '/api/invoices',
+    headers: {
+      authorization: 'Bearer expected-token',
+      'x-user-id': 'admin-1',
+      'x-user-role': 'admin',
+    },
+    body: {
+      clinicId: 'clinic-1',
+      patientId: 'patient-1',
+      invoiceNumber: 'INV-001',
+      lineItems: [
+        {
+          itemType: 'visit',
+          description: 'Doctor visit',
+          quantity: 1,
+          unitPriceAmount: 800,
+          discountAmount: 0,
+          taxAmount: 50,
+        },
+      ],
+    },
+  });
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(invoiceInput, {
+    clinicId: 'clinic-1',
+    patientId: 'patient-1',
+    appointmentId: undefined,
+    visitId: undefined,
+    encounterId: undefined,
+    invoiceNumber: 'INV-001',
+    status: undefined,
+    currency: undefined,
+    issuedAt: undefined,
+    dueAt: undefined,
+    notes: undefined,
+    lineItems: [
+      {
+        itemType: 'visit',
+        description: 'Doctor visit',
+        referenceType: undefined,
+        referenceId: undefined,
+        quantity: 1,
+        unitPriceAmount: 800,
+        discountAmount: 0,
+        taxAmount: 50,
+      },
+    ],
+  });
+  assert.equal(auditInputs[0].entityType, 'invoice');
+  assert.equal(auditInputs[0].action, 'created');
+});
+
+test('POST /api/invoices/:id/payments records payment and writes audit log', async () => {
+  let paymentInput: unknown;
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      apiToken: 'expected-token',
+      async recordInvoicePayment(input) {
+        paymentInput = input;
+        return {
+          id: input.invoiceId,
+          status: 'partially_paid',
+          paid_amount: input.amount,
+          balance_amount: '600.00',
+          line_items: [],
+          payments: [{ id: 'payment-1', payment_number: input.paymentNumber }],
+        };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'POST',
+    path: '/api/invoices/invoice-1/payments',
+    headers: {
+      authorization: 'Bearer expected-token',
+      'x-user-id': 'admin-1',
+      'x-user-role': 'admin',
+    },
+    body: {
+      paymentNumber: 'PAY-001',
+      method: 'cash',
+      amount: 400,
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(paymentInput, {
+    invoiceId: 'invoice-1',
+    paymentNumber: 'PAY-001',
+    method: 'cash',
+    amount: 400,
+    paidAt: undefined,
+    receivedByUserId: undefined,
+    referenceNumber: undefined,
+    notes: undefined,
+  });
+  assert.equal(auditInputs[0].entityType, 'invoice');
+  assert.equal(auditInputs[0].action, 'payment_recorded');
 });
 
 test('session bearer token resolves actor without role headers', async () => {

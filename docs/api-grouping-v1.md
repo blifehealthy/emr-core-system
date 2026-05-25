@@ -102,6 +102,15 @@ All routes except `GET /health` can be protected by bearer token when
 
 ## Files, Consent, and Audit
 
+## Billing and Payment
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/invoices` | List invoices by clinic with optional patient, status, limit, and offset filters. |
+| `GET` | `/api/invoices/:invoiceId` | Read one invoice with line items and payments. |
+| `POST` | `/api/invoices` | Create an invoice with line items and calculated totals. |
+| `POST` | `/api/invoices/:invoiceId/payments` | Record an invoice payment and recalculate paid, balance, and status. |
+
 ## Reporting
 
 | Method | Route | Purpose |
@@ -153,6 +162,17 @@ All routes except `GET /health` can be protected by bearer token when
 - Prescription safety checks return allergy and medication interaction warnings
   before prescribing.
 - Prescriptions can store warning snapshots in `safety_warnings`.
+
+## Phase 3A Additions
+
+- Billing foundation tables now store invoices, invoice line items, and invoice
+  payments.
+- Invoice creation calculates subtotal, discount, tax, total, paid amount, and
+  balance from structured line items and payments.
+- Payment recording updates invoice status to `partially_paid` or `paid` based
+  on the remaining balance.
+- Billing routes use dedicated read/write permissions and write audit logs when
+  invoices are created or payments are recorded.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

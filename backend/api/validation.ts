@@ -28,6 +28,7 @@ import type {
   CreateEncounterInput,
   CreatePractitionerValidatedInput,
   CreatePrescriptionInput,
+  CreateInvoiceInput,
   CreateUserValidatedInput,
   CreateVitalSignInput,
   DiagnosisStatus,
@@ -52,12 +53,16 @@ import type {
   UpdateSoapNoteInput,
   UpdatePractitionerValidatedInput,
   UpdatePrescriptionInput,
+  RecordInvoicePaymentInput,
   UpdateUserValidatedInput,
   UpdateVitalSignInput,
   UserRole,
   PrescriptionStatus,
   AssessPrescriptionSafetyInput,
   DrugInteractionSeverity,
+  InvoiceLineItemType,
+  InvoiceStatus,
+  PaymentMethod,
 } from './types.ts';
 
 const clinicVisitStatuses: ClinicVisitStatus[] = [
@@ -67,6 +72,23 @@ const clinicVisitStatuses: ClinicVisitStatus[] = [
   'completed',
   'discharged',
   'cancelled',
+];
+const invoiceStatuses: InvoiceStatus[] = ['draft', 'issued', 'partially_paid', 'paid', 'voided'];
+const invoiceLineItemTypes: InvoiceLineItemType[] = [
+  'visit',
+  'procedure',
+  'medication',
+  'lab',
+  'discount',
+  'other',
+];
+const paymentMethods: PaymentMethod[] = [
+  'cash',
+  'card',
+  'bank_transfer',
+  'qr',
+  'insurance',
+  'other',
 ];
 
 export function validateCreateAuthSessionBody(body: unknown):
@@ -92,6 +114,153 @@ export function validateCreateAuthSessionBody(body: unknown):
       clinicId: clinicId.value,
       username: username.value,
       loginCode: loginCode.value,
+    },
+  };
+}
+
+export function validateCreateInvoiceBody(body: unknown):
+  | { ok: true; value: CreateInvoiceInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+  const invoiceNumber = readRequiredString(candidate.invoiceNumber, 'invoiceNumber');
+  if (!invoiceNumber.ok) return invoiceNumber;
+
+  const status = readEnumValue<InvoiceStatus>(candidate.status, 'status', invoiceStatuses);
+  if (!status.ok) return status;
+
+  if (!Array.isArray(candidate.lineItems) || candidate.lineItems.length === 0) {
+    return { ok: false, error: 'lineItems must be a non-empty array' };
+  }
+
+  const lineItems: CreateInvoiceInput['lineItems'] = [];
+  for (const [index, item] of candidate.lineItems.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return { ok: false, error: `lineItems[${index}] must be an object` };
+    }
+
+    const entry = item as Record<string, unknown>;
+    const description = readRequiredString(entry.description, `lineItems[${index}].description`);
+    if (!description.ok) return description;
+    const itemType = readEnumValue<InvoiceLineItemType>(
+      entry.itemType,
+      `lineItems[${index}].itemType`,
+      invoiceLineItemTypes
+    );
+    if (!itemType.ok) return itemType;
+    const quantity = readPositiveNumberLikeValue(entry.quantity, `lineItems[${index}].quantity`);
+    if (!quantity.ok) return quantity;
+    const unitPriceAmount = readNonNegativeNumberLikeValue(
+      entry.unitPriceAmount,
+      `lineItems[${index}].unitPriceAmount`
+    );
+    if (!unitPriceAmount.ok) return unitPriceAmount;
+    const discountAmount = readOptionalNonNegativeNumberLikeValue(
+      entry.discountAmount,
+      `lineItems[${index}].discountAmount`
+    );
+    if (!discountAmount.ok) return discountAmount;
+    const taxAmount = readOptionalNonNegativeNumberLikeValue(
+      entry.taxAmount,
+      `lineItems[${index}].taxAmount`
+    );
+    if (!taxAmount.ok) return taxAmount;
+
+    const referenceType = readOptionalNullableStringField(entry, 'referenceType');
+    if (!referenceType.ok) return referenceType;
+    const referenceId = readOptionalNullableStringField(entry, 'referenceId');
+    if (!referenceId.ok) return referenceId;
+
+    lineItems.push({
+      itemType: itemType.value,
+      description: description.value,
+      referenceType: referenceType.value,
+      referenceId: referenceId.value,
+      quantity: quantity.value,
+      unitPriceAmount: unitPriceAmount.value,
+      discountAmount: discountAmount.value,
+      taxAmount: taxAmount.value,
+    });
+  }
+
+  const appointmentId = readOptionalNullableStringField(candidate, 'appointmentId');
+  if (!appointmentId.ok) return appointmentId;
+  const visitId = readOptionalNullableStringField(candidate, 'visitId');
+  if (!visitId.ok) return visitId;
+  const encounterId = readOptionalNullableStringField(candidate, 'encounterId');
+  if (!encounterId.ok) return encounterId;
+  const issuedAt = readOptionalNullableStringField(candidate, 'issuedAt');
+  if (!issuedAt.ok) return issuedAt;
+  const dueAt = readOptionalNullableStringField(candidate, 'dueAt');
+  if (!dueAt.ok) return dueAt;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      appointmentId: appointmentId.value,
+      visitId: visitId.value,
+      encounterId: encounterId.value,
+      invoiceNumber: invoiceNumber.value,
+      status: status.value,
+      currency:
+        typeof candidate.currency === 'string' && candidate.currency.trim().length > 0
+          ? candidate.currency.trim().toUpperCase()
+          : undefined,
+      issuedAt: issuedAt.value,
+      dueAt: dueAt.value,
+      notes: notes.value,
+      lineItems,
+    },
+  };
+}
+
+export function validateRecordInvoicePaymentBody(
+  body: unknown,
+  invoiceId: string
+): { ok: true; value: RecordInvoicePaymentInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const paymentNumber = readRequiredString(candidate.paymentNumber, 'paymentNumber');
+  if (!paymentNumber.ok) return paymentNumber;
+  const method = readRequiredEnumValue<PaymentMethod>(candidate.method, 'method', paymentMethods);
+  if (!method.ok) return method;
+  const amount = readPositiveNumberLikeValue(candidate.amount, 'amount');
+  if (!amount.ok) return amount;
+
+  const paidAt = readOptionalNullableStringField(candidate, 'paidAt');
+  if (!paidAt.ok) return paidAt;
+  const receivedByUserId = readOptionalNullableStringField(candidate, 'receivedByUserId');
+  if (!receivedByUserId.ok) return receivedByUserId;
+  const referenceNumber = readOptionalNullableStringField(candidate, 'referenceNumber');
+  if (!referenceNumber.ok) return referenceNumber;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      invoiceId,
+      paymentNumber: paymentNumber.value,
+      method: method.value,
+      amount: amount.value,
+      paidAt: paidAt.value,
+      receivedByUserId: receivedByUserId.value,
+      referenceNumber: referenceNumber.value,
+      notes: notes.value,
     },
   };
 }
@@ -2859,6 +3028,104 @@ function readOptionalNumberLikeField(
 ): { ok: true; value: number | string | null | undefined } | { ok: false; error: string } {
   const value = candidate[fieldName];
 
+  if (value === undefined || value === null) {
+    return { ok: true, value: value as null | undefined };
+  }
+
+  if (typeof value === 'number') {
+    return { ok: true, value };
+  }
+
+  if (typeof value === 'string') {
+    if (value.trim().length === 0) {
+      return { ok: false, error: `${fieldName} must not be an empty string` };
+    }
+
+    return { ok: true, value: value.trim() };
+  }
+
+  return { ok: false, error: `${fieldName} must be a number, string, or null` };
+}
+
+function readPositiveNumberLikeField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: number | string } | { ok: false; error: string } {
+  return readPositiveNumberLikeValue(candidate[fieldName], fieldName);
+}
+
+function readPositiveNumberLikeValue(
+  value: unknown,
+  fieldName: string
+): { ok: true; value: number | string } | { ok: false; error: string } {
+  const result = readOptionalNumberLikeValue(value, fieldName);
+  if (!result.ok) return result;
+  if (result.value === undefined || result.value === null) {
+    return { ok: false, error: `${fieldName} is required` };
+  }
+
+  const numberValue = Number(result.value);
+  if (!Number.isFinite(numberValue) || numberValue <= 0) {
+    return { ok: false, error: `${fieldName} must be greater than 0` };
+  }
+
+  return { ok: true, value: result.value };
+}
+
+function readNonNegativeNumberLikeField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: number | string } | { ok: false; error: string } {
+  return readNonNegativeNumberLikeValue(candidate[fieldName], fieldName);
+}
+
+function readNonNegativeNumberLikeValue(
+  value: unknown,
+  fieldName: string
+): { ok: true; value: number | string } | { ok: false; error: string } {
+  const result = readOptionalNumberLikeValue(value, fieldName);
+  if (!result.ok) return result;
+  if (result.value === undefined || result.value === null) {
+    return { ok: false, error: `${fieldName} is required` };
+  }
+
+  const numberValue = Number(result.value);
+  if (!Number.isFinite(numberValue) || numberValue < 0) {
+    return { ok: false, error: `${fieldName} must be greater than or equal to 0` };
+  }
+
+  return { ok: true, value: result.value };
+}
+
+function readOptionalNonNegativeNumberLikeField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: number | string | null | undefined } | { ok: false; error: string } {
+  return readOptionalNonNegativeNumberLikeValue(candidate[fieldName], fieldName);
+}
+
+function readOptionalNonNegativeNumberLikeValue(
+  value: unknown,
+  fieldName: string
+): { ok: true; value: number | string | null | undefined } | { ok: false; error: string } {
+  const result = readOptionalNumberLikeValue(value, fieldName);
+  if (!result.ok) return result;
+  if (result.value === undefined || result.value === null) {
+    return { ok: true, value: result.value };
+  }
+
+  const numberValue = Number(result.value);
+  if (!Number.isFinite(numberValue) || numberValue < 0) {
+    return { ok: false, error: `${fieldName} must be greater than or equal to 0` };
+  }
+
+  return { ok: true, value: result.value };
+}
+
+function readOptionalNumberLikeValue(
+  value: unknown,
+  fieldName: string
+): { ok: true; value: number | string | null | undefined } | { ok: false; error: string } {
   if (value === undefined || value === null) {
     return { ok: true, value: value as null | undefined };
   }

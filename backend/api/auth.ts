@@ -91,6 +91,8 @@ const permissions: Record<string, UserRole[]> = {
   drug_interaction_rule_write: ['admin'],
   prescription_read: ['doctor', 'nurse', 'admin'],
   prescription_write: ['doctor', 'admin'],
+  billing_read: ['doctor', 'nurse', 'admin'],
+  billing_write: ['admin'],
   soap_update: ['doctor', 'admin'],
   diagnosis_update: ['doctor', 'admin'],
   vital_sign_update: ['doctor', 'nurse', 'admin'],

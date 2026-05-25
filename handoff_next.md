@@ -528,6 +528,30 @@ Recommended next work:
 3. Fix only UAT blockers before pilot.
 4. Use `docs/phase-3-planning-seeds.md` after Phase 2 sign-off.
 
+## Phase 3A Status
+
+Phase 3A billing/payment foundation has started:
+
+- Billing schema added:
+  - `invoices`
+  - `invoice_line_items`
+  - `invoice_payments`
+- Billing APIs added:
+  - `GET /api/invoices`
+  - `GET /api/invoices/:id`
+  - `POST /api/invoices`
+  - `POST /api/invoices/:id/payments`
+- Admin can create invoices and record payments.
+- Doctor, nurse, and admin can read invoices.
+- Invoice creation and payment recording write audit logs.
+- API smoke covers invoice creation, payment recording, and partially-paid list.
+
+Recommended next Phase 3A batch:
+
+1. Add cashier frontend for invoice list/detail/create/payment.
+2. Add receipt print/export.
+3. Add void/refund workflow with audit.
+
 The deliverables added in this worktree are:
 
 - `docs/role-permission-matrix.md`
@@ -562,6 +586,9 @@ The deliverables added in this worktree are:
 - `docs/phase-2-uat-master-checklist-th.md`
 - `docs/phase-2-pilot-go-no-go-th.md`
 - `docs/phase-3-planning-seeds.md`
+- `docs/phase-3a-plan.md`
+- `docs/phase-3a-clinician-summary-th.md`
+- `docs/phase-3a-uat-checklist-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -610,5 +637,5 @@ Start by reading:
 
 Then produce:
 
-1. Phase 2 pilot UAT findings from `docs/phase-2-uat-master-checklist-th.md`
-2. Phase 3 planning after `docs/phase-2-pilot-go-no-go-th.md` is signed off
+1. Continue Phase 3A cashier frontend and receipt workflow
+2. Phase 2 pilot UAT findings from `docs/phase-2-uat-master-checklist-th.md`

@@ -103,6 +103,63 @@ const PRESCRIPTION_KEYS = [
   'deleted_at',
 ] as const;
 
+const INVOICE_KEYS = [
+  'id',
+  'clinic_id',
+  'patient_id',
+  'appointment_id',
+  'visit_id',
+  'encounter_id',
+  'invoice_number',
+  'status',
+  'currency',
+  'subtotal_amount',
+  'discount_amount',
+  'tax_amount',
+  'total_amount',
+  'paid_amount',
+  'balance_amount',
+  'issued_at',
+  'due_at',
+  'notes',
+  'void_reason',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INVOICE_LINE_ITEM_KEYS = [
+  'id',
+  'invoice_id',
+  'item_type',
+  'description',
+  'reference_type',
+  'reference_id',
+  'quantity',
+  'unit_price_amount',
+  'discount_amount',
+  'tax_amount',
+  'line_total_amount',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INVOICE_PAYMENT_KEYS = [
+  'id',
+  'invoice_id',
+  'payment_number',
+  'method',
+  'amount',
+  'paid_at',
+  'received_by_user_id',
+  'reference_number',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const DRUG_CATALOG_KEYS = [
   'id',
   'clinic_id',
@@ -414,6 +471,28 @@ export function toPrescriptionDto(row: unknown): Record<string, unknown> {
 
 export function toPrescriptionDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toPrescriptionDto(row));
+}
+
+export function toInvoiceDto(row: unknown): Record<string, unknown> {
+  const invoice = pickKeys(row, [...INVOICE_KEYS]);
+  if (row && typeof row === 'object') {
+    const source = row as Row;
+    if (Array.isArray(source.line_items)) {
+      invoice.line_items = source.line_items.map((item) =>
+        pickKeys(item, [...INVOICE_LINE_ITEM_KEYS])
+      );
+    }
+    if (Array.isArray(source.payments)) {
+      invoice.payments = source.payments.map((payment) =>
+        pickKeys(payment, [...INVOICE_PAYMENT_KEYS])
+      );
+    }
+  }
+  return invoice;
+}
+
+export function toInvoiceDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInvoiceDto(row));
 }
 
 export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {

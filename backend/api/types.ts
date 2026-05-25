@@ -504,6 +504,15 @@ export type CreatePractitionerValidatedInput = CreatePractitionerInput;
 export type UpdatePractitionerValidatedInput = UpdatePractitionerInput;
 
 export type PrescriptionStatus = 'active' | 'completed' | 'cancelled';
+export type InvoiceStatus = 'draft' | 'issued' | 'partially_paid' | 'paid' | 'voided';
+export type InvoiceLineItemType =
+  | 'visit'
+  | 'procedure'
+  | 'medication'
+  | 'lab'
+  | 'discount'
+  | 'other';
+export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'qr' | 'insurance' | 'other';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
@@ -675,6 +684,41 @@ export type UpdatePrescriptionInput = {
   safetyOverriddenByPractitionerId?: string | null;
 };
 
+export type CreateInvoiceInput = {
+  clinicId: string;
+  patientId: string;
+  appointmentId?: string | null;
+  visitId?: string | null;
+  encounterId?: string | null;
+  invoiceNumber: string;
+  status?: InvoiceStatus;
+  currency?: string;
+  issuedAt?: string | null;
+  dueAt?: string | null;
+  notes?: string | null;
+  lineItems: Array<{
+    itemType?: InvoiceLineItemType;
+    description: string;
+    referenceType?: string | null;
+    referenceId?: string | null;
+    quantity: number | string;
+    unitPriceAmount: number | string;
+    discountAmount?: number | string | null;
+    taxAmount?: number | string | null;
+  }>;
+};
+
+export type RecordInvoicePaymentInput = {
+  invoiceId: string;
+  paymentNumber: string;
+  method: PaymentMethod;
+  amount: number | string;
+  paidAt?: string | null;
+  receivedByUserId?: string | null;
+  referenceNumber?: string | null;
+  notes?: string | null;
+};
+
 export type Dependencies = {
   createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | AuthSessionFailure | null>;
   getPatientWithEncountersAndSOAP: (input: {
@@ -844,6 +888,16 @@ export type Dependencies = {
   createVitalSign?: (input: CreateVitalSignInput) => Promise<unknown>;
   createPrescription: (input: CreatePrescriptionInput) => Promise<unknown>;
   updatePrescription: (input: UpdatePrescriptionInput) => Promise<unknown | null>;
+  listInvoices?: (input: {
+    clinicId: string;
+    patientId?: string;
+    status?: InvoiceStatus;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  getInvoiceById?: (input: { invoiceId: string }) => Promise<unknown | null>;
+  createInvoice?: (input: CreateInvoiceInput) => Promise<unknown>;
+  recordInvoicePayment?: (input: RecordInvoicePaymentInput) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
   updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;

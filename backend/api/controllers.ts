@@ -20,6 +20,8 @@ import {
   toEncounterDto,
   toFileAssetDto,
   toFileAssetDtos,
+  toInvoiceDto,
+  toInvoiceDtos,
   toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
@@ -59,6 +61,7 @@ import {
   validateCreateVitalSignBody,
   validateAssessPrescriptionSafetyBody,
   validateCreateEncounterBody,
+  validateCreateInvoiceBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -82,6 +85,7 @@ import {
   validateUpdateSoapNoteBody,
   validateUpdateUserBody,
   validateUpdateVitalSignBody,
+  validateRecordInvoicePaymentBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
@@ -2061,6 +2065,130 @@ export async function handleListPrescriptionsByEncounter(
     headers: JSON_HEADERS,
     body: { data: toPrescriptionDtos(prescriptions.rows), meta: prescriptions.meta },
   };
+}
+
+export async function handleListInvoices(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInvoices) {
+    return mapError(new Error('Invoice list dependency is not configured'));
+  }
+
+  const clinicId = readOptionalQueryString(request, 'clinicId');
+  if (!clinicId.ok) return validationError(clinicId.error);
+  if (!clinicId.value) return validationError('clinicId is required query parameter');
+
+  const patientId = readOptionalQueryString(request, 'patientId');
+  if (!patientId.ok) return validationError(patientId.error);
+
+  const status = readOptionalEnumQuery(request, 'status', [
+    'draft',
+    'issued',
+    'partially_paid',
+    'paid',
+    'voided',
+  ]);
+  if (!status.ok) return validationError(status.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const invoices = await dependencies.listInvoices({
+    clinicId: clinicId.value,
+    patientId: patientId.value,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInvoiceDtos(invoices.rows), meta: invoices.meta },
+  };
+}
+
+export async function handleGetInvoice(
+  dependencies: Dependencies,
+  invoiceId: string
+): Promise<HttpResponse> {
+  if (!dependencies.getInvoiceById) {
+    return mapError(new Error('Invoice get dependency is not configured'));
+  }
+
+  const invoice = await dependencies.getInvoiceById({ invoiceId });
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Invoice not found' } };
+  }
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleCreateInvoice(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInvoice) {
+    return mapError(new Error('Invoice create dependency is not configured'));
+  }
+
+  const validation = validateCreateInvoiceBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const invoice = await dependencies.createInvoice(validation.value);
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: (invoice as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      clinicId: validation.value.clinicId,
+      patientId: validation.value.patientId,
+      invoiceNumber: validation.value.invoiceNumber,
+      lineItemCount: validation.value.lineItems.length,
+    },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleRecordInvoicePayment(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  invoiceId: string
+): Promise<HttpResponse> {
+  if (!dependencies.recordInvoicePayment) {
+    return mapError(new Error('Invoice payment dependency is not configured'));
+  }
+
+  const validation = validateRecordInvoicePaymentBody(request.body, invoiceId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const invoice = await dependencies.recordInvoicePayment(validation.value);
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Invoice not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: invoiceId,
+    action: 'payment_recorded',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      paymentNumber: validation.value.paymentNumber,
+      method: validation.value.method,
+      amount: validation.value.amount,
+    },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
 }
 
 export async function handleListDiagnosesByEncounter(

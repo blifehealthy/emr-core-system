@@ -11,6 +11,7 @@ import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
 import { createDrugCatalogItem } from '../backend/services/createDrugCatalogItem.ts';
 import { createDrugInteractionRule } from '../backend/services/createDrugInteractionRule.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
+import { createInvoice, getInvoiceById } from '../backend/services/createInvoice.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPatient } from '../backend/services/createPatient.ts';
 import { createPatientAllergy } from '../backend/services/createPatientAllergy.ts';
@@ -54,6 +55,7 @@ import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEnc
 import { listDrugCatalog } from '../backend/services/listDrugCatalog.ts';
 import { listDrugInteractionRules } from '../backend/services/listDrugInteractionRules.ts';
 import { listFileAssets } from '../backend/services/listFileAssets.ts';
+import { listInvoices } from '../backend/services/listInvoices.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
 import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
 import { listPatientFlags } from '../backend/services/listPatientFlags.ts';
@@ -91,6 +93,7 @@ import { updateVitalSign } from '../backend/services/updateVitalSign.ts';
 import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.ts';
 import { resolveActor } from '../backend/services/resolveActor.ts';
 import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
+import { recordInvoicePayment } from '../backend/services/recordInvoicePayment.ts';
 import { createOidcJwksCache } from '../backend/services/oidcJwks.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -183,6 +186,10 @@ const server = createNodeServer({
   assessPrescriptionSafety: assessPrescriptionSafety(db),
   listPrescriptionsByEncounter: listPrescriptionsByEncounter(db),
   createPrescription: createPrescription(db),
+  listInvoices: listInvoices(db),
+  getInvoiceById: getInvoiceById(db),
+  createInvoice: createInvoice(db),
+  recordInvoicePayment: recordInvoicePayment(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),
