@@ -390,6 +390,7 @@ async function main() {
       username: string;
       display_name: string;
       role: string;
+      oidc_subject: string | null;
     }>(
       '/api/users',
       adminHeaders,
@@ -400,10 +401,12 @@ async function main() {
         username: 'nurse.smoke',
         displayName: 'Nurse Smoke',
         role: 'nurse',
+        oidcSubject: 'oidc:nurse.smoke',
       }
     );
     assert.equal(createdUser.data.username, 'nurse.smoke');
     assert.equal(createdUser.data.role, 'nurse');
+    assert.equal(createdUser.data.oidc_subject, 'oidc:nurse.smoke');
 
     const duplicateUser = await requestJson<{ error: string; detail?: string }>(
       '/api/users',
@@ -422,6 +425,7 @@ async function main() {
     const updatedUser = await requestJson<{
       id: string;
       display_name: string;
+      oidc_subject: string | null;
       is_active: boolean;
     }>(
       `/api/users/${createdUser.data.id}`,
@@ -430,10 +434,12 @@ async function main() {
       200,
       {
         displayName: 'Nurse Smoke Updated',
+        oidcSubject: 'oidc:nurse.smoke.updated',
         isActive: false,
       }
     );
     assert.equal(updatedUser.data.display_name, 'Nurse Smoke Updated');
+    assert.equal(updatedUser.data.oidc_subject, 'oidc:nurse.smoke.updated');
     assert.equal(updatedUser.data.is_active, false);
 
     const createdPractitioner = await requestJson<{

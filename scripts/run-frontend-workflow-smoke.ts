@@ -22,6 +22,7 @@ assertContains(app, 'function createBarChart(', 'bar chart helper');
 assertContains(app, 'function createClaimVisitButton(', 'queue claim action');
 assertContains(app, 'function createStartVisitEncounterButton(', 'queue start encounter action');
 assertContains(app, 'function userSummary(', 'admin user summary helper');
+assertContains(app, 'oidcSubject', 'admin OIDC subject field');
 assertContains(app, 'function buildPrescriptionPrintHtml(', 'prescription print HTML builder');
 assertContains(app, 'ใบสั่งยา / Prescription', 'prescription print title');
 assertContains(app, 'function createPrescriptionEntryForm(', 'prescription entry form');

@@ -13,6 +13,7 @@ controlled technical pilot, but it is not the final production identity model.
   resolved from active database records.
 - OIDC-compatible bearer tokens can map external subjects to users through
   `users.oidc_subject`.
+- Clinic admins can bind `oidc_subject` on user records during pilot setup.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
 - Static technical tokens can still use `x-user-id` for smoke tests and trusted

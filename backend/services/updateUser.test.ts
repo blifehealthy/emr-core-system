@@ -38,3 +38,20 @@ test('updateUser keeps false boolean patches explicit', async () => {
   assert.match(calls[0].sql, /is_active = \$2/);
   assert.deepEqual(calls[0].params, ['user-1', false]);
 });
+
+test('updateUser can bind or clear OIDC subject mapping', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const service = updateUser({
+    async query<T>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return {
+        rows: [{ id: 'user-1', oidc_subject: 'oidc:user-1' }] as T[],
+      };
+    },
+  });
+
+  await service({ userId: 'user-1', oidcSubject: 'oidc:user-1' });
+
+  assert.match(calls[0].sql, /oidc_subject = \$2/);
+  assert.deepEqual(calls[0].params, ['user-1', 'oidc:user-1']);
+});

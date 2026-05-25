@@ -1319,6 +1319,7 @@ export function validateCreateUserBody(body: unknown):
       username: username.value,
       displayName: displayName.value,
       role: role.value,
+      oidcSubject: readOptionalNullableString(candidate.oidcSubject),
     },
   };
 }
@@ -1331,7 +1332,7 @@ export function validateUpdateUserBody(body: unknown, userId: string):
     return { ok: false, error: 'Request body must be a JSON object' };
   }
 
-  const hasChanges = ['displayName', 'role', 'isActive'].some((field) =>
+  const hasChanges = ['displayName', 'role', 'isActive', 'oidcSubject'].some((field) =>
     Object.hasOwn(candidate, field)
   );
   if (!hasChanges) {
@@ -1354,6 +1355,9 @@ export function validateUpdateUserBody(body: unknown, userId: string):
       ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
       ...(Object.hasOwn(candidate, 'role') ? { role: role.value } : {}),
       ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+      ...(Object.hasOwn(candidate, 'oidcSubject')
+        ? { oidcSubject: readOptionalNullableString(candidate.oidcSubject) }
+        : {}),
     },
   };
 }

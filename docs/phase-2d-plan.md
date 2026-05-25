@@ -20,6 +20,9 @@ bearer token verification and database user mapping.
   - OIDC-compatible bearer access token
 - OIDC tokens carry the external subject only; API role/practitioner context is
   resolved from the local active user record.
+- Admin user create/update APIs can bind or clear `oidc_subject`.
+- Clinic admin frontend user form exposes an `OIDC subject` field and shows
+  mappings in user cards.
 - API smoke seeds OIDC subject mappings and verifies protected patient detail
   access with an OIDC bearer token.
 - Production readiness check validates OIDC config when enabled:
@@ -36,9 +39,8 @@ identity provider.
 
 ## Remaining Phase 2D Work
 
-- Add RS256/JWKS verification path for the selected provider.
-- Add admin UI field for binding `oidc_subject` to users.
 - Add failed-login and OIDC auth failure audit events.
+- Add RS256/JWKS verification path for the selected provider.
 - Add MFA requirement documentation and enforcement hooks once provider is
   selected.
 - Create Phase 2D clinician/operator summary and UAT checklist after provider

@@ -8,7 +8,7 @@
 - production readiness now includes `npm run production:check` plus a pilot go/no-go checklist
 - Phase 2B clinician/UAT docs are ready for doctor and clinic owner review
 - Phase 2C pilot auth sessions now issue signed bearer tokens from database users and track last login / lockout state
-- Phase 2D OIDC-compatible bearer auth maps external subjects through `users.oidc_subject`
+- Phase 2D OIDC-compatible bearer auth maps external subjects through `users.oidc_subject`, including admin user binding support
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback

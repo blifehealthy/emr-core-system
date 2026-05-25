@@ -522,6 +522,7 @@ export type CreateUserInput = {
   username: string;
   displayName: string;
   role: UserRole;
+  oidcSubject?: string | null;
 };
 
 export type UpdateUserInput = {
@@ -529,6 +530,7 @@ export type UpdateUserInput = {
   displayName?: string;
   role?: UserRole;
   isActive?: boolean;
+  oidcSubject?: string | null;
 };
 
 export type CreatePractitionerInput = {

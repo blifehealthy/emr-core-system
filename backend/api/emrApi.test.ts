@@ -2054,7 +2054,13 @@ test('users, practitioners, and prescriptions APIs work and enforce roles', asyn
     method: 'POST',
     path: '/api/users',
     headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
-    body: { clinicId: 'clinic-1', username: 'doc1', displayName: 'Doc 1', role: 'doctor' },
+    body: {
+      clinicId: 'clinic-1',
+      username: 'doc1',
+      displayName: 'Doc 1',
+      role: 'doctor',
+      oidcSubject: 'oidc:doc1',
+    },
   });
   assert.equal(createUser.status, 201);
 
@@ -2094,8 +2100,14 @@ test('PATCH /api/users preserves omitted role field', async () => {
         assert.equal(input.userId, 'user-1');
         assert.equal(input.displayName, 'Updated User');
         assert.equal(input.isActive, false);
+        assert.equal(input.oidcSubject, 'oidc:updated');
         assert.equal(Object.hasOwn(input, 'role'), false);
-        return { id: 'user-1', display_name: 'Updated User', is_active: false };
+        return {
+          id: 'user-1',
+          display_name: 'Updated User',
+          oidc_subject: 'oidc:updated',
+          is_active: false,
+        };
       },
     })
   );
@@ -2104,7 +2116,7 @@ test('PATCH /api/users preserves omitted role field', async () => {
     method: 'PATCH',
     path: '/api/users/user-1',
     headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
-    body: { displayName: 'Updated User', isActive: false },
+    body: { displayName: 'Updated User', isActive: false, oidcSubject: 'oidc:updated' },
   });
 
   assert.equal(response.status, 200);

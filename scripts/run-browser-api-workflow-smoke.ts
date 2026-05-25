@@ -417,11 +417,12 @@ async function main() {
       userForm.querySelector('input[name="username"]').value = '${browserUsername}';
       userForm.querySelector('input[name="displayName"]').value = 'Browser Admin User';
       userForm.querySelector('select[name="role"]').value = 'nurse';
+      userForm.querySelector('input[name="oidcSubject"]').value = 'oidc:${browserUsername}';
       userForm.requestSubmit();
       return true;
     `);
     await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เพิ่ม user แล้ว')`);
-    const createdUsers = await requestJson<Array<{ id: string; username: string; display_name: string; is_active: boolean }>>(
+    const createdUsers = await requestJson<Array<{ id: string; username: string; display_name: string; oidc_subject: string | null; is_active: boolean }>>(
       API_PORT,
       `/api/users?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserUsername)}&active=active&limit=5&offset=0`,
       adminHeaders
@@ -429,17 +430,19 @@ async function main() {
     const createdUser = createdUsers.data.find((item) => item.username === browserUsername);
     assert.ok(createdUser);
     assert.equal(createdUser.display_name, 'Browser Admin User');
+    assert.equal(createdUser.oidc_subject, `oidc:${browserUsername}`);
 
     await evaluate(cdp, `
       clickButtonInCard('${browserUsername}', 'แก้ไข');
       const editForm = findCardByText('${browserUsername}').querySelector('.inline-profile-form');
       editForm.querySelector('input[name="displayName"]').value = 'Browser Admin User Edited';
       editForm.querySelector('select[name="role"]').value = 'admin';
+      editForm.querySelector('input[name="oidcSubject"]').value = 'oidc:${browserUsername}:edited';
       editForm.requestSubmit();
       return true;
     `);
     await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('แก้ user แล้ว')`);
-    const editedUsers = await requestJson<Array<{ id: string; display_name: string; role: string; is_active: boolean }>>(
+    const editedUsers = await requestJson<Array<{ id: string; display_name: string; role: string; oidc_subject: string | null; is_active: boolean }>>(
       API_PORT,
       `/api/users?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserUsername)}&active=all&limit=5&offset=0`,
       adminHeaders
@@ -447,6 +450,7 @@ async function main() {
     const editedUser = editedUsers.data.find((item) => item.id === createdUser.id);
     assert.equal(editedUser?.display_name, 'Browser Admin User Edited');
     assert.equal(editedUser?.role, 'admin');
+    assert.equal(editedUser?.oidc_subject, `oidc:${browserUsername}:edited`);
 
     await evaluate(cdp, `
       clickButtonInCard('${browserUsername}', 'ปิดใช้งาน');

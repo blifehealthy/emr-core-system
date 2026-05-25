@@ -6,6 +6,7 @@ export function updateUser(db: {
     displayName?: string;
     role?: 'doctor' | 'nurse' | 'admin';
     isActive?: boolean;
+    oidcSubject?: string | null;
   }) {
     const assignments: string[] = [];
     const params: unknown[] = [input.userId];
@@ -25,6 +26,11 @@ export function updateUser(db: {
       assignments.push(`is_active = $${params.length}`);
     }
 
+    if (Object.hasOwn(input, 'oidcSubject')) {
+      params.push(input.oidcSubject ?? null);
+      assignments.push(`oidc_subject = $${params.length}`);
+    }
+
     const result = await db.query(
       `
         UPDATE users
@@ -37,6 +43,10 @@ export function updateUser(db: {
           username,
           display_name,
           role,
+          oidc_subject,
+          last_login_at,
+          failed_login_count,
+          locked_until,
           is_active,
           created_at,
           updated_at,

@@ -433,6 +433,7 @@ Phase 2D has started with production identity provider readiness:
 - OIDC-compatible bearer tokens can be verified with local HS256 config for
   deterministic pilot testing.
 - `users.oidc_subject` maps external identity subjects to active local users.
+- Admin user forms can bind and edit `oidc_subject`.
 - API role/practitioner context is still resolved from the database.
 - API smoke seeds OIDC subject mappings and verifies protected access with an
   OIDC bearer token.
@@ -440,9 +441,9 @@ Phase 2D has started with production identity provider readiness:
 
 Next Phase 2D batch:
 
-1. Add admin UI support for binding `oidc_subject` to users.
-2. Add auth failure audit events.
-3. Add RS256/JWKS verification after the target provider is selected.
+1. Add auth failure audit events.
+2. Add RS256/JWKS verification after the target provider is selected.
+3. Add Phase 2D clinician/operator summary and UAT checklist.
 
 The deliverables added in this worktree are:
 

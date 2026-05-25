@@ -1297,6 +1297,8 @@ function renderAdminWorkspace(clinicId) {
   adminWorkspace.replaceChildren(
     createAdminSection('Users', 'users', createUserForm(clinicId), currentAdmin.users, userSummary, [
       'role',
+      'oidc_subject',
+      'last_login_at',
       'is_active',
       'username',
     ], createUserActions),
@@ -1856,7 +1858,8 @@ function createUserForm(clinicId, user = null) {
   form.append(
     createAdminInput('username', 'Username', user?.username ?? '', !user),
     createAdminInput('displayName', 'Display name', user?.display_name ?? '', true),
-    createAdminSelect('role', 'Role', ['doctor', 'nurse', 'admin'], user?.role ?? 'nurse')
+    createAdminSelect('role', 'Role', ['doctor', 'nurse', 'admin'], user?.role ?? 'nurse'),
+    createAdminInput('oidcSubject', 'OIDC subject', user?.oidc_subject ?? '')
   );
   if (user) form.append(createAdminSelect('isActive', 'Active', ['true', 'false'], String(user.is_active ?? true)));
 
@@ -1972,6 +1975,7 @@ async function saveUser(clinicId, userId, form, submit) {
     username: values.username,
     displayName: values.displayName,
     role: values.role,
+    oidcSubject: values.oidcSubject,
     isActive: parseOptionalBoolean(values.isActive),
   });
 
@@ -3913,7 +3917,8 @@ function visitSummary(item) {
 }
 
 function userSummary(item) {
-  return item.display_name ?? item.username ?? item.email ?? item.id;
+  const identity = item.oidc_subject ? ` · ${item.oidc_subject}` : '';
+  return `${item.display_name ?? item.username ?? item.email ?? item.id}${identity}`;
 }
 
 function practitionerSummary(item) {

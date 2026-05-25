@@ -27,6 +27,8 @@ test('listUsers builds search, active filter, pagination, and meta', async () =>
   assert.match(calls[0].sql, /username ILIKE \$2/);
   assert.match(calls[0].sql, /display_name ILIKE \$2/);
   assert.match(calls[0].sql, /role::text ILIKE \$2/);
+  assert.match(calls[0].sql, /oidc_subject/);
+  assert.match(calls[0].sql, /last_login_at/);
   assert.match(calls[0].sql, /LIMIT \$3/);
   assert.match(calls[0].sql, /OFFSET \$4/);
   assert.deepEqual(calls[0].params, ['clinic-1', '%nurse%', 3, 4]);
