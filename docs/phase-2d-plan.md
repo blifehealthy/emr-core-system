@@ -5,8 +5,8 @@ integration.
 
 ## Status
 
-Phase 2D has started. The first implementation slice adds OIDC-compatible
-bearer token verification and database user mapping.
+Phase 2D is ready for clinician/operator review. This phase adds
+OIDC-compatible bearer token verification and database user mapping.
 
 ## Completed In This Pass
 
@@ -31,6 +31,10 @@ bearer token verification and database user mapping.
   - `AUTH_OIDC_ISSUER`
   - `AUTH_OIDC_AUDIENCE`
   - `AUTH_OIDC_HS256_SECRET`
+- `docs/phase-2d-clinician-summary-th.md` summarizes the production identity
+  readiness changes for clinic owners and operators.
+- `docs/phase-2d-uat-checklist-th.md` gives UAT checks for OIDC mapping,
+  role-based access, failed-login audit, and deployment readiness.
 
 ## Important Constraint
 
@@ -39,12 +43,12 @@ without adding a JWKS client or network dependency. Before broad production
 rollout, replace or extend this with RS256/JWKS verification from the selected
 identity provider.
 
-## Remaining Phase 2D Work
+## Post-Phase 2D Follow-ups
 
+- Select the target identity provider.
+- Add RS256/JWKS verification path for the selected provider if HS256 is not
+  acceptable for deployment.
 - Add OIDC auth failure audit events for mapped users when provider data is
-  available.
-- Add RS256/JWKS verification path for the selected provider.
+  available in failed token paths.
 - Add MFA requirement documentation and enforcement hooks once provider is
   selected.
-- Create Phase 2D clinician/operator summary and UAT checklist after provider
-  decision.

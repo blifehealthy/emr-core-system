@@ -28,6 +28,7 @@
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
 - Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators
 - Review `docs/phase-2d-plan.md` before selecting RS256/JWKS provider integration
+- Review `docs/phase-2d-clinician-summary-th.md` and `docs/phase-2d-uat-checklist-th.md` with clinic owners/operators
 
 ## Verified
 
@@ -37,4 +38,5 @@
 - Phase 2C targeted auth/session tests pass
 - Phase 2C docs updated: clinician/operator summary and UAT checklist
 - Phase 2D targeted OIDC token, actor mapping, and migration tests pass
+- Phase 2D docs updated: operator summary and UAT checklist
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

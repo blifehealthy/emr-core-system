@@ -428,7 +428,7 @@ Post-Phase 2C next batch:
 
 ## Phase 2D Status
 
-Phase 2D has started with production identity provider readiness:
+Phase 2D is ready for clinician/operator review:
 
 - OIDC-compatible bearer tokens can be verified with local HS256 config for
   deterministic pilot testing.
@@ -442,9 +442,9 @@ Phase 2D has started with production identity provider readiness:
 
 Next Phase 2D batch:
 
-1. Add OIDC auth failure audit events for mapped users when provider data is available.
-2. Add RS256/JWKS verification after the target provider is selected.
-3. Add Phase 2D clinician/operator summary and UAT checklist.
+1. Run Phase 2D UAT with clinic owners/operators using `docs/phase-2d-uat-checklist-th.md`.
+2. Select identity provider and signing/JWKS approach.
+3. Add RS256/JWKS verification if required by the selected provider.
 
 The deliverables added in this worktree are:
 
@@ -464,6 +464,8 @@ The deliverables added in this worktree are:
 - `docs/phase-2c-clinician-summary-th.md`
 - `docs/phase-2c-uat-checklist-th.md`
 - `docs/phase-2d-plan.md`
+- `docs/phase-2d-clinician-summary-th.md`
+- `docs/phase-2d-uat-checklist-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

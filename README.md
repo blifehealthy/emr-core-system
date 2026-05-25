@@ -88,6 +88,8 @@ the pilot auth flow can evolve toward an external identity provider. Current
 scope is tracked in:
 
 - `docs/phase-2d-plan.md`
+- `docs/phase-2d-clinician-summary-th.md`
+- `docs/phase-2d-uat-checklist-th.md`
 
 ## Current Scope
 
