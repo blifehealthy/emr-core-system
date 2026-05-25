@@ -6,6 +6,8 @@ import { createSessionToken } from '../services/sessionToken.ts';
 import { createOidcTestToken } from '../services/oidcToken.ts';
 import type { Dependencies } from './types.ts';
 
+type AuditLogInput = Parameters<Dependencies['createAuditLog']>[0];
+
 function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
   const base: Dependencies = {
     async getPatientWithEncountersAndSOAP() {
@@ -384,6 +386,82 @@ test('POST /api/auth/sessions audits failed login for known users', async () => 
     username: 'doctor.one',
     reason: 'invalid_login_code',
     lockedUntil: '2026-05-25T10:15:00.000Z',
+  });
+});
+
+test('audits bearer authentication failures as security events', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      apiToken: 'expected-token',
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+
+  assert.equal(response.status, 401);
+  assert.equal(auditInputs.length, 1);
+  const auditInput = auditInputs[0];
+  assert.equal(auditInput.entityType, 'security_event');
+  assert.equal(auditInput.entityId, 'GET /api/patients/detail');
+  assert.equal(auditInput.action, 'auth_failed');
+  assert.deepEqual(auditInput.metadata, {
+    method: 'GET',
+    path: '/api/patients/detail',
+    status: 401,
+    error: 'Authorization header is required',
+    oidcSubject: null,
+    role: undefined,
+  });
+});
+
+test('audits role authorization failures as security events', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      apiToken: 'expected-token',
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'GET',
+    path: '/api/users',
+    headers: {
+      authorization: 'Bearer expected-token',
+      'x-user-id': 'user-1',
+      'x-practitioner-id': 'practitioner-1',
+      'x-user-role': 'nurse',
+    },
+    query: { clinicId: 'clinic-1' },
+  });
+
+  assert.equal(response.status, 403);
+  assert.equal(auditInputs.length, 1);
+  const auditInput = auditInputs[0];
+  assert.equal(auditInput.entityType, 'security_event');
+  assert.equal(auditInput.entityId, 'GET /api/users');
+  assert.equal(auditInput.action, 'authorization_failed');
+  assert.equal(auditInput.actorUserId, 'user-1');
+  assert.equal(auditInput.actorPractitionerId, 'practitioner-1');
+  assert.deepEqual(auditInput.metadata, {
+    method: 'GET',
+    path: '/api/users',
+    status: 403,
+    error: 'Role nurse is not allowed for user_read',
+    oidcSubject: null,
+    role: 'nurse',
   });
 });
 

@@ -112,6 +112,18 @@ enforcement for provider tokens. Current scope and review docs are tracked in:
 - `docs/phase-2f-clinician-summary-th.md`
 - `docs/phase-2f-uat-checklist-th.md`
 
+## Phase 2G
+
+Phase 2G production identity operations is ready for review. It adds security
+audit logging for API auth/authorization failures and an identity operations
+runbook for JWKS, MFA, and incident response. Current scope and review docs are
+tracked in:
+
+- `docs/phase-2g-plan.md`
+- `docs/phase-2g-clinician-summary-th.md`
+- `docs/phase-2g-uat-checklist-th.md`
+- `docs/identity-security-operations-runbook.md`
+
 ## Current Scope
 
 Included in this initialization phase:

@@ -480,13 +480,33 @@ integration foundations:
 - Production readiness validates JWKS HTTPS, JWKS TTL, and MFA claim policy.
 - Phase 2F clinician/operator summary and UAT checklist are available.
 
-Recommended next phase:
+Post-Phase 2F follow-ups:
 
 1. Run Phase 2F UAT against the selected identity provider.
-2. Start Phase 2G production identity operations:
-   - provider-specific key rotation and incident runbook
-   - audit hardening for authorization failures
-   - monitoring alerts for auth/readiness failures
+2. Provider-specific key rotation and incident runbook completed in Phase 2G.
+3. Audit hardening for authorization failures completed in Phase 2G.
+
+## Phase 2G Status
+
+Phase 2G is ready for clinician/operator review with production identity
+operations support:
+
+- API `401` responses write `security_event` audit logs with `auth_failed`.
+- API `403` responses write `security_event` audit logs with
+  `authorization_failed`.
+- Security audit metadata includes method, path, status, error, OIDC subject,
+  and role when available.
+- `/api/auth/sessions` keeps dedicated `session_created` and
+  `session_login_failed` audit behavior.
+- Identity security operations runbook covers repeated 401/403, JWKS/key
+  rotation, MFA claim issues, readiness checks, and incident roles.
+- Phase 2G clinician/operator summary and UAT checklist are available.
+
+Recommended next phase:
+
+1. Run Phase 2A-2G UAT as a pilot closure pass.
+2. Fix UAT findings.
+3. Produce Phase 2 pilot go/no-go summary before Phase 3 planning.
 
 The deliverables added in this worktree are:
 
@@ -514,6 +534,10 @@ The deliverables added in this worktree are:
 - `docs/phase-2f-plan.md`
 - `docs/phase-2f-clinician-summary-th.md`
 - `docs/phase-2f-uat-checklist-th.md`
+- `docs/phase-2g-plan.md`
+- `docs/phase-2g-clinician-summary-th.md`
+- `docs/phase-2g-uat-checklist-th.md`
+- `docs/identity-security-operations-runbook.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

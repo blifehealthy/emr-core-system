@@ -21,6 +21,8 @@ controlled technical pilot, but it is not the final production identity model.
 - OIDC verification can require a provider MFA claim/value before accepting a
   bearer token.
 - Known-user login failures write audit events for support review.
+- API auth and authorization failures write `security_event` audit logs for
+  operator investigation.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
 - Static technical tokens can still use `x-user-id` for smoke tests and trusted
@@ -64,6 +66,7 @@ Production access should move to an identity provider with:
 - Resolve role and practitioner id from database, not request headers.
 - Reject inactive users.
 - Record authenticated user id in audit logs.
+- Record auth/authorization failures as security audit events.
 
 ### Phase III: MFA And Session Hardening
 
@@ -93,6 +96,8 @@ Before production identity launch:
 - Store practitioner id where clinical action context exists.
 - Add audit entries for catalog/rule changes and safety overrides.
 - Review logs for failed authorization attempts.
+- Use `docs/identity-security-operations-runbook.md` for repeated 401/403,
+  JWKS, MFA, and provider incidents.
 - Add retention policy for audit logs.
 
 ## Open Decisions

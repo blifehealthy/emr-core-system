@@ -75,6 +75,8 @@ For S3 or MinIO storage, also confirm:
 - API process health endpoint is monitored through `GET /health`.
 - Failed smoke checks block deployment.
 - Audit lookup is available to admin users.
+- Security event audit logs are reviewed for repeated `auth_failed` or
+  `authorization_failed` events.
 - Prescription safety override reason is required and stored when warnings are
   accepted.
 - Drug catalog and interaction rule write access is limited to admins.
@@ -87,5 +89,6 @@ Before clinic pilot:
 - Confirm queue, appointment check-in, SOAP editing, prescription print, and
   report export workflows with clinic staff.
 - Confirm backup owner, restore owner, and incident contact.
+- Confirm identity provider contact and security incident owner.
 - Keep a manual downtime process available for registration, encounter notes,
   prescriptions, and payment handoff.

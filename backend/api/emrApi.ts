@@ -97,6 +97,13 @@ export type { Dependencies, HttpRequest, HttpResponse } from './types.ts';
 
 export function createEmrApi(dependencies: Dependencies) {
   return async function handleRequest(request: HttpRequest): Promise<HttpResponse> {
+    const response = await handleEmrRequest(request, dependencies);
+    await auditSecurityResponse(request, response, dependencies);
+    return response;
+  };
+}
+
+async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies): Promise<HttpResponse> {
     if (request.method === 'GET' && request.path === '/health') {
       return handleHealthCheck(dependencies);
     }
@@ -783,5 +790,43 @@ export function createEmrApi(dependencies: Dependencies) {
     }
 
     return notFound();
-  };
+}
+
+async function auditSecurityResponse(
+  request: HttpRequest,
+  response: HttpResponse,
+  dependencies: Dependencies
+) {
+  if (response.status !== 401 && response.status !== 403) {
+    return;
+  }
+  if (request.path === '/api/auth/sessions') {
+    return;
+  }
+
+  const actor = getActorContext(request);
+  const error =
+    response.body && typeof response.body === 'object' && 'error' in response.body
+      ? String((response.body as { error?: unknown }).error ?? '')
+      : '';
+
+  try {
+    await dependencies.createAuditLog({
+      entityType: 'security_event',
+      entityId: `${request.method} ${request.path}`,
+      action: response.status === 401 ? 'auth_failed' : 'authorization_failed',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        method: request.method,
+        path: request.path,
+        status: response.status,
+        error,
+        oidcSubject: actor.oidcSubject,
+        role: actor.role,
+      },
+    });
+  } catch {
+    // Security audit should not mask the original API response.
+  }
 }

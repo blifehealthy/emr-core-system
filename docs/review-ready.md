@@ -11,6 +11,7 @@
 - Phase 2D OIDC-compatible bearer auth maps external subjects through `users.oidc_subject`, including admin user binding support and failed-login audit events
 - Phase 2E OIDC verification supports RS256 public-key tokens in addition to HS256 local test tokens
 - Phase 2F OIDC integration supports provider JWKS loading/cache, RS256 `kid` key selection, and MFA claim enforcement
+- Phase 2G security operations adds audit events for API auth/authorization failures and an identity incident runbook
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -33,6 +34,7 @@
 - Review `docs/phase-2d-clinician-summary-th.md` and `docs/phase-2d-uat-checklist-th.md` with clinic owners/operators
 - Review `docs/phase-2e-plan.md`, `docs/phase-2e-clinician-summary-th.md`, and `docs/phase-2e-uat-checklist-th.md` before wiring a provider JWKS URL
 - Review `docs/phase-2f-plan.md`, `docs/phase-2f-clinician-summary-th.md`, and `docs/phase-2f-uat-checklist-th.md` with identity provider operators
+- Review `docs/phase-2g-plan.md`, `docs/phase-2g-clinician-summary-th.md`, `docs/phase-2g-uat-checklist-th.md`, and `docs/identity-security-operations-runbook.md` before pilot closure
 
 ## Verified
 
@@ -47,4 +49,6 @@
 - Phase 2E docs updated: operator summary and UAT checklist
 - Phase 2F targeted JWKS, MFA claim, and readiness tests pass
 - Phase 2F docs updated: operator summary and UAT checklist
+- Phase 2G targeted security audit tests pass
+- Phase 2G docs updated: operator summary, UAT checklist, and identity security operations runbook
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`
