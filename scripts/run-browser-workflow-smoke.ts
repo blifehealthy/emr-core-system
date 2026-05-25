@@ -120,7 +120,7 @@ async function main() {
       chrome.kill('SIGTERM');
       await once(chrome, 'exit').catch(() => undefined);
     }
-    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 150 });
   }
 }
 

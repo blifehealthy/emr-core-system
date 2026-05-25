@@ -52,6 +52,8 @@
   open/edit/save through the patient record UI
 - API-backed browser workflow smoke now covers operations CSV export plus admin
   branding/logo upload and save through the clinic admin UI
+- API-backed browser workflow smoke now covers admin user/practitioner create,
+  edit, deactivate, and audit lookup through the clinic admin UI
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
@@ -177,7 +179,8 @@
 - current result: passing
 - now covers queue load/claim/start-checkup, prescription print output,
   appointment check-in, SOAP open/edit/save, operations CSV export, and admin
-  branding/logo upload against real API/frontend proxy
+  branding/logo upload, user/practitioner CRUD, and audit lookup against real
+  API/frontend proxy
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run browser:api-workflow-smoke`
   - targeted admin list pagination/filter tests
@@ -344,15 +347,15 @@ incident guidance now live in `docs/object-storage-runbook.md`, with
 
 Remaining Phase 2A follow-ups:
 
-1. Add browser coverage for admin user/practitioner CRUD and audit lookup.
-2. Review operations chart labels with clinic users after real-world reporting data is available.
+1. Review operations chart labels with clinic users after real-world reporting data is available.
+2. Decide whether Phase 2A is ready to close for clinician UAT.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add browser workflow smoke for admin user/practitioner CRUD and audit lookup
-2. review and tune daily operations chart labels after clinical UAT
+1. review and tune daily operations chart labels after clinical UAT
+2. close Phase 2A with a clinician-facing summary if labels/workflows are accepted
 
 The deliverables added in this worktree are:
 
@@ -375,7 +378,7 @@ The deliverables added in this worktree are:
 - duplicate conflict mapping for user/practitioner writes
 - expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset policy/listing/upload/download, daily operations reporting/chart hooks, prescription print builder, and encounter edit
 - headless Chrome browser smoke coverage for queue claim/start-checkup and prescription print output
-- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres, including queue claim/start-checkup, prescription print, appointment check-in, SOAP editing, operations CSV export, and admin branding/logo upload
+- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres, including queue claim/start-checkup, prescription print, appointment check-in, SOAP editing, operations CSV export, admin branding/logo upload, admin user/practitioner CRUD, and audit lookup
 - object storage deployment runbook, env example, and storage config validation script
 - queue operations charts and deterministic frontend workflow smoke script
 - browser-driven queue and prescription print workflow smoke script
@@ -403,5 +406,5 @@ Start by reading:
 
 Then produce:
 
-1. Admin user/practitioner CRUD and audit lookup browser workflow smoke
-2. Clinic UAT feedback for daily operations charts
+1. Clinic UAT feedback for daily operations charts
+2. Phase 2A clinician-facing summary and closeout, if accepted

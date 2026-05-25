@@ -28,6 +28,7 @@ const CLINIC_ID = '10000000-0000-0000-0000-000000000101';
 const PATIENT_ID = '10000000-0000-0000-0000-000000001001';
 const PRACTITIONER_ID = '10000000-0000-0000-0000-000000000301';
 const USER_ID = '10000000-0000-0000-0000-000000000201';
+const RUN_ID = Date.now();
 
 const migrations = [
   '0000_organization_clinic_foundation.up.sql',
@@ -362,6 +363,126 @@ async function main() {
     assert.equal(uploadedLogo.data.original_filename, 'browser-api-logo.png');
     assert.equal(uploadedLogo.data.mime_type, 'image/png');
 
+    const browserUsername = `browser.admin.${RUN_ID}`;
+    const browserPractitionerCode = `PR-BROWSER-${RUN_ID}`;
+    await evaluate(cdp, `
+      const userForm = findFormByButtonText('เพิ่ม user');
+      userForm.querySelector('input[name="username"]').value = '${browserUsername}';
+      userForm.querySelector('input[name="displayName"]').value = 'Browser Admin User';
+      userForm.querySelector('select[name="role"]').value = 'nurse';
+      userForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เพิ่ม user แล้ว')`);
+    const createdUsers = await requestJson<Array<{ id: string; username: string; display_name: string; is_active: boolean }>>(
+      API_PORT,
+      `/api/users?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserUsername)}&active=active&limit=5&offset=0`,
+      adminHeaders
+    );
+    const createdUser = createdUsers.data.find((item) => item.username === browserUsername);
+    assert.ok(createdUser);
+    assert.equal(createdUser.display_name, 'Browser Admin User');
+
+    await evaluate(cdp, `
+      clickButtonInCard('${browserUsername}', 'แก้ไข');
+      const editForm = findCardByText('${browserUsername}').querySelector('.inline-profile-form');
+      editForm.querySelector('input[name="displayName"]').value = 'Browser Admin User Edited';
+      editForm.querySelector('select[name="role"]').value = 'admin';
+      editForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('แก้ user แล้ว')`);
+    const editedUsers = await requestJson<Array<{ id: string; display_name: string; role: string; is_active: boolean }>>(
+      API_PORT,
+      `/api/users?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserUsername)}&active=all&limit=5&offset=0`,
+      adminHeaders
+    );
+    const editedUser = editedUsers.data.find((item) => item.id === createdUser.id);
+    assert.equal(editedUser?.display_name, 'Browser Admin User Edited');
+    assert.equal(editedUser?.role, 'admin');
+
+    await evaluate(cdp, `
+      clickButtonInCard('${browserUsername}', 'ปิดใช้งาน');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('ปิดใช้งานแล้ว')`);
+    const inactiveUsers = await requestJson<Array<{ id: string; is_active: boolean }>>(
+      API_PORT,
+      `/api/users?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserUsername)}&active=inactive&limit=5&offset=0`,
+      adminHeaders
+    );
+    assert.equal(inactiveUsers.data.find((item) => item.id === createdUser.id)?.is_active, false);
+
+    await evaluate(cdp, `
+      document.querySelector('[data-view="admin"]').click();
+      document.querySelector('#admin-form').requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('โหลดทีมแล้ว')`);
+    await evaluate(cdp, `
+      const practitionerForm = findFormByButtonText('เพิ่ม practitioner');
+      practitionerForm.querySelector('input[name="practitionerCode"]').value = '${browserPractitionerCode}';
+      practitionerForm.querySelector('input[name="firstName"]').value = 'Browser';
+      practitionerForm.querySelector('input[name="lastName"]').value = 'Practitioner';
+      practitionerForm.querySelector('input[name="licenseNumber"]').value = 'LIC-${RUN_ID}';
+      practitionerForm.querySelector('input[name="specialty"]').value = 'Automation';
+      practitionerForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เพิ่ม practitioner แล้ว')`);
+    const createdPractitioners = await requestJson<Array<{ id: string; practitioner_code: string; specialty: string; is_active: boolean }>>(
+      API_PORT,
+      `/api/practitioners?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserPractitionerCode)}&active=active&limit=5&offset=0`,
+      adminHeaders
+    );
+    const createdPractitioner = createdPractitioners.data.find((item) => item.practitioner_code === browserPractitionerCode);
+    assert.ok(createdPractitioner);
+    assert.equal(createdPractitioner.specialty, 'Automation');
+
+    await evaluate(cdp, `
+      clickButtonInCard('${browserPractitionerCode}', 'แก้ไข');
+      const editForm = findCardByText('${browserPractitionerCode}').querySelector('.inline-profile-form');
+      editForm.querySelector('input[name="specialty"]').value = 'Automation Edited';
+      editForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('แก้ practitioner แล้ว')`);
+    const editedPractitioners = await requestJson<Array<{ id: string; specialty: string }>>(
+      API_PORT,
+      `/api/practitioners?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserPractitionerCode)}&active=all&limit=5&offset=0`,
+      adminHeaders
+    );
+    assert.equal(editedPractitioners.data.find((item) => item.id === createdPractitioner.id)?.specialty, 'Automation Edited');
+
+    await evaluate(cdp, `
+      clickButtonInCard('${browserPractitionerCode}', 'ปิดใช้งาน');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('ปิดใช้งานแล้ว')`);
+    const inactivePractitioners = await requestJson<Array<{ id: string; is_active: boolean }>>(
+      API_PORT,
+      `/api/practitioners?clinicId=${CLINIC_ID}&search=${encodeURIComponent(browserPractitionerCode)}&active=inactive&limit=5&offset=0`,
+      adminHeaders
+    );
+    assert.equal(inactivePractitioners.data.find((item) => item.id === createdPractitioner.id)?.is_active, false);
+
+    await evaluate(cdp, `
+      const auditForm = Array.from(document.querySelectorAll('form.audit-form'))[0];
+      auditForm.querySelector('select[name="entityType"]').value = 'user';
+      auditForm.querySelector('input[name="entityId"]').value = '${createdUser.id}';
+      auditForm.querySelector('input[name="limit"]').value = '10';
+      auditForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('โหลด audit แล้ว') && document.body.textContent.includes('${createdUser.id}')`);
+    const userAudit = await requestJson<Array<{ action: string }>>(
+      API_PORT,
+      `/api/audit-logs?entityType=user&entityId=${createdUser.id}&limit=10`,
+      adminHeaders
+    );
+    assert.ok(userAudit.data.some((item) => item.action === 'created'));
+    assert.ok(userAudit.data.some((item) => item.action === 'updated'));
+
     await cdp.close();
     console.log('Browser API workflow smoke passed');
   } finally {
@@ -502,6 +623,26 @@ async function evaluate<T = unknown>(cdp: DevToolsClient, expression: string) {
           const button = Array.from(document.querySelectorAll('button'))
             .find((item) => item.textContent.trim().includes(text));
           if (!button) throw new Error('Button not found: ' + text);
+          button.click();
+          return true;
+        });
+        window.findFormByButtonText = window.findFormByButtonText || ((text) => {
+          const form = Array.from(document.querySelectorAll('form'))
+            .find((item) => Array.from(item.querySelectorAll('button')).some((button) => button.textContent.trim().includes(text)));
+          if (!form) throw new Error('Form not found for button: ' + text);
+          return form;
+        });
+        window.findCardByText = window.findCardByText || ((text) => {
+          const card = Array.from(document.querySelectorAll('.record-card'))
+            .find((item) => item.textContent.includes(text));
+          if (!card) throw new Error('Card not found: ' + text);
+          return card;
+        });
+        window.clickButtonInCard = window.clickButtonInCard || ((cardText, buttonText) => {
+          const card = window.findCardByText(cardText);
+          const button = Array.from(card.querySelectorAll('button'))
+            .find((item) => item.textContent.trim().includes(buttonText));
+          if (!button) throw new Error('Button not found in card: ' + buttonText);
           button.click();
           return true;
         });

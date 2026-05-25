@@ -54,10 +54,10 @@ and clinician usability.
 - `npm run browser:api-workflow-smoke` runs the same browser click path through
   the real API, frontend proxy, and a temporary Docker Postgres database, and
   now also covers appointment check-in, SOAP open/edit/save, operations CSV
-  export, and clinic branding/logo upload.
+  export, clinic branding/logo upload, admin user/practitioner CRUD, and audit
+  lookup.
 
 ## Remaining Phase 2A Follow-ups
 
-- Add browser coverage for admin user/practitioner CRUD and audit lookup.
 - Review chart labels with clinic users after real-world reporting data is
   available.
