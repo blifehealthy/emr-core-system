@@ -74,3 +74,100 @@ test('verifies a valid RS256 OIDC-compatible test token', () => {
     assert.equal(result.subject, 'oidc-rs-user-1');
   }
 });
+
+test('selects RS256 public keys by token kid', () => {
+  const firstKey = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+  const secondKey = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+  const token = createOidcRs256TestToken(
+    {
+      iss: config.issuer,
+      aud: config.audience,
+      sub: 'oidc-rs-user-2',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    secondKey.privateKey,
+    { kid: 'provider-key-2' }
+  );
+
+  const result = verifyOidcAccessToken(token, {
+    issuer: config.issuer,
+    audience: config.audience,
+    rs256PublicKeysByKid: {
+      'provider-key-1': firstKey.publicKey,
+      'provider-key-2': secondKey.publicKey,
+    },
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.subject, 'oidc-rs-user-2');
+  }
+});
+
+test('rejects RS256 token when kid is unknown', () => {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+  const token = createOidcRs256TestToken(
+    {
+      iss: config.issuer,
+      aud: config.audience,
+      sub: 'oidc-rs-user-3',
+      exp: Math.floor(Date.now() / 1000) + 60,
+    },
+    privateKey,
+    { kid: 'missing-key' }
+  );
+
+  const result = verifyOidcAccessToken(token, {
+    issuer: config.issuer,
+    audience: config.audience,
+    rs256PublicKeysByKid: {
+      'provider-key-1': publicKey,
+    },
+  });
+
+  assert.equal(result.ok, false);
+});
+
+test('requires configured MFA claim values when enabled', () => {
+  const tokenWithMfa = createOidcTestToken(
+    {
+      iss: config.issuer,
+      aud: config.audience,
+      sub: 'oidc-user-mfa',
+      exp: Math.floor(Date.now() / 1000) + 60,
+      acr: 'urn:mfa',
+    },
+    config.hs256Secret
+  );
+  const tokenWithoutMfa = createOidcTestToken(
+    {
+      iss: config.issuer,
+      aud: config.audience,
+      sub: 'oidc-user-no-mfa',
+      exp: Math.floor(Date.now() / 1000) + 60,
+      acr: 'pwd',
+    },
+    config.hs256Secret
+  );
+
+  const mfaConfig = {
+    ...config,
+    requiredMfaClaim: 'acr',
+    requiredMfaValues: ['urn:mfa'],
+  };
+
+  assert.equal(verifyOidcAccessToken(tokenWithMfa, mfaConfig).ok, true);
+  assert.equal(verifyOidcAccessToken(tokenWithoutMfa, mfaConfig).ok, false);
+});

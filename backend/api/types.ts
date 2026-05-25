@@ -894,6 +894,9 @@ export type Dependencies = {
     audience: string;
     hs256Secret?: string;
     rs256PublicKeyPem?: string;
+    rs256PublicKeysByKid?: Record<string, string>;
     subjectClaim?: string;
+    requiredMfaClaim?: string;
+    requiredMfaValues?: string[];
   };
 };

@@ -460,15 +460,33 @@ signing support:
 
 Post-Phase 2E follow-ups:
 
-1. Add JWKS URL retrieval/cache after identity provider selection.
-2. Add MFA policy hooks/documentation tied to provider claims.
+1. JWKS URL retrieval/cache completed in Phase 2F.
+2. MFA policy hooks/documentation completed in Phase 2F.
 3. Run Phase 2E UAT with clinic operators and provider/vendor contact.
+
+## Phase 2F Status
+
+Phase 2F is ready for clinician/operator review with provider-specific identity
+integration foundations:
+
+- API startup can load RS256 public keys from `AUTH_OIDC_JWKS_URL`.
+- JWKS keys are cached by `AUTH_OIDC_JWKS_CACHE_TTL_SECONDS`.
+- RS256 verification selects provider keys by JWT `kid`.
+- Unknown `kid` values are rejected.
+- Optional MFA claim enforcement is controlled by:
+  - `AUTH_OIDC_MFA_REQUIRED`
+  - `AUTH_OIDC_MFA_CLAIM`
+  - `AUTH_OIDC_MFA_VALUES`
+- Production readiness validates JWKS HTTPS, JWKS TTL, and MFA claim policy.
+- Phase 2F clinician/operator summary and UAT checklist are available.
 
 Recommended next phase:
 
-1. Start Phase 2F provider-specific identity integration after provider choice.
-2. Add JWKS retrieval/cache and key rotation guidance.
-3. Add MFA claim policy for admin/doctor access.
+1. Run Phase 2F UAT against the selected identity provider.
+2. Start Phase 2G production identity operations:
+   - provider-specific key rotation and incident runbook
+   - audit hardening for authorization failures
+   - monitoring alerts for auth/readiness failures
 
 The deliverables added in this worktree are:
 
@@ -493,6 +511,9 @@ The deliverables added in this worktree are:
 - `docs/phase-2e-plan.md`
 - `docs/phase-2e-clinician-summary-th.md`
 - `docs/phase-2e-uat-checklist-th.md`
+- `docs/phase-2f-plan.md`
+- `docs/phase-2f-clinician-summary-th.md`
+- `docs/phase-2f-uat-checklist-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`

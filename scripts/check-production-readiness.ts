@@ -121,8 +121,12 @@ function checkOidcAuth(
   const audience = env.AUTH_OIDC_AUDIENCE?.trim();
   const hs256Secret = env.AUTH_OIDC_HS256_SECRET?.trim();
   const rs256PublicKeyPem = env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM?.trim();
+  const jwksUrl = env.AUTH_OIDC_JWKS_URL?.trim();
+  const mfaRequired = env.AUTH_OIDC_MFA_REQUIRED === 'true';
+  const mfaClaim = env.AUTH_OIDC_MFA_CLAIM?.trim();
+  const mfaValues = env.AUTH_OIDC_MFA_VALUES?.trim();
 
-  if (!oidcEnabled && !issuer && !audience && !hs256Secret && !rs256PublicKeyPem) {
+  if (!oidcEnabled && !issuer && !audience && !hs256Secret && !rs256PublicKeyPem && !jwksUrl) {
     return;
   }
 
@@ -134,8 +138,8 @@ function checkOidcAuth(
     add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_AUDIENCE', 'Set AUTH_OIDC_AUDIENCE when OIDC auth is enabled.');
   }
 
-  if (!hs256Secret && !rs256PublicKeyPem) {
-    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_SIGNING_KEY', 'Set AUTH_OIDC_RS256_PUBLIC_KEY_PEM for provider tokens or AUTH_OIDC_HS256_SECRET for local OIDC token verification.');
+  if (!hs256Secret && !rs256PublicKeyPem && !jwksUrl) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_SIGNING_KEY', 'Set AUTH_OIDC_JWKS_URL, AUTH_OIDC_RS256_PUBLIC_KEY_PEM, or AUTH_OIDC_HS256_SECRET for OIDC token verification.');
   }
 
   if (hs256Secret && !isStrongSecret(hs256Secret)) {
@@ -144,6 +148,26 @@ function checkOidcAuth(
 
   if (rs256PublicKeyPem && !rs256PublicKeyPem.includes('BEGIN PUBLIC KEY')) {
     add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_RS256_PUBLIC_KEY_PEM', 'AUTH_OIDC_RS256_PUBLIC_KEY_PEM must contain a PEM public key.');
+  }
+
+  if (jwksUrl && !/^https:\/\//i.test(jwksUrl)) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_JWKS_URL', 'AUTH_OIDC_JWKS_URL must use HTTPS for pilot and production deployments.');
+  }
+
+  const jwksTtl = env.AUTH_OIDC_JWKS_CACHE_TTL_SECONDS;
+  if (jwksTtl !== undefined) {
+    const ttlSeconds = Number(jwksTtl);
+    if (!Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 86400) {
+      add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_JWKS_CACHE_TTL_SECONDS', 'AUTH_OIDC_JWKS_CACHE_TTL_SECONDS must be an integer from 60 to 86400.');
+    }
+  }
+
+  if (mfaRequired && !mfaClaim) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_MFA_CLAIM', 'Set AUTH_OIDC_MFA_CLAIM when AUTH_OIDC_MFA_REQUIRED=true.');
+  }
+
+  if (mfaRequired && !mfaValues) {
+    add(findings, strict ? 'error' : 'warning', 'AUTH_OIDC_MFA_VALUES', 'Set AUTH_OIDC_MFA_VALUES to the provider claim values that prove MFA.');
   }
 }
 

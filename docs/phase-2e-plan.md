@@ -26,14 +26,14 @@ the production readiness gate for either signing mode.
 
 ## Post-Phase 2E Follow-Ups
 
-- Add JWKS URL retrieval/cache once the target identity provider is selected.
-- Add MFA policy hooks/documentation tied to provider claims.
+- JWKS URL retrieval/cache was added in Phase 2F.
+- MFA claim policy hooks were added in Phase 2F.
 - Run Phase 2E UAT with the clinic owner, operator, and identity provider
   representative.
 
 ## Recommended Next Phase
 
-Start Phase 2F after provider selection:
+Phase 2F has started and covers:
 
 - provider-specific JWKS URL retrieval/cache
 - MFA claim policy for admin/doctor access

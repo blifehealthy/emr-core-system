@@ -16,6 +16,10 @@ controlled technical pilot, but it is not the final production identity model.
 - Clinic admins can bind `oidc_subject` on user records during pilot setup.
 - OIDC verification supports HS256 local testing and RS256 public-key provider
   tokens through configured env.
+- OIDC verification can load RS256 keys from provider JWKS URL and choose keys
+  by JWT `kid`.
+- OIDC verification can require a provider MFA claim/value before accepting a
+  bearer token.
 - Known-user login failures write audit events for support review.
 - User records track `last_login_at`, `failed_login_count`, and `locked_until`
   for pilot lockout controls.
@@ -55,6 +59,7 @@ Production access should move to an identity provider with:
 
 - Select provider: managed OIDC, clinic SSO, or private identity service.
 - Add provider-grade JWT verification middleware.
+- Prefer provider JWKS URL for RS256 public key rotation.
 - Map token subject to `users.oidc_subject`.
 - Resolve role and practitioner id from database, not request headers.
 - Reject inactive users.
@@ -64,6 +69,8 @@ Production access should move to an identity provider with:
 
 - Require MFA for admin users.
 - Require MFA for remote clinician access.
+- Configure `AUTH_OIDC_MFA_CLAIM` and `AUTH_OIDC_MFA_VALUES` from the selected
+  provider.
 - Define session idle timeout and absolute timeout.
 - Add forced logout for disabled users.
 - Add token rotation and revocation strategy.

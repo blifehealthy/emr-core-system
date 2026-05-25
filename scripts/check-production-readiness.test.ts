@@ -101,3 +101,54 @@ test('passes strict mode with RS256 OIDC public key config', () => {
 
   assert.deepEqual(findings, []);
 });
+
+test('passes strict mode with OIDC JWKS and MFA claim policy', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DEPLOYMENT_PROFILE: 'production',
+    DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
+    API_TOKEN: '0123456789abcdef0123456789abcdef',
+    AUTH_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+    AUTH_LOGIN_CODE: 'fedcba9876543210fedcba9876543210',
+    AUTH_OIDC_ENABLED: 'true',
+    AUTH_OIDC_ISSUER: 'https://id.example.test',
+    AUTH_OIDC_AUDIENCE: 'emr-core',
+    AUTH_OIDC_JWKS_URL: 'https://id.example.test/.well-known/jwks.json',
+    AUTH_OIDC_JWKS_CACHE_TTL_SECONDS: '3600',
+    AUTH_OIDC_MFA_REQUIRED: 'true',
+    AUTH_OIDC_MFA_CLAIM: 'acr',
+    AUTH_OIDC_MFA_VALUES: 'urn:mfa,mfa',
+    FILE_STORAGE_DRIVER: 'local',
+    FILE_STORAGE_DIR: '/var/lib/emr-core/file-assets',
+    FILE_STORAGE_MAX_BYTES: '5242880',
+    FILE_STORAGE_ALLOWED_MIME_TYPES: 'image/png,image/jpeg,application/pdf',
+  });
+
+  assert.deepEqual(findings, []);
+});
+
+test('fails strict mode for insecure OIDC JWKS and incomplete MFA policy', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DEPLOYMENT_PROFILE: 'production',
+    DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
+    API_TOKEN: '0123456789abcdef0123456789abcdef',
+    AUTH_SESSION_SECRET: 'abcdef0123456789abcdef0123456789',
+    AUTH_LOGIN_CODE: 'fedcba9876543210fedcba9876543210',
+    AUTH_OIDC_ENABLED: 'true',
+    AUTH_OIDC_ISSUER: 'https://id.example.test',
+    AUTH_OIDC_AUDIENCE: 'emr-core',
+    AUTH_OIDC_JWKS_URL: 'http://id.example.test/.well-known/jwks.json',
+    AUTH_OIDC_JWKS_CACHE_TTL_SECONDS: '10',
+    AUTH_OIDC_MFA_REQUIRED: 'true',
+    FILE_STORAGE_DRIVER: 'local',
+    FILE_STORAGE_DIR: '/var/lib/emr-core/file-assets',
+    FILE_STORAGE_MAX_BYTES: '5242880',
+    FILE_STORAGE_ALLOWED_MIME_TYPES: 'image/png,image/jpeg,application/pdf',
+  });
+
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_JWKS_URL'));
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_JWKS_CACHE_TTL_SECONDS'));
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_MFA_CLAIM'));
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'AUTH_OIDC_MFA_VALUES'));
+});

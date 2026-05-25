@@ -28,8 +28,13 @@ that need human confirmation.
 - `AUTH_SESSION_SECRET` is set to a private signing secret of at least 32 characters.
 - `AUTH_LOGIN_CODE` is set to a private onboarding/login code of at least 32 characters.
 - `AUTH_SESSION_TTL_MINUTES` is set to an integer from 1 to 720 when overridden.
-- If OIDC auth is enabled, `AUTH_OIDC_ISSUER`, `AUTH_OIDC_AUDIENCE`, and either
-  `AUTH_OIDC_RS256_PUBLIC_KEY_PEM` or `AUTH_OIDC_HS256_SECRET` are set.
+- If OIDC auth is enabled, `AUTH_OIDC_ISSUER`, `AUTH_OIDC_AUDIENCE`, and one of
+  `AUTH_OIDC_JWKS_URL`, `AUTH_OIDC_RS256_PUBLIC_KEY_PEM`, or
+  `AUTH_OIDC_HS256_SECRET` are set.
+- `AUTH_OIDC_JWKS_URL` uses HTTPS when configured.
+- `AUTH_OIDC_JWKS_CACHE_TTL_SECONDS` is set to 60-86400 when overridden.
+- If `AUTH_OIDC_MFA_REQUIRED=true`, `AUTH_OIDC_MFA_CLAIM` and
+  `AUTH_OIDC_MFA_VALUES` are set from the selected provider policy.
 - `FILE_STORAGE_DRIVER` is set to `local` or `s3`.
 - `FILE_STORAGE_DIR` uses persistent private disk when the local driver is used.
 - `FILE_STORAGE_ALLOWED_MIME_TYPES` lists explicit MIME types.

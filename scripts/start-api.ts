@@ -91,6 +91,7 @@ import { updateVitalSign } from '../backend/services/updateVitalSign.ts';
 import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.ts';
 import { resolveActor } from '../backend/services/resolveActor.ts';
 import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
+import { createOidcJwksCache } from '../backend/services/oidcJwks.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -100,6 +101,12 @@ if (!databaseUrl) {
 
 const db = createPostgresDb(databaseUrl);
 const fileStoragePolicy = createFileAssetStoragePolicy(process.env);
+const oidcPublicKeysByKid = process.env.AUTH_OIDC_JWKS_URL
+  ? (await createOidcJwksCache({
+      jwksUrl: process.env.AUTH_OIDC_JWKS_URL,
+      cacheTtlMs: Number(process.env.AUTH_OIDC_JWKS_CACHE_TTL_SECONDS ?? 3600) * 1000,
+    }).getPublicKeys()).publicKeysByKid
+  : undefined;
 
 const server = createNodeServer({
   getPatientWithEncountersAndSOAP: createGetPatientWithEncountersAndSOAPService(db),
@@ -205,13 +212,24 @@ const server = createNodeServer({
   oidcAuth:
     process.env.AUTH_OIDC_ISSUER &&
     process.env.AUTH_OIDC_AUDIENCE &&
-    (process.env.AUTH_OIDC_HS256_SECRET || process.env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM)
+    (process.env.AUTH_OIDC_HS256_SECRET ||
+      process.env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM ||
+      oidcPublicKeysByKid)
       ? {
           issuer: process.env.AUTH_OIDC_ISSUER,
           audience: process.env.AUTH_OIDC_AUDIENCE,
           hs256Secret: process.env.AUTH_OIDC_HS256_SECRET,
           rs256PublicKeyPem: process.env.AUTH_OIDC_RS256_PUBLIC_KEY_PEM,
+          rs256PublicKeysByKid: oidcPublicKeysByKid,
           subjectClaim: process.env.AUTH_OIDC_SUBJECT_CLAIM,
+          requiredMfaClaim:
+            process.env.AUTH_OIDC_MFA_REQUIRED === 'true'
+              ? process.env.AUTH_OIDC_MFA_CLAIM ?? 'acr'
+              : undefined,
+          requiredMfaValues:
+            process.env.AUTH_OIDC_MFA_VALUES?.split(',')
+              .map((value) => value.trim())
+              .filter(Boolean),
         }
       : undefined,
 });

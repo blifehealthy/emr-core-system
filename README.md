@@ -102,6 +102,16 @@ are tracked in:
 - `docs/phase-2e-clinician-summary-th.md`
 - `docs/phase-2e-uat-checklist-th.md`
 
+## Phase 2F
+
+Phase 2F provider identity integration is ready for review. It adds OIDC JWKS
+loading/cache, RS256 key selection by JWT `kid`, and optional MFA claim
+enforcement for provider tokens. Current scope and review docs are tracked in:
+
+- `docs/phase-2f-plan.md`
+- `docs/phase-2f-clinician-summary-th.md`
+- `docs/phase-2f-uat-checklist-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:
