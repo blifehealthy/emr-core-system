@@ -719,6 +719,44 @@ export type RecordInvoicePaymentInput = {
   notes?: string | null;
 };
 
+export type RecordInvoiceRefundInput = {
+  invoiceId: string;
+  refundNumber: string;
+  method: PaymentMethod;
+  amount: number | string;
+  refundedAt?: string | null;
+  refundedByUserId?: string | null;
+  referenceNumber?: string | null;
+  notes?: string | null;
+};
+
+export type VoidInvoiceInput = {
+  invoiceId: string;
+  voidReason: string;
+};
+
+export type CreateChargeTemplateInput = {
+  clinicId: string;
+  code: string;
+  description: string;
+  itemType?: InvoiceLineItemType;
+  unitPriceAmount: number | string;
+  taxAmount?: number | string | null;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdateChargeTemplateInput = {
+  chargeTemplateId: string;
+  code?: string;
+  description?: string;
+  itemType?: InvoiceLineItemType;
+  unitPriceAmount?: number | string;
+  taxAmount?: number | string | null;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
 export type Dependencies = {
   createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | AuthSessionFailure | null>;
   getPatientWithEncountersAndSOAP: (input: {
@@ -898,6 +936,16 @@ export type Dependencies = {
   getInvoiceById?: (input: { invoiceId: string }) => Promise<unknown | null>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<unknown>;
   recordInvoicePayment?: (input: RecordInvoicePaymentInput) => Promise<unknown | null>;
+  recordInvoiceRefund?: (input: RecordInvoiceRefundInput) => Promise<unknown | null>;
+  voidInvoice?: (input: VoidInvoiceInput) => Promise<unknown | null>;
+  listChargeTemplates?: (input: {
+    clinicId: string;
+    active?: AdminActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createChargeTemplate?: (input: CreateChargeTemplateInput) => Promise<unknown>;
+  updateChargeTemplate?: (input: UpdateChargeTemplateInput) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
   updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;

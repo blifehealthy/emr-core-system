@@ -22,6 +22,8 @@ import {
   toFileAssetDtos,
   toInvoiceDto,
   toInvoiceDtos,
+  toChargeTemplateDto,
+  toChargeTemplateDtos,
   toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
@@ -62,6 +64,7 @@ import {
   validateAssessPrescriptionSafetyBody,
   validateCreateEncounterBody,
   validateCreateInvoiceBody,
+  validateCreateChargeTemplateBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -86,6 +89,9 @@ import {
   validateUpdateUserBody,
   validateUpdateVitalSignBody,
   validateRecordInvoicePaymentBody,
+  validateRecordInvoiceRefundBody,
+  validateVoidInvoiceBody,
+  validateUpdateChargeTemplateBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
@@ -2189,6 +2195,160 @@ export async function handleRecordInvoicePayment(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleRecordInvoiceRefund(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  invoiceId: string
+): Promise<HttpResponse> {
+  if (!dependencies.recordInvoiceRefund) {
+    return mapError(new Error('Invoice refund dependency is not configured'));
+  }
+
+  const validation = validateRecordInvoiceRefundBody(request.body, invoiceId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const invoice = await dependencies.recordInvoiceRefund(validation.value);
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Invoice not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: invoiceId,
+    action: 'refund_recorded',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      refundNumber: validation.value.refundNumber,
+      method: validation.value.method,
+      amount: validation.value.amount,
+    },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleVoidInvoice(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  invoiceId: string
+): Promise<HttpResponse> {
+  if (!dependencies.voidInvoice) {
+    return mapError(new Error('Invoice void dependency is not configured'));
+  }
+
+  const validation = validateVoidInvoiceBody(request.body, invoiceId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const invoice = await dependencies.voidInvoice(validation.value);
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Invoice not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: invoiceId,
+    action: 'voided',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      voidReason: validation.value.voidReason,
+    },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleListChargeTemplates(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listChargeTemplates) {
+    return mapError(new Error('Charge template list dependency is not configured'));
+  }
+
+  const clinicId = readOptionalQueryString(request, 'clinicId');
+  if (!clinicId.ok) return validationError(clinicId.error);
+  if (!clinicId.value) return validationError('clinicId is required query parameter');
+
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const templates = await dependencies.listChargeTemplates({
+    clinicId: clinicId.value,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toChargeTemplateDtos(templates.rows), meta: templates.meta },
+  };
+}
+
+export async function handleCreateChargeTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createChargeTemplate) {
+    return mapError(new Error('Charge template create dependency is not configured'));
+  }
+
+  const validation = validateCreateChargeTemplateBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const template = await dependencies.createChargeTemplate(validation.value);
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'charge_template',
+    entityId: (template as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { clinicId: validation.value.clinicId, code: validation.value.code },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toChargeTemplateDto(template) } };
+}
+
+export async function handleUpdateChargeTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  chargeTemplateId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateChargeTemplate) {
+    return mapError(new Error('Charge template update dependency is not configured'));
+  }
+
+  const validation = validateUpdateChargeTemplateBody(request.body, chargeTemplateId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const template = await dependencies.updateChargeTemplate(validation.value);
+  if (!template) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Charge template not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'charge_template',
+    entityId: chargeTemplateId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { isActive: validation.value.isActive },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toChargeTemplateDto(template) } };
 }
 
 export async function handleListDiagnosesByEncounter(

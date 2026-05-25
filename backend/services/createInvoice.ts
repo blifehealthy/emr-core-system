@@ -134,11 +134,22 @@ export function getInvoiceById(db: {
       `,
       [input.invoiceId]
     );
+    const refunds = await db.query(
+      `
+        SELECT *
+        FROM invoice_refunds
+        WHERE invoice_id = $1
+          AND deleted_at IS NULL
+        ORDER BY refunded_at DESC, created_at DESC
+      `,
+      [input.invoiceId]
+    );
 
     return {
       ...(invoice.rows[0] as Record<string, unknown>),
       line_items: lineItems.rows,
       payments: payments.rows,
+      refunds: refunds.rows,
     };
   };
 }

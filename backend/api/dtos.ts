@@ -118,6 +118,7 @@ const INVOICE_KEYS = [
   'tax_amount',
   'total_amount',
   'paid_amount',
+  'refunded_amount',
   'balance_amount',
   'issued_at',
   'due_at',
@@ -154,6 +155,36 @@ const INVOICE_PAYMENT_KEYS = [
   'paid_at',
   'received_by_user_id',
   'reference_number',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INVOICE_REFUND_KEYS = [
+  'id',
+  'invoice_id',
+  'refund_number',
+  'method',
+  'amount',
+  'refunded_at',
+  'refunded_by_user_id',
+  'reference_number',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const CHARGE_TEMPLATE_KEYS = [
+  'id',
+  'clinic_id',
+  'code',
+  'description',
+  'item_type',
+  'unit_price_amount',
+  'tax_amount',
+  'is_active',
   'notes',
   'created_at',
   'updated_at',
@@ -487,12 +518,25 @@ export function toInvoiceDto(row: unknown): Record<string, unknown> {
         pickKeys(payment, [...INVOICE_PAYMENT_KEYS])
       );
     }
+    if (Array.isArray(source.refunds)) {
+      invoice.refunds = source.refunds.map((refund) =>
+        pickKeys(refund, [...INVOICE_REFUND_KEYS])
+      );
+    }
   }
   return invoice;
 }
 
 export function toInvoiceDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInvoiceDto(row));
+}
+
+export function toChargeTemplateDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...CHARGE_TEMPLATE_KEYS]);
+}
+
+export function toChargeTemplateDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toChargeTemplateDto(row));
 }
 
 export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {

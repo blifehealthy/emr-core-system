@@ -52,6 +52,7 @@ const migrations = [
   '0020_add_user_login_security.up.sql',
   '0021_add_user_oidc_subject.up.sql',
   '0022_add_billing_foundation.up.sql',
+  '0023_add_billing_refunds_and_charge_templates.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -849,6 +850,32 @@ async function main() {
     assert.equal(createdPrescription.data.drug_catalog_id, '10000000-0000-0000-0000-000000020001');
     assert.equal(createdPrescription.data.safety_warnings[0].type, 'allergy');
 
+    const chargeTemplate = await requestJson<{
+      id: string;
+      code: string;
+      description: string;
+      unit_price_amount: string;
+    }>(
+      '/api/charge-templates',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        code: `VISIT-${Date.now()}`,
+        description: 'Smoke visit fee',
+        itemType: 'visit',
+        unitPriceAmount: 800,
+      }
+    );
+    assert.equal(chargeTemplate.data.description, 'Smoke visit fee');
+
+    const chargeTemplates = await requestJson<Array<{ id: string }>>(
+      '/api/charge-templates?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=10',
+      adminHeaders
+    );
+    assert.ok(chargeTemplates.data.some((item) => item.id === chargeTemplate.data.id));
+
     const createdInvoice = await requestJson<{
       id: string;
       invoice_number: string;
@@ -911,11 +938,44 @@ async function main() {
     assert.equal(Number(recordedPayment.data.paid_amount), 400);
     assert.equal(Number(recordedPayment.data.balance_amount), 500);
 
+    const recordedRefund = await requestJson<{
+      id: string;
+      status: string;
+      paid_amount: string;
+      refunded_amount: string;
+      balance_amount: string;
+      refunds: Array<{ refund_number: string; method: string }>;
+    }>(
+      `/api/invoices/${createdInvoice.data.id}/refunds`,
+      adminHeaders,
+      'POST',
+      200,
+      {
+        refundNumber: `REF-SMOKE-${Date.now()}`,
+        method: 'cash',
+        amount: 100,
+      }
+    );
+    assert.equal(recordedRefund.data.status, 'partially_paid');
+    assert.equal(Number(recordedRefund.data.paid_amount), 300);
+    assert.equal(Number(recordedRefund.data.refunded_amount), 100);
+    assert.equal(Number(recordedRefund.data.balance_amount), 600);
+
     const invoiceList = await requestJson<Array<{ id: string }>>(
       '/api/invoices?clinicId=10000000-0000-0000-0000-000000000101&status=partially_paid&limit=5&offset=0',
       adminHeaders
     );
     assert.ok(invoiceList.data.some((item) => item.id === createdInvoice.data.id));
+
+    const voidedInvoice = await requestJson<{ id: string; status: string; void_reason: string }>(
+      `/api/invoices/${createdInvoice.data.id}/void`,
+      adminHeaders,
+      'PATCH',
+      200,
+      { voidReason: 'Smoke test void' }
+    );
+    assert.equal(voidedInvoice.data.status, 'voided');
+    assert.equal(voidedInvoice.data.void_reason, 'Smoke test void');
 
     const updatedPrescription = await requestJson<{
       id: string;

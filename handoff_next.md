@@ -530,27 +530,40 @@ Recommended next work:
 
 ## Phase 3A Status
 
-Phase 3A billing/payment foundation has started:
+Phase 3A billing/payment foundation now includes a usable cashier foundation:
 
 - Billing schema added:
   - `invoices`
   - `invoice_line_items`
   - `invoice_payments`
+  - `invoice_refunds`
+  - `charge_templates`
 - Billing APIs added:
   - `GET /api/invoices`
   - `GET /api/invoices/:id`
   - `POST /api/invoices`
   - `POST /api/invoices/:id/payments`
-- Admin can create invoices and record payments.
+  - `POST /api/invoices/:id/refunds`
+  - `PATCH /api/invoices/:id/void`
+  - `GET /api/charge-templates`
+  - `POST /api/charge-templates`
+  - `PATCH /api/charge-templates/:id`
+- Admin can create invoices, record payments/refunds, void invoices, and manage
+  charge templates.
 - Doctor, nurse, and admin can read invoices.
-- Invoice creation and payment recording write audit logs.
-- API smoke covers invoice creation, payment recording, and partially-paid list.
+- Invoice creation, payment/refund recording, invoice voiding, and charge
+  template changes write audit logs.
+- Frontend Cashier tab added for invoice list/detail/create/payment/refund/void,
+  charge template creation, and receipt print.
+- API smoke covers charge template creation/listing, invoice creation, payment,
+  refund, partially-paid list, and void.
 
 Recommended next Phase 3A batch:
 
-1. Add cashier frontend for invoice list/detail/create/payment.
-2. Add receipt print/export.
-3. Add void/refund workflow with audit.
+1. Add multi-line invoice editor before issue/final payment.
+2. Add automated charge capture from visit/procedure/prescription/lab activity.
+3. Add receipt numbering and tax invoice policy fields.
+4. Add insurance claim lifecycle beyond payment method tagging.
 
 The deliverables added in this worktree are:
 

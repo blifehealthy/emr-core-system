@@ -646,6 +646,8 @@ button:disabled {
 .prescription-entry-form label:nth-of-type(4),
 .prescription-entry-form label:nth-of-type(10),
 .prescription-entry-form label:nth-of-type(11),
+.billing-form label:nth-of-type(2),
+.billing-form label:nth-of-type(8),
 .safety-warning-panel {
   grid-column: 1 / -1;
 }
@@ -728,8 +730,35 @@ button:disabled {
 
 .record-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.invoice-action-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.invoice-detail {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.compact-table-section {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-table-section h4 {
+  margin: 0;
+}
+
+.compact-table-section dl {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
 }
 
 .small-button {

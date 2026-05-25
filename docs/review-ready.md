@@ -13,7 +13,7 @@
 - Phase 2F OIDC integration supports provider JWKS loading/cache, RS256 `kid` key selection, and MFA claim enforcement
 - Phase 2G security operations adds audit events for API auth/authorization failures and an identity incident runbook
 - Phase 2 implementation scope is closed for pilot UAT/go-no-go review
-- Phase 3A billing/payment foundation adds invoices, line items, payment recording, and billing audit events
+- Phase 3A billing/payment foundation adds invoices, line items, payment/refund recording, invoice voiding, charge templates, cashier UI, receipt print, and billing audit events
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -56,5 +56,5 @@
 - Phase 2G targeted security audit tests pass
 - Phase 2G docs updated: operator summary, UAT checklist, and identity security operations runbook
 - Phase 2 closure docs added for master UAT, go/no-go, and Phase 3 planning seeds
-- Phase 3A targeted billing service, API, and migration tests pass
+- Phase 3A targeted billing service, API, frontend syntax, and migration tests pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

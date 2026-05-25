@@ -8,8 +8,8 @@ test('recordInvoicePayment updates invoice paid and balance amounts', async () =
   const service = recordInvoicePayment({
     async query<T = unknown>(sql: string, params?: unknown[]) {
       calls.push({ sql, params });
-      if (sql.includes('SELECT') && sql.includes('COALESCE(SUM')) {
-        return { rows: [{ total_amount: '1000.00', paid_amount: '400.00' }] as T[] };
+      if (sql.includes('SELECT') && sql.includes('total_amount')) {
+        return { rows: [{ total_amount: '1000.00', paid_amount: '400.00', refunded_amount: '0.00' }] as T[] };
       }
       if (sql.includes('SELECT *') && sql.includes('FROM invoices')) {
         return { rows: [{ id: 'invoice-1', paid_amount: '400.00', balance_amount: '600.00' }] as T[] };

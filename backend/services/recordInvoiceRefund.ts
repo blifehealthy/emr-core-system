@@ -1,19 +1,19 @@
-import type { RecordInvoicePaymentInput } from '../api/types.ts';
+import type { RecordInvoiceRefundInput } from '../api/types.ts';
 import { getInvoiceById } from './createInvoice.ts';
 
-export function recordInvoicePayment(db: {
+export function recordInvoiceRefund(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
 }) {
-  return async function run(input: RecordInvoicePaymentInput) {
+  return async function run(input: RecordInvoiceRefundInput) {
     await db.query(
       `
-        INSERT INTO invoice_payments (
+        INSERT INTO invoice_refunds (
           invoice_id,
-          payment_number,
+          refund_number,
           method,
           amount,
-          paid_at,
-          received_by_user_id,
+          refunded_at,
+          refunded_by_user_id,
           reference_number,
           notes
         )
@@ -21,17 +21,21 @@ export function recordInvoicePayment(db: {
       `,
       [
         input.invoiceId,
-        input.paymentNumber,
+        input.refundNumber,
         input.method,
         input.amount,
-        input.paidAt ?? new Date().toISOString(),
-        input.receivedByUserId ?? null,
+        input.refundedAt ?? new Date().toISOString(),
+        input.refundedByUserId ?? null,
         input.referenceNumber ?? null,
         input.notes ?? null,
       ]
     );
 
-    const totals = await db.query<{ total_amount: string; paid_amount: string; refunded_amount: string }>(
+    const totals = await db.query<{
+      total_amount: string;
+      paid_amount: string;
+      refunded_amount: string;
+    }>(
       `
         SELECT
           i.total_amount,
@@ -61,20 +65,23 @@ export function recordInvoicePayment(db: {
     }
 
     const totalAmount = Number(totals.rows[0].total_amount);
-    const paidAmount = Math.max(0, Number(totals.rows[0].paid_amount) - Number(totals.rows[0].refunded_amount));
-    const balanceAmount = Math.max(0, totalAmount - paidAmount);
+    const paidAmount = Number(totals.rows[0].paid_amount);
+    const refundedAmount = Number(totals.rows[0].refunded_amount);
+    const netPaidAmount = Math.max(0, paidAmount - refundedAmount);
+    const balanceAmount = Math.max(0, totalAmount - netPaidAmount);
     const status = balanceAmount <= 0 ? 'paid' : 'partially_paid';
 
     await db.query(
       `
         UPDATE invoices
         SET paid_amount = $2,
-            balance_amount = $3,
-            status = $4
+            refunded_amount = $3,
+            balance_amount = $4,
+            status = CASE WHEN status = 'voided' THEN status ELSE $5::invoice_status END
         WHERE id = $1
           AND deleted_at IS NULL
       `,
-      [input.invoiceId, paidAmount, balanceAmount, status]
+      [input.invoiceId, netPaidAmount, refundedAmount, balanceAmount, status]
     );
 
     return getInvoiceById(db)({ invoiceId: input.invoiceId });

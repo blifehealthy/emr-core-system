@@ -10,6 +10,11 @@ import { createConsentRecord } from '../backend/services/createConsentRecord.ts'
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
 import { createDrugCatalogItem } from '../backend/services/createDrugCatalogItem.ts';
 import { createDrugInteractionRule } from '../backend/services/createDrugInteractionRule.ts';
+import {
+  createChargeTemplate,
+  listChargeTemplates,
+  updateChargeTemplate,
+} from '../backend/services/chargeTemplates.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createInvoice, getInvoiceById } from '../backend/services/createInvoice.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
@@ -94,6 +99,8 @@ import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.t
 import { resolveActor } from '../backend/services/resolveActor.ts';
 import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
 import { recordInvoicePayment } from '../backend/services/recordInvoicePayment.ts';
+import { recordInvoiceRefund } from '../backend/services/recordInvoiceRefund.ts';
+import { voidInvoice } from '../backend/services/voidInvoice.ts';
 import { createOidcJwksCache } from '../backend/services/oidcJwks.ts';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -190,6 +197,11 @@ const server = createNodeServer({
   getInvoiceById: getInvoiceById(db),
   createInvoice: createInvoice(db),
   recordInvoicePayment: recordInvoicePayment(db),
+  recordInvoiceRefund: recordInvoiceRefund(db),
+  voidInvoice: voidInvoice(db),
+  listChargeTemplates: listChargeTemplates(db),
+  createChargeTemplate: createChargeTemplate(db),
+  updateChargeTemplate: updateChargeTemplate(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),

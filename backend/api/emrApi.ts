@@ -3,6 +3,7 @@ import {
   handleCreateAttachmentLink,
   handleCreateAppointment,
   handleCreateAuthSession,
+  handleCreateChargeTemplate,
   handleCreateClinicVisit,
   handleCreateClinicalNoteTemplate,
   handleCreateConsentRecord,
@@ -55,6 +56,7 @@ import {
   handleHealthCheck,
   handleListAttachments,
   handleListAppointments,
+  handleListChargeTemplates,
   handleListClinicQueue,
   handleListClinicalNoteTemplates,
   handleListConsentRecordsByPatient,
@@ -92,6 +94,9 @@ import {
   handleUpdateVitalSign,
   handleUploadFileAsset,
   handleRecordInvoicePayment,
+  handleRecordInvoiceRefund,
+  handleUpdateChargeTemplate,
+  handleVoidInvoice,
   notFound,
 } from './controllers.ts';
 import { requireRole } from './auth.ts';
@@ -219,6 +224,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_read');
       if (roleError) return roleError;
       return handleListInvoices(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/charge-templates') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleListChargeTemplates(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/users') {
@@ -549,6 +560,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreateInvoice(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/charge-templates') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateChargeTemplate(actorAwareRequest, dependencies);
+    }
+
     const invoicePaymentMatch =
       request.method === 'POST'
         ? request.path.match(/^\/api\/invoices\/([^/]+)\/payments$/)
@@ -557,6 +574,36 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_write');
       if (roleError) return roleError;
       return handleRecordInvoicePayment(actorAwareRequest, dependencies, invoicePaymentMatch[1]);
+    }
+
+    const invoiceRefundMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/invoices\/([^/]+)\/refunds$/)
+        : null;
+    if (invoiceRefundMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleRecordInvoiceRefund(actorAwareRequest, dependencies, invoiceRefundMatch[1]);
+    }
+
+    const invoiceVoidMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/invoices\/([^/]+)\/void$/)
+        : null;
+    if (invoiceVoidMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleVoidInvoice(actorAwareRequest, dependencies, invoiceVoidMatch[1]);
+    }
+
+    const chargeTemplateUpdateMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/charge-templates\/([^/]+)$/)
+        : null;
+    if (chargeTemplateUpdateMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleUpdateChargeTemplate(actorAwareRequest, dependencies, chargeTemplateUpdateMatch[1]);
     }
 
     if (request.method === 'POST' && request.path === '/api/consents') {

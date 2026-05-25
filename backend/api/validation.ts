@@ -54,6 +54,10 @@ import type {
   UpdatePractitionerValidatedInput,
   UpdatePrescriptionInput,
   RecordInvoicePaymentInput,
+  RecordInvoiceRefundInput,
+  VoidInvoiceInput,
+  CreateChargeTemplateInput,
+  UpdateChargeTemplateInput,
   UpdateUserValidatedInput,
   UpdateVitalSignInput,
   UserRole,
@@ -260,6 +264,140 @@ export function validateRecordInvoicePaymentBody(
       paidAt: paidAt.value,
       receivedByUserId: receivedByUserId.value,
       referenceNumber: referenceNumber.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateRecordInvoiceRefundBody(
+  body: unknown,
+  invoiceId: string
+): { ok: true; value: RecordInvoiceRefundInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const refundNumber = readRequiredString(candidate.refundNumber, 'refundNumber');
+  if (!refundNumber.ok) return refundNumber;
+  const method = readRequiredEnumValue<PaymentMethod>(candidate.method, 'method', paymentMethods);
+  if (!method.ok) return method;
+  const amount = readPositiveNumberLikeValue(candidate.amount, 'amount');
+  if (!amount.ok) return amount;
+
+  const refundedAt = readOptionalNullableStringField(candidate, 'refundedAt');
+  if (!refundedAt.ok) return refundedAt;
+  const refundedByUserId = readOptionalNullableStringField(candidate, 'refundedByUserId');
+  if (!refundedByUserId.ok) return refundedByUserId;
+  const referenceNumber = readOptionalNullableStringField(candidate, 'referenceNumber');
+  if (!referenceNumber.ok) return referenceNumber;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      invoiceId,
+      refundNumber: refundNumber.value,
+      method: method.value,
+      amount: amount.value,
+      refundedAt: refundedAt.value,
+      refundedByUserId: refundedByUserId.value,
+      referenceNumber: referenceNumber.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateVoidInvoiceBody(
+  body: unknown,
+  invoiceId: string
+): { ok: true; value: VoidInvoiceInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const voidReason = readRequiredString(candidate.voidReason, 'voidReason');
+  if (!voidReason.ok) return voidReason;
+
+  return { ok: true, value: { invoiceId, voidReason: voidReason.value } };
+}
+
+export function validateCreateChargeTemplateBody(body: unknown):
+  | { ok: true; value: CreateChargeTemplateInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const code = readRequiredString(candidate.code, 'code');
+  if (!code.ok) return code;
+  const description = readRequiredString(candidate.description, 'description');
+  if (!description.ok) return description;
+  const itemType = readEnumValue<InvoiceLineItemType>(candidate.itemType, 'itemType', invoiceLineItemTypes);
+  if (!itemType.ok) return itemType;
+  const unitPriceAmount = readNonNegativeNumberLikeValue(candidate.unitPriceAmount, 'unitPriceAmount');
+  if (!unitPriceAmount.ok) return unitPriceAmount;
+  const taxAmount = readOptionalNonNegativeNumberLikeValue(candidate.taxAmount, 'taxAmount');
+  if (!taxAmount.ok) return taxAmount;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      code: code.value,
+      description: description.value,
+      itemType: itemType.value,
+      unitPriceAmount: unitPriceAmount.value,
+      taxAmount: taxAmount.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateChargeTemplateBody(
+  body: unknown,
+  chargeTemplateId: string
+): { ok: true; value: UpdateChargeTemplateInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const code = readOptionalTrimmedStringField(candidate, 'code');
+  if (!code.ok) return code;
+  const description = readOptionalTrimmedStringField(candidate, 'description');
+  if (!description.ok) return description;
+  const itemType = readEnumValue<InvoiceLineItemType>(candidate.itemType, 'itemType', invoiceLineItemTypes);
+  if (!itemType.ok) return itemType;
+  const unitPriceAmount = readOptionalNonNegativeNumberLikeField(candidate, 'unitPriceAmount');
+  if (!unitPriceAmount.ok) return unitPriceAmount;
+  const taxAmount = readOptionalNonNegativeNumberLikeField(candidate, 'taxAmount');
+  if (!taxAmount.ok) return taxAmount;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      chargeTemplateId,
+      code: code.value,
+      description: description.value,
+      itemType: itemType.value,
+      unitPriceAmount: unitPriceAmount.value ?? undefined,
+      taxAmount: taxAmount.value,
+      isActive: isActive.value,
       notes: notes.value,
     },
   };

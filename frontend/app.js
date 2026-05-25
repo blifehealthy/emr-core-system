@@ -3,11 +3,13 @@ const authForm = document.querySelector('#auth-form');
 const searchForm = document.querySelector('#patient-search-form');
 const adminForm = document.querySelector('#admin-form');
 const queueForm = document.querySelector('#queue-form');
+const billingForm = document.querySelector('#billing-form');
 const submitButton = document.querySelector('#submit-button');
 const searchButton = document.querySelector('#search-button');
 const adminLoadButton = document.querySelector('#admin-load-button');
 const queueLoadButton = document.querySelector('#queue-load-button');
 const queueExportButton = document.querySelector('#queue-export-button');
+const billingLoadButton = document.querySelector('#billing-load-button');
 const logoutButton = document.querySelector('#logout-button');
 const serviceStatus = document.querySelector('#service-status');
 const resultTitle = document.querySelector('#result-title');
@@ -17,6 +19,7 @@ const patientDetailPanel = document.querySelector('#patient-detail-panel');
 const patientDetail = document.querySelector('#patient-detail');
 const adminWorkspace = document.querySelector('#admin-workspace');
 const queueBoard = document.querySelector('#queue-board');
+const billingWorkspace = document.querySelector('#billing-workspace');
 const tabButtons = Array.from(document.querySelectorAll('[data-view]'));
 const viewPanels = Array.from(document.querySelectorAll('[data-view-panel]'));
 
@@ -28,6 +31,7 @@ let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
+let currentBilling = { invoices: [], chargeTemplates: [] };
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
@@ -125,6 +129,7 @@ const defaults = {
   searchClinicId: '10000000-0000-0000-0000-000000000101',
   adminClinicId: '10000000-0000-0000-0000-000000000101',
   queueClinicId: '10000000-0000-0000-0000-000000000101',
+  billingClinicId: '10000000-0000-0000-0000-000000000101',
   queueReportStartDate: new Date().toISOString().slice(0, 10),
   queueReportEndDate: new Date().toISOString().slice(0, 10),
   loginClinicId: '10000000-0000-0000-0000-000000000101',
@@ -259,6 +264,29 @@ queueExportButton.addEventListener('click', async () => {
   await exportDailyOperationsCsv();
 });
 
+billingForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const clinicId = readValue('billingClinicId');
+  const apiToken = readValue('apiToken');
+  localStorage.setItem('emr.apiToken', apiToken);
+  currentApiToken = apiToken;
+
+  setBillingBusy(true);
+  setStatus('กำลังโหลดรายการเงิน', '');
+
+  try {
+    currentBilling = await fetchBillingBundle(clinicId, apiToken);
+    renderBillingWorkspace();
+    setStatus('โหลดรายการเงินแล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'โหลดรายการเงินไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    setBillingBusy(false);
+  }
+});
+
 registrationForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -368,6 +396,15 @@ function buildQueueRequest() {
     reportStartDate: readValue('queueReportStartDate'),
     reportEndDate: readValue('queueReportEndDate'),
     limit: readValue('queueLimit'),
+  });
+}
+
+function buildBillingRequest() {
+  return compactPayload({
+    clinicId: readValue('billingClinicId'),
+    patientId: readValue('billingPatientId'),
+    status: readValue('billingStatus'),
+    limit: readValue('billingLimit'),
   });
 }
 
@@ -497,6 +534,69 @@ async function fetchQueue(clinicId, apiToken) {
   }
 
   return result.data ?? [];
+}
+
+async function fetchBillingBundle(clinicId, apiToken) {
+  const [invoicesPage, chargeTemplatesPage] = await Promise.all([
+    fetchInvoices(clinicId, apiToken),
+    fetchChargeTemplates(clinicId, apiToken),
+  ]);
+
+  return {
+    invoices: invoicesPage.items,
+    chargeTemplates: chargeTemplatesPage.items,
+  };
+}
+
+async function fetchInvoices(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId });
+  if (readValue('billingPatientId')) params.set('patientId', readValue('billingPatientId'));
+  if (readValue('billingStatus')) params.set('status', readValue('billingStatus'));
+  if (readValue('billingLimit')) params.set('limit', readValue('billingLimit'));
+
+  const response = await fetch(`/api/invoices?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: Number(readValue('billingLimit') || 50), offset: 0, hasMore: false },
+  };
+}
+
+async function fetchInvoice(invoiceId, apiToken) {
+  const response = await fetch(`/api/invoices/${invoiceId}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+async function fetchChargeTemplates(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId, active: 'active', limit: '100' });
+  const response = await fetch(`/api/charge-templates?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: 100, offset: 0, hasMore: false },
+  };
 }
 
 async function fetchPractitioners(clinicId, apiToken, filters = {}) {
@@ -795,6 +895,8 @@ function setActiveView(view) {
       ? 'พร้อมค้นหา'
       : activeView === 'queue'
         ? 'พร้อมโหลดคิว'
+      : activeView === 'billing'
+        ? 'พร้อมรับชำระ'
       : activeView === 'admin'
         ? 'พร้อมตั้งค่า'
         : 'พร้อมกรอกข้อมูล';
@@ -821,6 +923,11 @@ function setQueueBusy(isBusy) {
   queueLoadButton.disabled = isBusy;
   queueExportButton.disabled = isBusy;
   queueLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดคิว';
+}
+
+function setBillingBusy(isBusy) {
+  billingLoadButton.disabled = isBusy;
+  billingLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดรายการเงิน';
 }
 
 function setStatus(text, mode) {
@@ -1011,6 +1118,405 @@ function renderQueueBoard() {
 
   fragment.append(columns);
   queueBoard.replaceChildren(fragment);
+}
+
+function renderBillingWorkspace() {
+  billingWorkspace.hidden = false;
+  const invoices = currentBilling.invoices ?? [];
+  const openTotal = invoices
+    .filter((invoice) => !['paid', 'voided'].includes(invoice.status))
+    .reduce((sum, invoice) => sum + Number(invoice.balance_amount ?? 0), 0);
+  const paidTotal = invoices.reduce((sum, invoice) => sum + Number(invoice.paid_amount ?? 0), 0);
+
+  const fragment = document.createDocumentFragment();
+  fragment.append(createMetricGrid([
+    ['Invoices', invoices.length],
+    ['Open balance', formatMoney(openTotal)],
+    ['Paid', formatMoney(paidTotal)],
+    ['Templates', currentBilling.chargeTemplates.length],
+  ]));
+  fragment.append(createInvoiceCreateForm());
+  fragment.append(createChargeTemplateForm());
+
+  const list = document.createElement('div');
+  list.className = 'record-list';
+  for (const invoice of invoices) {
+    list.append(createInvoiceCard(invoice));
+  }
+
+  if (invoices.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-text';
+    empty.textContent = 'ยังไม่มี invoice ตามเงื่อนไขนี้';
+    fragment.append(empty);
+  } else {
+    fragment.append(list);
+  }
+
+  billingWorkspace.replaceChildren(fragment);
+}
+
+function createInvoiceCreateForm() {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form billing-form';
+
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'สร้าง invoice';
+  const hint = document.createElement('span');
+  hint.textContent = 'cashier';
+  heading.append(title, hint);
+  form.append(heading);
+
+  form.append(
+    createBillingInput('patientId', 'Patient ID', readValue('billingPatientId'), true),
+    createBillingInput('invoiceNumber', 'Invoice number', `INV-${Date.now().toString().slice(-8)}`, true),
+    createBillingSelect('chargeTemplateId', 'Charge template', [
+      ['', 'กำหนดเอง'],
+      ...currentBilling.chargeTemplates.map((item) => [
+        item.id,
+        `${item.code ?? ''} · ${item.description ?? ''} · ${formatMoney(item.unit_price_amount ?? 0)}`,
+      ]),
+    ]),
+    createBillingInput('description', 'Description', '', true),
+    createBillingInput('quantity', 'Qty', '1', true, 'number'),
+    createBillingInput('unitPriceAmount', 'Unit price', '', true, 'number'),
+    createBillingInput('taxAmount', 'Tax', '0', false, 'number'),
+    createFormField('notes', 'Notes', 'textarea')
+  );
+
+  form.elements.chargeTemplateId.addEventListener('change', () => {
+    const template = currentBilling.chargeTemplates.find((item) => item.id === form.elements.chargeTemplateId.value);
+    if (!template) return;
+    form.elements.description.value = template.description ?? '';
+    form.elements.unitPriceAmount.value = template.unit_price_amount ?? '';
+    form.elements.taxAmount.value = template.tax_amount ?? '0';
+  });
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'สร้าง invoice';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInvoiceFromForm(form, submit);
+  });
+
+  return form;
+}
+
+function createChargeTemplateForm() {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form billing-form';
+
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'เพิ่ม charge template';
+  const hint = document.createElement('span');
+  hint.textContent = 'common fees';
+  heading.append(title, hint);
+  form.append(heading);
+
+  form.append(
+    createBillingInput('code', 'Code', '', true),
+    createBillingInput('description', 'Description', '', true),
+    createBillingSelect('itemType', 'Type', [
+      ['visit', 'visit'],
+      ['procedure', 'procedure'],
+      ['medication', 'medication'],
+      ['lab', 'lab'],
+      ['other', 'other'],
+    ]),
+    createBillingInput('unitPriceAmount', 'Unit price', '', true, 'number'),
+    createBillingInput('taxAmount', 'Tax', '0', false, 'number'),
+    createFormField('notes', 'Notes', 'textarea')
+  );
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'secondary-button compact-button';
+  submit.textContent = 'เพิ่ม template';
+  form.append(submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createChargeTemplateFromForm(form, submit);
+  });
+
+  return form;
+}
+
+function createInvoiceCard(invoice) {
+  const card = createRecordCard(invoice, invoiceSummary, [
+    'status',
+    'invoice_number',
+    'patient_id',
+    'total_amount',
+    'paid_amount',
+    'refunded_amount',
+    'balance_amount',
+    'issued_at',
+  ]);
+  card.append(createInvoiceActions(invoice));
+  return card;
+}
+
+function createInvoiceActions(invoice) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'invoice-action-stack';
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'secondary-button small-button';
+  openButton.textContent = 'เปิดรายละเอียด';
+  openButton.addEventListener('click', async () => {
+    await expandInvoiceDetails(wrapper, invoice.id);
+  });
+
+  const receiptButton = document.createElement('button');
+  receiptButton.type = 'button';
+  receiptButton.className = 'secondary-button small-button';
+  receiptButton.textContent = 'พิมพ์ใบเสร็จ';
+  receiptButton.addEventListener('click', async () => {
+    const detail = await fetchInvoice(invoice.id, currentApiToken || readValue('apiToken'));
+    openReceiptPrint(detail);
+  });
+
+  actions.append(openButton, receiptButton);
+  if (invoice.status !== 'voided') {
+    actions.append(
+      createPaymentAction(invoice),
+      createRefundAction(invoice),
+      createVoidInvoiceAction(invoice)
+    );
+  }
+
+  wrapper.append(actions);
+  return wrapper;
+}
+
+async function expandInvoiceDetails(container, invoiceId) {
+  setStatus('กำลังโหลด invoice', '');
+  try {
+    const invoice = await fetchInvoice(invoiceId, currentApiToken || readValue('apiToken'));
+    container.querySelector('.invoice-detail')?.remove();
+    const detail = document.createElement('div');
+    detail.className = 'invoice-detail';
+    detail.append(
+      createInvoiceTable('Line items', invoice.line_items ?? [], ['description', 'quantity', 'unit_price_amount', 'tax_amount', 'line_total_amount']),
+      createInvoiceTable('Payments', invoice.payments ?? [], ['payment_number', 'method', 'amount', 'paid_at']),
+      createInvoiceTable('Refunds', invoice.refunds ?? [], ['refund_number', 'method', 'amount', 'refunded_at'])
+    );
+    container.append(detail);
+    setStatus('เปิด invoice แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'เปิด invoice ไม่สำเร็จ', 'error');
+  }
+}
+
+function createInvoiceTable(titleText, rows, fields) {
+  const section = document.createElement('section');
+  section.className = 'compact-table-section';
+  const title = document.createElement('h4');
+  title.textContent = titleText;
+  section.append(title);
+  if (rows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-text';
+    empty.textContent = 'ยังไม่มีรายการ';
+    section.append(empty);
+    return section;
+  }
+
+  for (const row of rows) {
+    const item = document.createElement('dl');
+    for (const field of fields) {
+      const term = document.createElement('dt');
+      term.textContent = labelize(field);
+      const description = document.createElement('dd');
+      description.textContent = formatValue(row[field]);
+      item.append(term, description);
+    }
+    section.append(item);
+  }
+  return section;
+}
+
+function createPaymentAction(invoice) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'primary-button small-button';
+  button.textContent = 'รับชำระ';
+  button.addEventListener('click', async () => {
+    const amount = window.prompt('ยอดรับชำระ', invoice.balance_amount ?? '');
+    if (!amount) return;
+    await postInvoiceAction(`/api/invoices/${invoice.id}/payments`, {
+      paymentNumber: `PAY-${Date.now().toString().slice(-8)}`,
+      method: 'cash',
+      amount,
+      receivedByUserId: readValue('userId'),
+    });
+  });
+  return button;
+}
+
+function createRefundAction(invoice) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'คืนเงิน';
+  button.addEventListener('click', async () => {
+    const amount = window.prompt('ยอดคืนเงิน', invoice.paid_amount ?? '');
+    if (!amount) return;
+    await postInvoiceAction(`/api/invoices/${invoice.id}/refunds`, {
+      refundNumber: `REF-${Date.now().toString().slice(-8)}`,
+      method: 'cash',
+      amount,
+      refundedByUserId: readValue('userId'),
+    });
+  });
+  return button;
+}
+
+function createVoidInvoiceAction(invoice) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button danger-button small-button';
+  button.textContent = 'Void';
+  button.addEventListener('click', async () => {
+    const voidReason = window.prompt('เหตุผลที่ void invoice');
+    if (!voidReason) return;
+    await postInvoiceAction(`/api/invoices/${invoice.id}/void`, { voidReason }, 'PATCH');
+  });
+  return button;
+}
+
+async function createInvoiceFromForm(form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const template = currentBilling.chargeTemplates.find((item) => item.id === values.chargeTemplateId);
+  const payload = compactPayload({
+    clinicId: readValue('billingClinicId'),
+    patientId: values.patientId,
+    invoiceNumber: values.invoiceNumber,
+    status: 'issued',
+    notes: values.notes,
+    lineItems: [
+      {
+        itemType: template?.item_type ?? 'procedure',
+        description: values.description,
+        quantity: values.quantity,
+        unitPriceAmount: values.unitPriceAmount,
+        taxAmount: values.taxAmount,
+      },
+    ],
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังสร้าง';
+  try {
+    const response = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await reloadBillingWorkspace();
+    setStatus('สร้าง invoice แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'สร้าง invoice ไม่สำเร็จ');
+    setStatus('สร้าง invoice ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'สร้าง invoice';
+  }
+}
+
+async function createChargeTemplateFromForm(form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId: readValue('billingClinicId'),
+    code: values.code,
+    description: values.description,
+    itemType: values.itemType,
+    unitPriceAmount: values.unitPriceAmount,
+    taxAmount: values.taxAmount,
+    notes: values.notes,
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/charge-templates', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await reloadBillingWorkspace();
+    setStatus('เพิ่ม charge template แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม template ไม่สำเร็จ');
+    setStatus('เพิ่ม template ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม template';
+  }
+}
+
+async function postInvoiceAction(url, payload, method = 'POST') {
+  setStatus('กำลังบันทึกรายการเงิน', '');
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus('บันทึกรายการเงินแล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'บันทึกรายการเงินไม่สำเร็จ', 'error');
+  }
+}
+
+async function reloadBillingWorkspace() {
+  currentBilling = await fetchBillingBundle(readValue('billingClinicId'), currentApiToken || readValue('apiToken'));
+  renderBillingWorkspace();
+}
+
+function createBillingInput(name, labelText, value = '', required = false, type = 'text') {
+  const field = createFormField(name, labelText, 'input', required);
+  const input = field.querySelector('input');
+  input.value = value ?? '';
+  input.type = type;
+  if (type === 'number') input.step = '0.01';
+  return field;
+}
+
+function createBillingSelect(name, labelText, options) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  for (const [value, text] of options) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
 }
 
 function createQueueSummary() {
@@ -2690,6 +3196,8 @@ function toDateTimeLocal(value) {
 function syncSearchFields(patient) {
   document.querySelector('#searchClinicId').value = patient.clinic_id ?? readValue('clinicId');
   document.querySelector('#adminClinicId').value = patient.clinic_id ?? readValue('clinicId');
+  document.querySelector('#billingClinicId').value = patient.clinic_id ?? readValue('clinicId');
+  document.querySelector('#billingPatientId').value = patient.id ?? '';
   document.querySelector('#searchMedicalRecordNumber').value =
     patient.medical_record_number ?? readValue('medicalRecordNumber');
   renderRequestPreview();
@@ -2720,6 +3228,8 @@ function renderRequestPreview() {
       ? buildSearchRequest()
       : activeView === 'queue'
         ? buildQueueRequest()
+      : activeView === 'billing'
+        ? buildBillingRequest()
       : activeView === 'admin'
         ? buildAdminRequest()
         : buildPatientPayload();
@@ -3329,6 +3839,106 @@ async function openPrescriptionPrint(prescription) {
   printWindow.print();
 }
 
+function openReceiptPrint(invoice) {
+  const printWindow = window.open('', '_blank', 'width=720,height=840');
+  if (!printWindow) return;
+
+  printWindow.document.write(buildReceiptPrintHtml(invoice));
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+function buildReceiptPrintHtml(invoice) {
+  const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const clinicName = currentClinicSettings?.display_name ?? 'EMR Core Clinic';
+  const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : invoice.patient_id ?? '';
+  const lineItems = invoice.line_items ?? [];
+  const payments = invoice.payments ?? [];
+  const refunds = invoice.refunds ?? [];
+
+  return `
+    <!doctype html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt</title>
+        <style>
+          body { margin: 0; color: #17211f; font-family: Arial, sans-serif; }
+          main { padding: 32px; }
+          header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #17211f; padding-bottom: 18px; }
+          h1 { margin: 0; font-size: 24px; }
+          h2 { margin: 24px 0 8px; font-size: 16px; }
+          dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 14px 0; }
+          dt { font-weight: 700; color: #5f706b; }
+          dd { margin: 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border-bottom: 1px solid #d9e4e0; padding: 8px 6px; text-align: left; vertical-align: top; }
+          th:last-child, td:last-child { text-align: right; }
+          .totals { margin-left: auto; max-width: 320px; }
+          .status { text-transform: uppercase; font-weight: 700; }
+          @media print { body { print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <main>
+          <header>
+            <div>
+              <h1>ใบเสร็จ / Receipt</h1>
+              <div>${escapeHtml(clinicName)}</div>
+            </div>
+            <div>
+              <div class="status">${escapeHtml(invoice.status ?? '')}</div>
+              <div>${escapeHtml(printedAt)}</div>
+            </div>
+          </header>
+          <dl>
+            <dt>Invoice</dt><dd>${escapeHtml(invoice.invoice_number ?? invoice.id ?? '')}</dd>
+            <dt>Patient</dt><dd>${escapeHtml(patientName)}</dd>
+            <dt>Patient ID</dt><dd>${escapeHtml(invoice.patient_id ?? '')}</dd>
+          </dl>
+          <h2>Charges</h2>
+          <table>
+            <thead><tr><th>รายการ</th><th>จำนวน</th><th>ราคา</th><th>รวม</th></tr></thead>
+            <tbody>
+              ${lineItems.map((item) => `
+                <tr>
+                  <td>${escapeHtml(item.description ?? '')}</td>
+                  <td>${escapeHtml(item.quantity ?? '')}</td>
+                  <td>${escapeHtml(formatMoney(item.unit_price_amount ?? 0))}</td>
+                  <td>${escapeHtml(formatMoney(item.line_total_amount ?? 0))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <h2>Payments</h2>
+          <table>
+            <tbody>
+              ${payments.map((payment) => `
+                <tr><td>${escapeHtml(payment.payment_number ?? '')}</td><td>${escapeHtml(payment.method ?? '')}</td><td>${escapeHtml(formatMoney(payment.amount ?? 0))}</td></tr>
+              `).join('') || '<tr><td colspan="3">ยังไม่มี payment</td></tr>'}
+            </tbody>
+          </table>
+          <h2>Refunds</h2>
+          <table>
+            <tbody>
+              ${refunds.map((refund) => `
+                <tr><td>${escapeHtml(refund.refund_number ?? '')}</td><td>${escapeHtml(refund.method ?? '')}</td><td>${escapeHtml(formatMoney(refund.amount ?? 0))}</td></tr>
+              `).join('') || '<tr><td colspan="3">ยังไม่มี refund</td></tr>'}
+            </tbody>
+          </table>
+          <dl class="totals">
+            <dt>Total</dt><dd>${escapeHtml(formatMoney(invoice.total_amount ?? 0))}</dd>
+            <dt>Paid</dt><dd>${escapeHtml(formatMoney(invoice.paid_amount ?? 0))}</dd>
+            <dt>Refunded</dt><dd>${escapeHtml(formatMoney(invoice.refunded_amount ?? 0))}</dd>
+            <dt>Balance</dt><dd>${escapeHtml(formatMoney(invoice.balance_amount ?? 0))}</dd>
+          </dl>
+        </main>
+      </body>
+    </html>
+  `;
+}
+
 async function buildPrescriptionPrintHtml(prescription) {
   const patientName = currentPatient ? `${currentPatient.first_name} ${currentPatient.last_name}` : '';
   const practitioner = (currentProfile?.practitioners ?? []).find(
@@ -3889,6 +4499,15 @@ function formatValue(value) {
   return value;
 }
 
+function formatMoney(value) {
+  const amount = Number(value ?? 0);
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    minimumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
 function flagSummary(item) {
   return item.label ?? item.flag_type ?? item.id;
 }
@@ -3945,6 +4564,10 @@ function vitalSummary(item) {
 
 function prescriptionSummary(item) {
   return item.medication_name ?? item.rxnorm_code ?? item.id;
+}
+
+function invoiceSummary(item) {
+  return `${item.invoice_number ?? item.id} · ${formatMoney(item.balance_amount ?? 0)}`;
 }
 
 function noteSummary(item) {

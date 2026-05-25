@@ -110,6 +110,11 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/invoices/:invoiceId` | Read one invoice with line items and payments. |
 | `POST` | `/api/invoices` | Create an invoice with line items and calculated totals. |
 | `POST` | `/api/invoices/:invoiceId/payments` | Record an invoice payment and recalculate paid, balance, and status. |
+| `POST` | `/api/invoices/:invoiceId/refunds` | Record an invoice refund and recalculate paid, refunded, balance, and status. |
+| `PATCH` | `/api/invoices/:invoiceId/void` | Void an invoice with a required reason. |
+| `GET` | `/api/charge-templates` | List common charge templates by clinic and active status. |
+| `POST` | `/api/charge-templates` | Create a clinic charge template. |
+| `PATCH` | `/api/charge-templates/:chargeTemplateId` | Update or deactivate a clinic charge template. |
 
 ## Reporting
 
@@ -165,14 +170,16 @@ All routes except `GET /health` can be protected by bearer token when
 
 ## Phase 3A Additions
 
-- Billing foundation tables now store invoices, invoice line items, and invoice
-  payments.
+- Billing foundation tables now store invoices, invoice line items, invoice
+  payments, invoice refunds, and charge templates.
 - Invoice creation calculates subtotal, discount, tax, total, paid amount, and
   balance from structured line items and payments.
-- Payment recording updates invoice status to `partially_paid` or `paid` based
-  on the remaining balance.
+- Payment and refund recording update invoice paid/refunded/balance values and
+  status based on the remaining balance.
+- Invoice voiding stores a required reason and marks the invoice `voided`.
 - Billing routes use dedicated read/write permissions and write audit logs when
-  invoices are created or payments are recorded.
+  invoices are created, payments/refunds are recorded, invoices are voided, or
+  charge templates change.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 
