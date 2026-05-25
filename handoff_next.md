@@ -570,9 +570,11 @@ Phase 3A billing/payment foundation implementation scope is complete:
 
 Recommended next work:
 
-1. Run Phase 3A UAT with cashier/front desk users.
-2. Start Phase 3B for billing reports, reconciliation, and production numbering policy.
-3. Plan payer/insurer integration or claim export after UAT.
+1. Run Phase 3A/3B UAT with cashier, front desk, and accounting users.
+2. Start Phase 3C after UAT direction is clear.
+3. Prefer Pharmacy/Inventory foundation if medication stock is the bigger pilot
+   blocker, or accounting/claim export integration if accounting handoff is the
+   bigger blocker.
 
 The deliverables added in this worktree are:
 
@@ -611,6 +613,10 @@ The deliverables added in this worktree are:
 - `docs/phase-3a-plan.md`
 - `docs/phase-3a-clinician-summary-th.md`
 - `docs/phase-3a-uat-checklist-th.md`
+- `docs/phase-3b-plan.md`
+- `docs/phase-3b-clinician-summary-th.md`
+- `docs/phase-3b-uat-checklist-th.md`
+- `docs/phase-3b-closure-summary-th.md`
 - `database/migrations/0017_add_drug_catalog_and_safety_warnings.*`
 - `database/migrations/0013_add_clinic_visits.*`
 - `database/migrations/0014_add_clinical_note_templates.*`
@@ -659,5 +665,6 @@ Start by reading:
 
 Then produce:
 
-1. Continue Phase 3A cashier frontend and receipt workflow
-2. Phase 2 pilot UAT findings from `docs/phase-2-uat-master-checklist-th.md`
+1. Run Phase 3A/3B cashier and accounting UAT.
+2. Start Phase 3C Pharmacy/Inventory foundation, unless UAT says accounting or
+   claim export integration is more urgent.

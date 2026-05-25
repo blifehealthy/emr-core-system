@@ -11,6 +11,8 @@ import {
   handleCreateInvoice,
   handleCreateInvoiceFromEncounter,
   handleCreateInsuranceClaim,
+  handleCreateBillingNumberSequence,
+  handleCreateCashierReconciliation,
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
@@ -40,6 +42,8 @@ import {
   handleGetConsentRecord,
   handleGetDailyOperationsReport,
   handleGetDailyOperationsReportCsv,
+  handleGetBillingSummaryReport,
+  handleGetBillingSummaryReportCsv,
   handleGetDiagnosis,
   handleAssessPrescriptionSafety,
   handleGetEncounter,
@@ -68,6 +72,8 @@ import {
   handleListFileAssets,
   handleListInvoices,
   handleListInsuranceClaims,
+  handleListBillingNumberSequences,
+  handleListCashierReconciliations,
   handleListPatientAllergies,
   handleListPatientConditions,
   handleListPatientFlags,
@@ -98,6 +104,8 @@ import {
   handleUploadFileAsset,
   handleRecordInvoicePayment,
   handleRecordInvoiceRefund,
+  handleIssueBillingNumber,
+  handleCloseCashierReconciliation,
   handleUpdateChargeTemplate,
   handleUpdateInsuranceClaim,
   handleUpdateInvoice,
@@ -243,6 +251,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleListInsuranceClaims(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'GET' && request.path === '/api/billing-number-sequences') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleListBillingNumberSequences(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/cashier-reconciliations') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleListCashierReconciliations(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'GET' && request.path === '/api/users') {
       const roleError = requireRole(actorAwareRequest, 'user_read');
       if (roleError) return roleError;
@@ -283,6 +303,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'audit_read');
       if (roleError) return roleError;
       return handleGetDailyOperationsReportCsv(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/billing-summary') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleGetBillingSummaryReport(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/billing-summary.csv') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleGetBillingSummaryReportCsv(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/audit-logs') {
@@ -599,6 +631,24 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreateInsuranceClaim(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/billing-number-sequences') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateBillingNumberSequence(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/billing-number-sequences/issue') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleIssueBillingNumber(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/cashier-reconciliations') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateCashierReconciliation(actorAwareRequest, dependencies);
+    }
+
     const invoicePaymentMatch =
       request.method === 'POST'
         ? request.path.match(/^\/api\/invoices\/([^/]+)\/payments$/)
@@ -647,6 +697,20 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_write');
       if (roleError) return roleError;
       return handleUpdateInsuranceClaim(actorAwareRequest, dependencies, insuranceClaimUpdateMatch[1]);
+    }
+
+    const cashierReconciliationCloseMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/cashier-reconciliations\/([^/]+)\/close$/)
+        : null;
+    if (cashierReconciliationCloseMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCloseCashierReconciliation(
+        actorAwareRequest,
+        dependencies,
+        cashierReconciliationCloseMatch[1]
+      );
     }
 
     if (request.method === 'POST' && request.path === '/api/consents') {

@@ -120,6 +120,12 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/insurance-claims` | List insurance claims by clinic, invoice, status, limit, and offset. |
 | `POST` | `/api/insurance-claims` | Create an insurance claim linked to an invoice. |
 | `PATCH` | `/api/insurance-claims/:insuranceClaimId` | Update insurance claim status and adjudication fields. |
+| `GET` | `/api/billing-number-sequences` | List active and historical document number sequences for a clinic. |
+| `POST` | `/api/billing-number-sequences` | Create a document number sequence for invoice, receipt, tax invoice, or claim numbers. |
+| `POST` | `/api/billing-number-sequences/issue` | Issue the next document number from an active sequence. |
+| `GET` | `/api/cashier-reconciliations` | List cashier reconciliation sessions by clinic and status. |
+| `POST` | `/api/cashier-reconciliations` | Open a cashier reconciliation session with opening cash. |
+| `PATCH` | `/api/cashier-reconciliations/:reconciliationId/close` | Close a cashier reconciliation session and calculate expected cash and variance. |
 
 ## Reporting
 
@@ -127,6 +133,8 @@ All routes except `GET /health` can be protected by bearer token when
 | --- | --- | --- |
 | `GET` | `/api/reports/daily-operations` | Date-range visits, queue status, diagnosis, prescription, provider, room, and prescriber aggregates. |
 | `GET` | `/api/reports/daily-operations.csv` | CSV export for the same operations report metrics. |
+| `GET` | `/api/reports/billing-summary` | Date-range invoice, payment, refund, outstanding, and claim aggregates. |
+| `GET` | `/api/reports/billing-summary.csv` | CSV export for billing summary metrics. |
 
 | Method | Route | Purpose |
 | --- | --- | --- |
@@ -190,6 +198,16 @@ All routes except `GET /health` can be protected by bearer token when
   invoices are created/updated, charge capture runs, payments/refunds are
   recorded, invoices are voided, charge templates change, or insurance claims
   change.
+
+## Phase 3B Additions
+
+- Billing reports now include JSON and CSV accounting summaries by date range.
+- Billing document number sequences support invoice, receipt, tax invoice, and
+  claim numbering policies per clinic.
+- Cashier reconciliation records capture opening cash, expected cash, counted
+  cash, and variance for daily close.
+- The Cashier tab exposes Phase 3B summary metrics, number sequence actions, and
+  reconciliation open/close controls.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

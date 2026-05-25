@@ -48,8 +48,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
 | `prescription_write` | Yes | No | Yes | Prescription create/update/delete |
-| `billing_read` | Yes | Yes | Yes | Invoice, charge template, and insurance claim reads |
-| `billing_write` | No | No | Yes | Invoice/payment/refund/void/template/claim writes |
+| `billing_read` | Yes | Yes | Yes | Invoice, charge template, insurance claim, billing report, number sequence, and reconciliation reads |
+| `billing_write` | No | No | Yes | Invoice/payment/refund/void/template/claim/number sequence/reconciliation writes |
 | `soap_update` | Yes | No | Yes | SOAP update/delete |
 | `diagnosis_update` | Yes | No | Yes | Diagnosis create/update/delete |
 | `vital_sign_update` | Yes | Yes | Yes | Vital sign create/update/delete |
@@ -127,6 +127,14 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/insurance-claims` | `billing_read` |
 | `POST` | `/api/insurance-claims` | `billing_write` |
 | `PATCH` | `/api/insurance-claims/:insuranceClaimId` | `billing_write` |
+| `GET` | `/api/reports/billing-summary` | `billing_read` |
+| `GET` | `/api/reports/billing-summary.csv` | `billing_read` |
+| `GET` | `/api/billing-number-sequences` | `billing_read` |
+| `POST` | `/api/billing-number-sequences` | `billing_write` |
+| `POST` | `/api/billing-number-sequences/issue` | `billing_write` |
+| `GET` | `/api/cashier-reconciliations` | `billing_read` |
+| `POST` | `/api/cashier-reconciliations` | `billing_write` |
+| `PATCH` | `/api/cashier-reconciliations/:reconciliationId/close` | `billing_write` |
 | `GET` | `/api/consents/:consentId` | `consent_read` |
 | `POST` | `/api/consents` | `consent_write` |
 | `PATCH` | `/api/consents/:consentId` | `consent_write` |

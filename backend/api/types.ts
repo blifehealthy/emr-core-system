@@ -514,6 +514,8 @@ export type InvoiceLineItemType =
   | 'other';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'qr' | 'insurance' | 'other';
 export type InsuranceClaimStatus = 'draft' | 'submitted' | 'accepted' | 'rejected' | 'paid' | 'cancelled';
+export type BillingDocumentType = 'invoice' | 'receipt' | 'tax_invoice' | 'claim';
+export type CashierReconciliationStatus = 'open' | 'closed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
@@ -812,6 +814,35 @@ export type UpdateInsuranceClaimInput = {
   notes?: string | null;
 };
 
+export type CreateBillingNumberSequenceInput = {
+  clinicId: string;
+  documentType: BillingDocumentType;
+  prefix: string;
+  nextNumber?: number;
+  padding?: number;
+  isActive?: boolean;
+};
+
+export type IssueBillingNumberInput = {
+  clinicId: string;
+  documentType: BillingDocumentType;
+};
+
+export type CreateCashierReconciliationInput = {
+  clinicId: string;
+  reconciliationDate: string;
+  openingCashAmount?: number | string;
+  openedByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type CloseCashierReconciliationInput = {
+  reconciliationId: string;
+  countedCashAmount: number | string;
+  closedByUserId?: string | null;
+  notes?: string | null;
+};
+
 export type Dependencies = {
   createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | AuthSessionFailure | null>;
   getPatientWithEncountersAndSOAP: (input: {
@@ -866,6 +897,11 @@ export type Dependencies = {
   getClinicSettings?: (input: { clinicId: string }) => Promise<unknown | null>;
   upsertClinicSettings?: (input: UpsertClinicSettingsInput) => Promise<unknown>;
   getDailyOperationsReport?: (input: {
+    clinicId: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<unknown | null>;
+  getBillingSummaryReport?: (input: {
     clinicId: string;
     startDate: string;
     endDate: string;
@@ -1012,6 +1048,17 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createInsuranceClaim?: (input: CreateInsuranceClaimInput) => Promise<unknown>;
   updateInsuranceClaim?: (input: UpdateInsuranceClaimInput) => Promise<unknown | null>;
+  listBillingNumberSequences?: (input: { clinicId: string }) => Promise<unknown[]>;
+  createBillingNumberSequence?: (input: CreateBillingNumberSequenceInput) => Promise<unknown>;
+  issueBillingNumber?: (input: IssueBillingNumberInput) => Promise<{ documentNumber: string } | null>;
+  listCashierReconciliations?: (input: {
+    clinicId: string;
+    status?: CashierReconciliationStatus;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createCashierReconciliation?: (input: CreateCashierReconciliationInput) => Promise<unknown>;
+  closeCashierReconciliation?: (input: CloseCashierReconciliationInput) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
   updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;

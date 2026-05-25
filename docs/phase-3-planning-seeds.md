@@ -7,11 +7,13 @@ real UAT findings, but the likely product directions are below.
 
 ### Billing And Payment
 
-- visit charge capture
-- invoice/receipt model
-- payment status
-- cashier workflow
-- report export for accounting
+- Phase 3A completed visit charge capture, invoice/receipt model, payment
+  status, cashier workflow, and insurance claim foundation.
+- Phase 3B completed report export for accounting, document number sequences,
+  and cashier reconciliation foundation.
+- Remaining billing follow-up should come from UAT: statutory tax invoice rules,
+  accounting export integration, payer/insurer export, or multi-drawer cashier
+  operations.
 
 ### Pharmacy And Inventory
 

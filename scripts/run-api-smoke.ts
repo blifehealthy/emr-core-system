@@ -54,6 +54,7 @@ const migrations = [
   '0022_add_billing_foundation.up.sql',
   '0023_add_billing_refunds_and_charge_templates.up.sql',
   '0024_add_phase_3a_completion_billing.up.sql',
+  '0025_add_phase_3b_billing_operations.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -1093,6 +1094,90 @@ async function main() {
       adminHeaders
     );
     assert.ok(claimList.data.some((item) => item.id === insuranceClaim.data.id));
+
+    const billingToday = new Date().toISOString().slice(0, 10);
+    const billingSummary = await requestJson<{
+      invoice_count: number;
+      paid_total: string;
+      cash_total: string;
+      claim_count: number;
+    }>(
+      `/api/reports/billing-summary?clinicId=10000000-0000-0000-0000-000000000101&startDate=${billingToday}&endDate=${billingToday}`,
+      adminHeaders
+    );
+    assert.ok(Number(billingSummary.data.invoice_count) >= 1);
+    assert.ok(Number(billingSummary.data.cash_total) >= 400);
+
+    const billingSummaryCsv = await requestText(
+      `/api/reports/billing-summary.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${billingToday}&endDate=${billingToday}`,
+      adminHeaders
+    );
+    assert.match(billingSummaryCsv.body, /invoice_count/);
+
+    const sequence = await requestJson<{ id: string; document_type: string }>(
+      '/api/billing-number-sequences',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        documentType: 'receipt',
+        prefix: `RCPT-SMOKE-${Date.now()}-`,
+        nextNumber: 1,
+        padding: 4,
+      }
+    );
+    assert.equal(sequence.data.document_type, 'receipt');
+
+    const issuedNumber = await requestJson<{ documentNumber: string }>(
+      '/api/billing-number-sequences/issue',
+      adminHeaders,
+      'POST',
+      200,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        documentType: 'receipt',
+      }
+    );
+    assert.match(issuedNumber.data.documentNumber, /RCPT-SMOKE-/);
+
+    const sequenceList = await requestJson<Array<{ id: string }>>(
+      '/api/billing-number-sequences?clinicId=10000000-0000-0000-0000-000000000101',
+      adminHeaders
+    );
+    assert.ok(sequenceList.data.some((item) => item.id === sequence.data.id));
+
+    const reconciliation = await requestJson<{ id: string; status: string }>(
+      '/api/cashier-reconciliations',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        reconciliationDate: billingToday,
+        openingCashAmount: 100,
+      }
+    );
+    assert.equal(reconciliation.data.status, 'open');
+
+    const closedReconciliation = await requestJson<{
+      id: string;
+      status: string;
+      variance_amount: string;
+    }>(
+      `/api/cashier-reconciliations/${reconciliation.data.id}/close`,
+      adminHeaders,
+      'PATCH',
+      200,
+      { countedCashAmount: 500 }
+    );
+    assert.equal(closedReconciliation.data.status, 'closed');
+
+    const reconciliationList = await requestJson<Array<{ id: string }>>(
+      '/api/cashier-reconciliations?clinicId=10000000-0000-0000-0000-000000000101&status=closed',
+      adminHeaders
+    );
+    assert.ok(reconciliationList.data.some((item) => item.id === reconciliation.data.id));
 
     const updatedPrescription = await requestJson<{
       id: string;

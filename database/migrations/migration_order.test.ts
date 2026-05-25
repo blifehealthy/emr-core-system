@@ -109,6 +109,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0024_add_phase_3a_completion_billing.up.sql'),
     'expected Phase 3A completion billing migration'
   );
+  assert.ok(
+    filenames.includes('0025_add_phase_3b_billing_operations.up.sql'),
+    'expected Phase 3B billing operations migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

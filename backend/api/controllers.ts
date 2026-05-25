@@ -26,6 +26,10 @@ import {
   toInsuranceClaimDtos,
   toChargeTemplateDto,
   toChargeTemplateDtos,
+  toBillingNumberSequenceDto,
+  toBillingNumberSequenceDtos,
+  toCashierReconciliationDto,
+  toCashierReconciliationDtos,
   toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
@@ -69,6 +73,10 @@ import {
   validateCreateInvoiceFromEncounterBody,
   validateCreateChargeTemplateBody,
   validateCreateInsuranceClaimBody,
+  validateCreateBillingNumberSequenceBody,
+  validateIssueBillingNumberBody,
+  validateCreateCashierReconciliationBody,
+  validateCloseCashierReconciliationBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -103,6 +111,7 @@ import { getActorContext } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
 import type {
   AppointmentStatus,
+  CashierReconciliationStatus,
   ClinicVisitStatus,
   Dependencies,
   EncounterStatus,
@@ -751,6 +760,77 @@ export async function handleGetDailyOperationsReportCsv(
     headers: {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': 'attachment; filename="daily-operations.csv"',
+    },
+    body: `${csv}\n`,
+  };
+}
+
+export async function handleGetBillingSummaryReport(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.getBillingSummaryReport) {
+    return mapError(new Error('Billing summary report dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const startDate = request.query?.startDate?.trim() || request.query?.date?.trim();
+  if (!startDate) return validationError('startDate is required query parameter');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return validationError('startDate must be YYYY-MM-DD');
+  }
+  const endDate = request.query?.endDate?.trim() || startDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return validationError('endDate must be YYYY-MM-DD');
+  }
+  if (endDate < startDate) {
+    return validationError('endDate must be on or after startDate');
+  }
+
+  const report = await dependencies.getBillingSummaryReport({ clinicId, startDate, endDate });
+  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { start_date: startDate, end_date: endDate } } };
+}
+
+export async function handleGetBillingSummaryReportCsv(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const reportResponse = await handleGetBillingSummaryReport(request, dependencies);
+  if (reportResponse.status !== 200) return reportResponse;
+
+  const report = (reportResponse.body as { data?: Record<string, unknown> }).data ?? {};
+  const rows = [
+    ['metric', 'value'],
+    ['start_date', String(report.start_date ?? '')],
+    ['end_date', String(report.end_date ?? '')],
+    ['invoice_count', String(report.invoice_count ?? 0)],
+    ['gross_total', String(report.gross_total ?? 0)],
+    ['discount_total', String(report.discount_total ?? 0)],
+    ['tax_total', String(report.tax_total ?? 0)],
+    ['net_total', String(report.net_total ?? 0)],
+    ['paid_total', String(report.paid_total ?? 0)],
+    ['refunded_total', String(report.refunded_total ?? 0)],
+    ['outstanding_total', String(report.outstanding_total ?? 0)],
+    ['cash_total', String(report.cash_total ?? 0)],
+    ['card_total', String(report.card_total ?? 0)],
+    ['bank_transfer_total', String(report.bank_transfer_total ?? 0)],
+    ['qr_total', String(report.qr_total ?? 0)],
+    ['insurance_payment_total', String(report.insurance_payment_total ?? 0)],
+    ['claim_count', String(report.claim_count ?? 0)],
+    ['claims_submitted', String(report.claims_submitted ?? 0)],
+    ['claims_paid', String(report.claims_paid ?? 0)],
+    ['claims_rejected', String(report.claims_rejected ?? 0)],
+  ];
+  appendAggregateRows(rows, 'by_status', report.by_status, 'status', 'total_amount');
+  appendAggregateRows(rows, 'by_payment_method', report.by_payment_method, 'method', 'total_amount');
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+
+  return {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': 'attachment; filename="billing-summary.csv"',
     },
     body: `${csv}\n`,
   };
@@ -2502,6 +2582,173 @@ export async function handleUpdateInsuranceClaim(
     metadata: { status: validation.value.status },
   });
   return { status: 200, headers: JSON_HEADERS, body: { data: toInsuranceClaimDto(claim) } };
+}
+
+export async function handleListBillingNumberSequences(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listBillingNumberSequences) {
+    return mapError(new Error('Billing number sequence list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+
+  const sequences = await dependencies.listBillingNumberSequences({ clinicId });
+  return { status: 200, headers: JSON_HEADERS, body: { data: toBillingNumberSequenceDtos(sequences) } };
+}
+
+export async function handleCreateBillingNumberSequence(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createBillingNumberSequence) {
+    return mapError(new Error('Billing number sequence create dependency is not configured'));
+  }
+
+  const validation = validateCreateBillingNumberSequenceBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const sequence = await dependencies.createBillingNumberSequence(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'billing_number_sequence',
+      entityId: (sequence as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { documentType: validation.value.documentType },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toBillingNumberSequenceDto(sequence) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleIssueBillingNumber(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.issueBillingNumber) {
+    return mapError(new Error('Billing number issue dependency is not configured'));
+  }
+
+  const validation = validateIssueBillingNumberBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const issued = await dependencies.issueBillingNumber(validation.value);
+  if (!issued) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Active billing number sequence not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'billing_number_sequence',
+    entityId: validation.value.clinicId,
+    action: 'issued',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { clinicId: validation.value.clinicId, documentNumber: issued.documentNumber },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: issued } };
+}
+
+export async function handleListCashierReconciliations(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listCashierReconciliations) {
+    return mapError(new Error('Cashier reconciliation list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const status = readOptionalEnumQuery<CashierReconciliationStatus>(
+    request,
+    'status',
+    ['open', 'closed', 'cancelled']
+  );
+  if (!status.ok) return validationError(status.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const reconciliations = await dependencies.listCashierReconciliations({
+    clinicId,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toCashierReconciliationDtos(reconciliations.rows), meta: reconciliations.meta },
+  };
+}
+
+export async function handleCreateCashierReconciliation(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createCashierReconciliation) {
+    return mapError(new Error('Cashier reconciliation create dependency is not configured'));
+  }
+
+  const validation = validateCreateCashierReconciliationBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const reconciliation = await dependencies.createCashierReconciliation(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'cashier_reconciliation',
+      entityId: (reconciliation as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { reconciliationDate: validation.value.reconciliationDate },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toCashierReconciliationDto(reconciliation) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCloseCashierReconciliation(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  reconciliationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.closeCashierReconciliation) {
+    return mapError(new Error('Cashier reconciliation close dependency is not configured'));
+  }
+
+  const validation = validateCloseCashierReconciliationBody(request.body, reconciliationId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const reconciliation = await dependencies.closeCashierReconciliation(validation.value);
+  if (!reconciliation) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Open cashier reconciliation not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'cashier_reconciliation',
+    entityId: reconciliationId,
+    action: 'closed',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { countedCashAmount: validation.value.countedCashAmount },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toCashierReconciliationDto(reconciliation) } };
 }
 
 export async function handleListDiagnosesByEncounter(

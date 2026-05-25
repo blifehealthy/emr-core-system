@@ -63,7 +63,8 @@ for migration in \
   "$MIGRATIONS_DIR/0021_add_user_oidc_subject.up.sql" \
   "$MIGRATIONS_DIR/0022_add_billing_foundation.up.sql" \
   "$MIGRATIONS_DIR/0023_add_billing_refunds_and_charge_templates.up.sql" \
-  "$MIGRATIONS_DIR/0024_add_phase_3a_completion_billing.up.sql"
+  "$MIGRATIONS_DIR/0024_add_phase_3a_completion_billing.up.sql" \
+  "$MIGRATIONS_DIR/0025_add_phase_3b_billing_operations.up.sql"
 do
   run_psql "$migration"
 done

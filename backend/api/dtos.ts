@@ -214,6 +214,38 @@ const CHARGE_TEMPLATE_KEYS = [
   'deleted_at',
 ] as const;
 
+const BILLING_NUMBER_SEQUENCE_KEYS = [
+  'id',
+  'clinic_id',
+  'document_type',
+  'prefix',
+  'next_number',
+  'padding',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const CASHIER_RECONCILIATION_KEYS = [
+  'id',
+  'clinic_id',
+  'reconciliation_date',
+  'status',
+  'opening_cash_amount',
+  'expected_cash_amount',
+  'counted_cash_amount',
+  'variance_amount',
+  'opened_by_user_id',
+  'closed_by_user_id',
+  'opened_at',
+  'closed_at',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const DRUG_CATALOG_KEYS = [
   'id',
   'clinic_id',
@@ -568,6 +600,22 @@ export function toInsuranceClaimDto(row: unknown): Record<string, unknown> {
 
 export function toInsuranceClaimDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInsuranceClaimDto(row));
+}
+
+export function toBillingNumberSequenceDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...BILLING_NUMBER_SEQUENCE_KEYS]);
+}
+
+export function toBillingNumberSequenceDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toBillingNumberSequenceDto(row));
+}
+
+export function toCashierReconciliationDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...CASHIER_RECONCILIATION_KEYS]);
+}
+
+export function toCashierReconciliationDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toCashierReconciliationDto(row));
 }
 
 export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {

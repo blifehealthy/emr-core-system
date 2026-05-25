@@ -15,6 +15,16 @@ import {
   listChargeTemplates,
   updateChargeTemplate,
 } from '../backend/services/chargeTemplates.ts';
+import {
+  createBillingNumberSequence,
+  issueBillingNumber,
+  listBillingNumberSequences,
+} from '../backend/services/billingNumberSequences.ts';
+import {
+  closeCashierReconciliation,
+  createCashierReconciliation,
+  listCashierReconciliations,
+} from '../backend/services/cashierReconciliations.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createInvoice, getInvoiceById } from '../backend/services/createInvoice.ts';
 import { createInvoiceFromEncounter } from '../backend/services/createInvoiceFromEncounter.ts';
@@ -40,6 +50,7 @@ import { getAppointmentById } from '../backend/services/getAppointmentById.ts';
 import { getClinicSettings } from '../backend/services/getClinicSettings.ts';
 import { getConsentRecordById } from '../backend/services/getConsentRecordById.ts';
 import { getDailyOperationsReport } from '../backend/services/getDailyOperationsReport.ts';
+import { getBillingSummaryReport } from '../backend/services/getBillingSummaryReport.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
 import { getEncounterById } from '../backend/services/getEncounterById.ts';
 import { getFileAssetById } from '../backend/services/getFileAssetById.ts';
@@ -142,6 +153,7 @@ const server = createNodeServer({
   getAppointmentById: getAppointmentById(db),
   getClinicSettings: getClinicSettings(db),
   getDailyOperationsReport: getDailyOperationsReport(db),
+  getBillingSummaryReport: getBillingSummaryReport(db),
   getEncounterById: getEncounterById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),
   getDiagnosisById: getDiagnosisById(db),
@@ -214,6 +226,12 @@ const server = createNodeServer({
   listInsuranceClaims: listInsuranceClaims(db),
   createInsuranceClaim: createInsuranceClaim(db),
   updateInsuranceClaim: updateInsuranceClaim(db),
+  listBillingNumberSequences: listBillingNumberSequences(db),
+  createBillingNumberSequence: createBillingNumberSequence(db),
+  issueBillingNumber: issueBillingNumber(db),
+  listCashierReconciliations: listCashierReconciliations(db),
+  createCashierReconciliation: createCashierReconciliation(db),
+  closeCashierReconciliation: closeCashierReconciliation(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),

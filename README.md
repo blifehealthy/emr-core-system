@@ -148,6 +148,18 @@ Current scope and review docs are tracked in:
 - `docs/phase-3a-uat-checklist-th.md`
 - `docs/phase-3a-closure-summary-th.md`
 
+## Phase 3B
+
+Phase 3B closes the first billing operations layer. It adds billing summary
+JSON/CSV reporting, clinic-managed document number sequences, and cashier cash
+reconciliation for opening cash, expected cash, counted cash, and variance.
+Current scope and review docs are tracked in:
+
+- `docs/phase-3b-plan.md`
+- `docs/phase-3b-clinician-summary-th.md`
+- `docs/phase-3b-uat-checklist-th.md`
+- `docs/phase-3b-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

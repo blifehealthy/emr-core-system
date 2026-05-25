@@ -61,6 +61,10 @@ import type {
   CreateChargeTemplateInput,
   UpdateChargeTemplateInput,
   CreateInsuranceClaimInput,
+  CreateBillingNumberSequenceInput,
+  CreateCashierReconciliationInput,
+  CloseCashierReconciliationInput,
+  IssueBillingNumberInput,
   UpdateInsuranceClaimInput,
   UpdateUserValidatedInput,
   UpdateVitalSignInput,
@@ -71,6 +75,8 @@ import type {
   InvoiceLineItemType,
   InvoiceStatus,
   InsuranceClaimStatus,
+  BillingDocumentType,
+  CashierReconciliationStatus,
   PaymentMethod,
 } from './types.ts';
 
@@ -107,6 +113,8 @@ const paymentMethods: PaymentMethod[] = [
   'insurance',
   'other',
 ];
+const billingDocumentTypes: BillingDocumentType[] = ['invoice', 'receipt', 'tax_invoice', 'claim'];
+const cashierReconciliationStatuses: CashierReconciliationStatus[] = ['open', 'closed', 'cancelled'];
 
 export function validateCreateAuthSessionBody(body: unknown):
   | { ok: true; value: { clinicId: string; username: string; loginCode: string } }
@@ -642,6 +650,131 @@ export function validateUpdateInsuranceClaimBody(
       submittedAt: submittedAt.value,
       adjudicatedAt: adjudicatedAt.value,
       rejectionReason: rejectionReason.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateBillingNumberSequenceBody(body: unknown):
+  | { ok: true; value: CreateBillingNumberSequenceInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const documentType = readRequiredEnumValue<BillingDocumentType>(
+    candidate.documentType,
+    'documentType',
+    billingDocumentTypes
+  );
+  if (!documentType.ok) return documentType;
+  const prefix = readRequiredString(candidate.prefix, 'prefix');
+  if (!prefix.ok) return prefix;
+  const nextNumber = readOptionalIntegerField(candidate, 'nextNumber');
+  if (!nextNumber.ok) return nextNumber;
+  if (nextNumber.value != null && nextNumber.value < 1) {
+    return { ok: false, error: 'nextNumber must be at least 1' };
+  }
+  const padding = readOptionalIntegerField(candidate, 'padding');
+  if (!padding.ok) return padding;
+  if (padding.value != null && (padding.value < 1 || padding.value > 12)) {
+    return { ok: false, error: 'padding must be between 1 and 12' };
+  }
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      documentType: documentType.value,
+      prefix: prefix.value,
+      nextNumber: nextNumber.value ?? undefined,
+      padding: padding.value ?? undefined,
+      isActive: isActive.value,
+    },
+  };
+}
+
+export function validateIssueBillingNumberBody(body: unknown):
+  | { ok: true; value: IssueBillingNumberInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const documentType = readRequiredEnumValue<BillingDocumentType>(
+    candidate.documentType,
+    'documentType',
+    billingDocumentTypes
+  );
+  if (!documentType.ok) return documentType;
+
+  return { ok: true, value: { clinicId: clinicId.value, documentType: documentType.value } };
+}
+
+export function validateCreateCashierReconciliationBody(body: unknown):
+  | { ok: true; value: CreateCashierReconciliationInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const reconciliationDate = readRequiredString(candidate.reconciliationDate, 'reconciliationDate');
+  if (!reconciliationDate.ok) return reconciliationDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(reconciliationDate.value)) {
+    return { ok: false, error: 'reconciliationDate must be YYYY-MM-DD' };
+  }
+  const openingCashAmount = readOptionalNonNegativeNumberLikeField(candidate, 'openingCashAmount');
+  if (!openingCashAmount.ok) return openingCashAmount;
+  const openedByUserId = readOptionalNullableStringField(candidate, 'openedByUserId');
+  if (!openedByUserId.ok) return openedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      reconciliationDate: reconciliationDate.value,
+      openingCashAmount: openingCashAmount.value ?? undefined,
+      openedByUserId: openedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCloseCashierReconciliationBody(
+  body: unknown,
+  reconciliationId: string
+): { ok: true; value: CloseCashierReconciliationInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const countedCashAmount = readNonNegativeNumberLikeValue(candidate.countedCashAmount, 'countedCashAmount');
+  if (!countedCashAmount.ok) return countedCashAmount;
+  const closedByUserId = readOptionalNullableStringField(candidate, 'closedByUserId');
+  if (!closedByUserId.ok) return closedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      reconciliationId,
+      countedCashAmount: countedCashAmount.value,
+      closedByUserId: closedByUserId.value,
       notes: notes.value,
     },
   };

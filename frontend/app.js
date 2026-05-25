@@ -31,7 +31,14 @@ let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
-let currentBilling = { invoices: [], chargeTemplates: [], insuranceClaims: [] };
+let currentBilling = {
+  invoices: [],
+  chargeTemplates: [],
+  insuranceClaims: [],
+  numberSequences: [],
+  reconciliations: [],
+  billingSummary: {},
+};
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
@@ -537,17 +544,34 @@ async function fetchQueue(clinicId, apiToken) {
 }
 
 async function fetchBillingBundle(clinicId, apiToken) {
-  const [invoicesPage, chargeTemplatesPage, insuranceClaimsPage] = await Promise.all([
+  const [invoicesPage, chargeTemplatesPage, insuranceClaimsPage, numberSequencesPage, reconciliationsPage, billingSummary] = await Promise.all([
     fetchInvoices(clinicId, apiToken),
     fetchChargeTemplates(clinicId, apiToken),
     fetchInsuranceClaims(clinicId, apiToken),
+    fetchBillingNumberSequences(clinicId, apiToken),
+    fetchCashierReconciliations(clinicId, apiToken),
+    fetchBillingSummary(clinicId, apiToken),
   ]);
 
   return {
     invoices: invoicesPage.items,
     chargeTemplates: chargeTemplatesPage.items,
     insuranceClaims: insuranceClaimsPage.items,
+    numberSequences: numberSequencesPage.items,
+    reconciliations: reconciliationsPage.items,
+    billingSummary,
   };
+}
+
+async function fetchBillingSummary(clinicId, apiToken) {
+  const today = new Date().toISOString().slice(0, 10);
+  const params = new URLSearchParams({ clinicId, startDate: today, endDate: today });
+  const response = await fetch(`/api/reports/billing-summary?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  return result.data ?? {};
 }
 
 async function fetchInvoices(clinicId, apiToken) {
@@ -613,6 +637,29 @@ async function fetchInsuranceClaims(clinicId, apiToken) {
   return {
     items: result.data ?? [],
     meta: result.meta ?? { limit: 100, offset: 0, hasMore: false },
+  };
+}
+
+async function fetchBillingNumberSequences(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId });
+  const response = await fetch(`/api/billing-number-sequences?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  return { items: result.data ?? [] };
+}
+
+async function fetchCashierReconciliations(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId, limit: '20' });
+  const response = await fetch(`/api/cashier-reconciliations?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: 20, offset: 0, hasMore: false },
   };
 }
 
@@ -1140,6 +1187,7 @@ function renderQueueBoard() {
 function renderBillingWorkspace() {
   billingWorkspace.hidden = false;
   const invoices = currentBilling.invoices ?? [];
+  const summary = currentBilling.billingSummary ?? {};
   const openTotal = invoices
     .filter((invoice) => !['paid', 'voided'].includes(invoice.status))
     .reduce((sum, invoice) => sum + Number(invoice.balance_amount ?? 0), 0);
@@ -1150,9 +1198,12 @@ function renderBillingWorkspace() {
     ['Invoices', invoices.length],
     ['Open balance', formatMoney(openTotal)],
     ['Paid', formatMoney(paidTotal)],
+    ['Today cash', formatMoney(summary.cash_total ?? 0)],
+    ['Today net', formatMoney(summary.net_total ?? 0)],
     ['Templates', currentBilling.chargeTemplates.length],
     ['Claims', currentBilling.insuranceClaims.length],
   ]));
+  fragment.append(createBillingOperationsPanel());
   fragment.append(createInvoiceCreateForm());
   fragment.append(createAutoChargeCaptureForm());
   fragment.append(createChargeTemplateForm());
@@ -1173,6 +1224,100 @@ function renderBillingWorkspace() {
   }
 
   billingWorkspace.replaceChildren(fragment);
+}
+
+function createBillingOperationsPanel() {
+  const section = document.createElement('section');
+  section.className = 'inline-profile-form billing-form';
+
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'งานบัญชีแคชเชียร์';
+  const hint = document.createElement('span');
+  hint.textContent = 'Phase 3B';
+  heading.append(title, hint);
+  section.append(heading);
+
+  const sequenceActions = document.createElement('div');
+  sequenceActions.className = 'record-actions';
+  const createSequence = document.createElement('button');
+  createSequence.type = 'button';
+  createSequence.className = 'secondary-button small-button';
+  createSequence.textContent = 'ตั้งเลขเอกสาร';
+  createSequence.addEventListener('click', createBillingNumberSequencePrompt);
+  const issueNumber = document.createElement('button');
+  issueNumber.type = 'button';
+  issueNumber.className = 'primary-button small-button';
+  issueNumber.textContent = 'ออกเลขเอกสาร';
+  issueNumber.addEventListener('click', issueBillingNumberPrompt);
+  sequenceActions.append(createSequence, issueNumber);
+  section.append(sequenceActions);
+
+  section.append(createBillingOperationList('ชุดเลขเอกสาร', currentBilling.numberSequences ?? [], [
+    'document_type',
+    'prefix',
+    'next_number',
+    'padding',
+    'is_active',
+  ]));
+
+  const reconciliationForm = document.createElement('form');
+  reconciliationForm.className = 'nested-inline-form';
+  reconciliationForm.append(
+    createBillingInput('reconciliationDate', 'Reconciliation date', new Date().toISOString().slice(0, 10), true, 'date'),
+    createBillingInput('openingCashAmount', 'Opening cash', '0', false, 'number')
+  );
+  const openButton = document.createElement('button');
+  openButton.type = 'submit';
+  openButton.className = 'secondary-button compact-button';
+  openButton.textContent = 'เปิดรอบเงินสด';
+  reconciliationForm.append(openButton);
+  reconciliationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createCashierReconciliationFromForm(reconciliationForm, openButton);
+  });
+  section.append(reconciliationForm);
+
+  section.append(createBillingOperationList('รอบปิดเงินสด', currentBilling.reconciliations ?? [], [
+    'reconciliation_date',
+    'status',
+    'opening_cash_amount',
+    'expected_cash_amount',
+    'counted_cash_amount',
+    'variance_amount',
+  ], createCloseCashierReconciliationAction));
+
+  return section;
+}
+
+function createBillingOperationList(titleText, rows, fields, actionFactory) {
+  const wrapper = document.createElement('section');
+  wrapper.className = 'compact-table-section';
+  const title = document.createElement('h4');
+  title.textContent = titleText;
+  wrapper.append(title);
+  if (rows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-text';
+    empty.textContent = 'ยังไม่มีรายการ';
+    wrapper.append(empty);
+    return wrapper;
+  }
+
+  for (const row of rows) {
+    const item = document.createElement('dl');
+    for (const field of fields) {
+      const term = document.createElement('dt');
+      term.textContent = labelize(field);
+      const description = document.createElement('dd');
+      description.textContent = formatValue(row[field]);
+      item.append(term, description);
+    }
+    if (actionFactory) item.append(actionFactory(row));
+    wrapper.append(item);
+  }
+  return wrapper;
 }
 
 function createInvoiceCreateForm() {
@@ -1667,6 +1812,121 @@ async function createChargeTemplateFromForm(form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'เพิ่ม template';
+  }
+}
+
+async function createBillingNumberSequencePrompt() {
+  const documentType = window.prompt('Document type: invoice, receipt, tax_invoice, claim', 'receipt');
+  if (!documentType) return;
+  const prefix = window.prompt('Prefix', `${documentType.toUpperCase()}-`);
+  if (!prefix) return;
+  const nextNumber = window.prompt('Next number', '1');
+  if (!nextNumber) return;
+  const padding = window.prompt('Padding', '6');
+  if (!padding) return;
+
+  setStatus('กำลังตั้งเลขเอกสาร', '');
+  try {
+    const response = await fetch('/api/billing-number-sequences', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify({
+        clinicId: readValue('billingClinicId'),
+        documentType,
+        prefix,
+        nextNumber: Number(nextNumber),
+        padding: Number(padding),
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus('ตั้งเลขเอกสารแล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ตั้งเลขเอกสารไม่สำเร็จ', 'error');
+  }
+}
+
+async function issueBillingNumberPrompt() {
+  const documentType = window.prompt('Document type: invoice, receipt, tax_invoice, claim', 'receipt');
+  if (!documentType) return;
+  setStatus('กำลังออกเลขเอกสาร', '');
+  try {
+    const response = await fetch('/api/billing-number-sequences/issue', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify({ clinicId: readValue('billingClinicId'), documentType }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus(`เลขเอกสารใหม่: ${result.data?.documentNumber ?? ''}`, 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ออกเลขเอกสารไม่สำเร็จ', 'error');
+  }
+}
+
+async function createCashierReconciliationFromForm(form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเปิดรอบ';
+  try {
+    const response = await fetch('/api/cashier-reconciliations', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: readValue('billingClinicId'),
+        reconciliationDate: values.reconciliationDate,
+        openingCashAmount: values.openingCashAmount,
+        openedByUserId: readValue('userId'),
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus('เปิดรอบเงินสดแล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เปิดรอบเงินสดไม่สำเร็จ');
+    setStatus('เปิดรอบเงินสดไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เปิดรอบเงินสด';
+  }
+}
+
+function createCloseCashierReconciliationAction(reconciliation) {
+  const wrapper = document.createElement('dd');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'ปิดรอบ';
+  button.disabled = reconciliation.status !== 'open';
+  button.addEventListener('click', async () => {
+    const countedCashAmount = window.prompt('ยอดเงินสดที่นับได้', reconciliation.expected_cash_amount ?? '');
+    if (!countedCashAmount) return;
+    await closeCashierReconciliation(reconciliation.id, countedCashAmount);
+  });
+  wrapper.append(button);
+  return wrapper;
+}
+
+async function closeCashierReconciliation(reconciliationId, countedCashAmount) {
+  setStatus('กำลังปิดรอบเงินสด', '');
+  try {
+    const response = await fetch(`/api/cashier-reconciliations/${reconciliationId}/close`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify({
+        countedCashAmount,
+        closedByUserId: readValue('userId'),
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus('ปิดรอบเงินสดแล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ปิดรอบเงินสดไม่สำเร็จ', 'error');
   }
 }
 
