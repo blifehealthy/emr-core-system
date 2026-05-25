@@ -10,9 +10,13 @@ const app = readFileSync(join(frontendDir, 'app.js'), 'utf8');
 const styles = readFileSync(join(frontendDir, 'styles.css'), 'utf8');
 
 assertContains(html, 'data-view="queue"', 'queue tab');
+assertContains(html, 'id="auth-form"', 'auth session form');
+assertContains(html, 'id="authLoginCode"', 'auth login code field');
 assertContains(html, 'id="queue-form"', 'queue form');
 assertContains(html, 'id="queue-export-button"', 'daily operations CSV export button');
 assertContains(app, 'function renderQueueBoard()', 'queue board renderer');
+assertContains(app, 'function createAuthSession(', 'auth session API helper');
+assertContains(app, '/api/auth/sessions', 'auth session endpoint');
 assertContains(app, 'function createOperationsCharts()', 'operations chart renderer');
 assertContains(app, 'function createBarChart(', 'bar chart helper');
 assertContains(app, 'function createClaimVisitButton(', 'queue claim action');

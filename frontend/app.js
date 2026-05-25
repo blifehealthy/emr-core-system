@@ -1,4 +1,5 @@
 const registrationForm = document.querySelector('#registration-form');
+const authForm = document.querySelector('#auth-form');
 const searchForm = document.querySelector('#patient-search-form');
 const adminForm = document.querySelector('#admin-form');
 const queueForm = document.querySelector('#queue-form');
@@ -7,6 +8,7 @@ const searchButton = document.querySelector('#search-button');
 const adminLoadButton = document.querySelector('#admin-load-button');
 const queueLoadButton = document.querySelector('#queue-load-button');
 const queueExportButton = document.querySelector('#queue-export-button');
+const logoutButton = document.querySelector('#logout-button');
 const serviceStatus = document.querySelector('#service-status');
 const resultTitle = document.querySelector('#result-title');
 const resultList = document.querySelector('#result-list');
@@ -125,6 +127,8 @@ const defaults = {
   queueClinicId: '10000000-0000-0000-0000-000000000101',
   queueReportStartDate: new Date().toISOString().slice(0, 10),
   queueReportEndDate: new Date().toISOString().slice(0, 10),
+  loginClinicId: '10000000-0000-0000-0000-000000000101',
+  loginUsername: 'doctor.smoke',
   userId: '10000000-0000-0000-0000-000000000201',
   userRole: 'nurse',
   apiToken: localStorage.getItem('emr.apiToken') ?? '',
@@ -140,6 +144,43 @@ for (const button of tabButtons) {
 }
 
 document.addEventListener('input', () => {
+  renderRequestPreview();
+});
+
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  setStatus('กำลังเข้าสู่ระบบ', '');
+
+  try {
+    const session = await createAuthSession({
+      clinicId: readValue('loginClinicId'),
+      username: readValue('loginUsername'),
+      loginCode: readValue('authLoginCode'),
+    });
+
+    document.querySelector('#apiToken').value = session.accessToken;
+    document.querySelector('#userId').value = session.user.id;
+    document.querySelector('#userRole').value = session.user.role;
+    document.querySelector('#actorPractitionerId').value = session.user.practitioner_id ?? '';
+    currentApiToken = session.accessToken;
+    localStorage.setItem('emr.apiToken', session.accessToken);
+    localStorage.setItem('emr.sessionExpiresAt', session.expiresAt);
+    setStatus(`เข้าสู่ระบบแล้ว: ${session.user.display_name}`, 'success');
+    renderRequestPreview();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'เข้าสู่ระบบไม่สำเร็จ';
+    setStatus(message, 'error');
+  }
+});
+
+logoutButton.addEventListener('click', () => {
+  document.querySelector('#apiToken').value = '';
+  document.querySelector('#authLoginCode').value = '';
+  currentApiToken = '';
+  localStorage.removeItem('emr.apiToken');
+  localStorage.removeItem('emr.sessionExpiresAt');
+  setStatus('ออกจากระบบแล้ว', '');
   renderRequestPreview();
 });
 
@@ -343,6 +384,21 @@ function buildHeaders(apiToken) {
   if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
 
   return headers;
+}
+
+async function createAuthSession(payload) {
+  const response = await fetch('/api/auth/sessions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 async function fetchPatientDetail(clinicId, medicalRecordNumber, apiToken) {

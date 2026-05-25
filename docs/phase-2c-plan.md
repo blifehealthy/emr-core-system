@@ -19,6 +19,11 @@ headers.
 - Protected API routes resolve role and practitioner context from active
   database users on each request when `resolveActor` is configured.
 - Session creation writes an audit log entry on the user record.
+- Users now store `last_login_at`, `failed_login_count`, and `locked_until`.
+- Successful login resets failed attempts and records `last_login_at`.
+- Repeated invalid login codes can temporarily lock a user account.
+- Frontend connection panel can create a session token from clinic id, username,
+  and login code, then reuse it for existing workflows.
 - API smoke now obtains doctor/admin session tokens before exercising protected
   workflows.
 - Production readiness check now validates:
@@ -28,11 +33,7 @@ headers.
 
 ## Remaining Phase 2C Work
 
-- Add frontend login panel and session persistence controls.
-- Add user access hardening:
-  - last login timestamp
-  - failed login audit events
-  - optional login lockout policy
+- Add failed login audit events with user id when an active user is known.
 - Add production identity provider/OIDC integration path after pilot auth is
   accepted.
 - Add UAT summary for Phase 2C after frontend login lands.

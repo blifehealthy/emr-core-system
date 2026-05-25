@@ -11,6 +11,8 @@ controlled technical pilot, but it is not the final production identity model.
   and `AUTH_LOGIN_CODE` to receive a short-lived signed bearer token.
 - Session bearer tokens carry only user id; role and practitioner context are
   resolved from active database records.
+- User records track `last_login_at`, `failed_login_count`, and `locked_until`
+  for pilot lockout controls.
 - Static technical tokens can still use `x-user-id` for smoke tests and trusted
   operator workflows.
 - `x-user-role` and `x-practitioner-id` remain explicit local/test fallbacks.
@@ -38,6 +40,7 @@ Production access should move to an identity provider with:
 - Restrict token access to deployment operators.
 - Prefer session bearer tokens for pilot users.
 - Use role headers only from trusted local/test boundaries.
+- Review locked accounts and failed login counts during pilot support.
 - Confirm admin, doctor, and nurse role mappings during UAT.
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot.
 

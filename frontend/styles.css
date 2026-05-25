@@ -206,6 +206,14 @@ textarea:focus {
   backdrop-filter: blur(12px);
 }
 
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 button {
   min-height: 42px;
   border-radius: 6px;

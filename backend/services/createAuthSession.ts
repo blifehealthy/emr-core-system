@@ -28,6 +28,8 @@ export function createAuthSession(
     loginCode?: string;
     sessionSecret?: string;
     ttlMinutes?: number;
+    maxFailedAttempts?: number;
+    lockoutMinutes?: number;
     now?: () => Date;
   }
 ) {
@@ -38,10 +40,6 @@ export function createAuthSession(
       throw new AuthSessionConfigError('AUTH_LOGIN_CODE and AUTH_SESSION_SECRET are required');
     }
 
-    if (input.loginCode !== expectedLoginCode) {
-      return null;
-    }
-
     const result = await db.query<{
       id: string;
       clinic_id: string;
@@ -49,6 +47,8 @@ export function createAuthSession(
       display_name: string;
       role: 'doctor' | 'nurse' | 'admin';
       practitioner_id: string | null;
+      failed_login_count: number;
+      locked_until: string | null;
     }>(
       `
         SELECT
@@ -57,7 +57,9 @@ export function createAuthSession(
           u.username,
           u.display_name,
           u.role,
-          p.id AS practitioner_id
+          p.id AS practitioner_id,
+          u.failed_login_count,
+          u.locked_until
         FROM users u
         LEFT JOIN practitioners p
           ON p.user_id = u.id
@@ -77,6 +79,32 @@ export function createAuthSession(
     }
 
     const now = config.now?.() ?? new Date();
+    if (user.locked_until && Date.parse(user.locked_until) > now.getTime()) {
+      return null;
+    }
+
+    if (input.loginCode !== expectedLoginCode) {
+      const failedLoginCount = user.failed_login_count + 1;
+      const maxFailedAttempts = config.maxFailedAttempts ?? 5;
+      const lockoutMinutes = config.lockoutMinutes ?? 15;
+      const lockedUntil =
+        failedLoginCount >= maxFailedAttempts
+          ? new Date(now.getTime() + lockoutMinutes * 60 * 1000).toISOString()
+          : null;
+
+      await db.query(
+        `
+          UPDATE users
+          SET failed_login_count = $2,
+              locked_until = $3
+          WHERE id = $1
+        `,
+        [user.id, failedLoginCount, lockedUntil]
+      );
+
+      return null;
+    }
+
     const ttlMinutes = config.ttlMinutes ?? 480;
     const expiresAt = new Date(now.getTime() + ttlMinutes * 60 * 1000).toISOString();
     const accessToken = createSessionToken(
@@ -86,6 +114,17 @@ export function createAuthSession(
         expiresAt,
       },
       sessionSecret
+    );
+
+    await db.query(
+      `
+        UPDATE users
+        SET last_login_at = $2,
+            failed_login_count = 0,
+            locked_until = NULL
+        WHERE id = $1
+      `,
+      [user.id, now.toISOString()]
     );
 
     return {

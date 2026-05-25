@@ -409,15 +409,17 @@ Phase 2C has started with production-auth hardening:
 - API role/practitioner context is resolved from active database users when
   `resolveActor` is configured.
 - Session creation writes an audit log entry.
+- Users track `last_login_at`, `failed_login_count`, and `locked_until`.
+- Frontend connection panel can create and persist a pilot session token.
 - API smoke obtains doctor/admin session tokens before protected workflows.
 - `npm run production:check` now validates `AUTH_SESSION_SECRET`,
   `AUTH_LOGIN_CODE`, and `AUTH_SESSION_TTL_MINUTES`.
 
 Next Phase 2C batch:
 
-1. Add frontend login/session persistence.
-2. Add login failure audit and last-login/lockout hardening.
-3. Prepare Phase 2C clinician/operator summary after the login UI lands.
+1. Add failed-login audit events for known active users.
+2. Add Phase 2C clinician/operator summary.
+3. Decide whether to start OIDC/MFA implementation or keep it as the next phase after UAT.
 
 The deliverables added in this worktree are:
 

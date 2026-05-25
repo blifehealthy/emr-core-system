@@ -24,12 +24,24 @@
           <button type="button" class="tab-button" data-view="admin">ตั้งค่าคลินิก</button>
         </nav>
 
-        <section class="form-section compact" aria-labelledby="access-heading">
+        <form id="auth-form" class="form-section compact" aria-labelledby="access-heading">
           <div class="section-heading">
             <h2 id="access-heading">การเชื่อมต่อ</h2>
-            <span>Dev</span>
+            <span>Session</span>
           </div>
           <div class="field-grid">
+            <label>
+              Login Clinic ID
+              <input id="loginClinicId" name="loginClinicId" autocomplete="off" />
+            </label>
+            <label>
+              Username
+              <input id="loginUsername" name="loginUsername" autocomplete="username" />
+            </label>
+            <label>
+              Login Code
+              <input id="authLoginCode" name="authLoginCode" autocomplete="one-time-code" />
+            </label>
             <label>
               API Token
               <input id="apiToken" name="apiToken" autocomplete="off" />
@@ -51,7 +63,11 @@
               <input id="actorPractitionerId" name="actorPractitionerId" autocomplete="off" />
             </label>
           </div>
-        </section>
+          <div class="inline-actions">
+            <button type="submit">เข้าสู่ระบบ</button>
+            <button type="button" class="secondary-button" id="logout-button">ออกจากระบบ</button>
+          </div>
+        </form>
 
         <form id="registration-form" class="registration-form view-panel active" data-view-panel="registration">
           <section class="form-section" aria-labelledby="identity-heading">

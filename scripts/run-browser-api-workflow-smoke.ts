@@ -14,6 +14,9 @@ const API_PORT = Number(process.env.BROWSER_API_SMOKE_API_PORT ?? '3115');
 const FRONTEND_PORT = Number(process.env.BROWSER_API_SMOKE_FRONTEND_PORT ?? '5186');
 const DEBUG_PORT = Number(process.env.BROWSER_API_SMOKE_DEBUG_PORT ?? '9226');
 const API_TOKEN = process.env.API_TOKEN ?? 'browser-api-smoke-token';
+const AUTH_LOGIN_CODE = process.env.AUTH_LOGIN_CODE ?? 'browser-api-smoke-login-code-0001';
+const AUTH_SESSION_SECRET =
+  process.env.AUTH_SESSION_SECRET ?? 'abcdef0123456789abcdef0123456789';
 const CHROME_BIN = process.env.CHROME_BIN ?? '/usr/bin/google-chrome';
 
 const POSTGRES_CONTAINER = process.env.POSTGRES_CONTAINER ?? 'poolproject-postgres';
@@ -51,6 +54,7 @@ const migrations = [
   '0017_add_drug_catalog_and_safety_warnings.up.sql',
   '0018_add_prescription_safety_override.up.sql',
   '0019_add_drug_interaction_rules.up.sql',
+  '0020_add_user_login_security.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -71,6 +75,8 @@ async function main() {
         ...process.env,
         DATABASE_URL: databaseUrl,
         API_TOKEN,
+        AUTH_LOGIN_CODE,
+        AUTH_SESSION_SECRET,
         PORT: String(API_PORT),
         FILE_STORAGE_DIR,
       },
@@ -165,10 +171,16 @@ async function main() {
     await cdp.waitForEvent('Page.loadEventFired');
 
     await evaluate(cdp, `
+      document.querySelector('#loginClinicId').value = '${CLINIC_ID}';
+      document.querySelector('#loginUsername').value = 'doctor.smoke';
+      document.querySelector('#authLoginCode').value = '${AUTH_LOGIN_CODE}';
+      document.querySelector('#auth-form').requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เข้าสู่ระบบแล้ว')`);
+
+    await evaluate(cdp, `
       document.querySelector('[data-view="queue"]').click();
-      document.querySelector('#apiToken').value = '${API_TOKEN}';
-      document.querySelector('#userId').value = '${USER_ID}';
-      document.querySelector('#actorPractitionerId').value = '${PRACTITIONER_ID}';
       document.querySelector('#queueClinicId').value = '${CLINIC_ID}';
       document.querySelector('#queueLimit').value = '25';
       document.querySelector('#queue-form').requestSubmit();
@@ -328,10 +340,16 @@ async function main() {
     assert.match(exportedName, /^daily-operations-/);
 
     await evaluate(cdp, `
+      document.querySelector('#loginClinicId').value = '${CLINIC_ID}';
+      document.querySelector('#loginUsername').value = 'admin.smoke';
+      document.querySelector('#authLoginCode').value = '${AUTH_LOGIN_CODE}';
+      document.querySelector('#auth-form').requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เข้าสู่ระบบแล้ว: Admin Smoke')`);
+
+    await evaluate(cdp, `
       document.querySelector('[data-view="admin"]').click();
-      document.querySelector('#userRole').value = 'admin';
-      document.querySelector('#userId').value = '10000000-0000-0000-0000-000000000202';
-      document.querySelector('#actorPractitionerId').value = '';
       document.querySelector('#adminClinicId').value = '${CLINIC_ID}';
       document.querySelector('#admin-form').requestSubmit();
       return true;
