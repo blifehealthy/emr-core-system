@@ -52,11 +52,11 @@ and clinician usability.
   frontend, clicks queue load/claim/start-checkup, and verifies prescription
   print HTML through a deterministic mock API.
 - `npm run browser:api-workflow-smoke` runs the same browser click path through
-  the real API, frontend proxy, and a temporary Docker Postgres database.
+  the real API, frontend proxy, and a temporary Docker Postgres database, and
+  now also covers appointment check-in plus SOAP open/edit/save.
 
 ## Remaining Phase 2A Follow-ups
 
-- Add more browser coverage for appointment check-in and SOAP editing once the
-  queue/print path stabilizes under UAT.
+- Add browser coverage for admin branding/logo upload and operations CSV export.
 - Review chart labels with clinic users after real-world reporting data is
   available.

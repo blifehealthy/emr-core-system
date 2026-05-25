@@ -98,6 +98,25 @@ async function main() {
     );
     assert.equal(settings.data.display_name, 'Browser API Clinic');
 
+    const appointment = await requestJson<{ id: string; status: string; appointment_number: string }>(
+      API_PORT,
+      '/api/appointments',
+      headers,
+      'POST',
+      201,
+      {
+        clinicId: CLINIC_ID,
+        patientId: PATIENT_ID,
+        practitionerId: PRACTITIONER_ID,
+        appointmentNumber: `APT-BROWSER-API-${Date.now()}`,
+        status: 'confirmed',
+        scheduledStartAt: '2026-05-25T04:00:00.000Z',
+        scheduledEndAt: '2026-05-25T04:30:00.000Z',
+        reason: 'Browser API check-in smoke',
+      }
+    );
+    assert.equal(appointment.data.status, 'confirmed');
+
     const visit = await requestJson<{ id: string; status: string; queue_label: string | null }>(
       API_PORT,
       '/api/visits',
@@ -199,6 +218,64 @@ async function main() {
     assert.match(printHtml, /Browser API Clinic/);
     assert.match(printHtml, /Oseltamivir|Paracetamol/);
     assert.match(printHtml, /Jane Smoke/);
+
+    await evaluate(cdp, `
+      clickButtonByText('Appointments');
+      clickButtonByText('เช็กอิน');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เช็กอินและเข้าคิวแล้ว')`);
+    const checkedInAppointment = await requestJson<{ id: string; status: string }>(
+      API_PORT,
+      `/api/appointments/${appointment.data.id}`,
+      headers
+    );
+    assert.equal(checkedInAppointment.data.status, 'checked_in');
+    const appointmentQueue = await requestJson<Array<{ id: string; appointment_id: string | null; status: string }>>(
+      API_PORT,
+      `/api/queue?clinicId=${CLINIC_ID}&limit=50`,
+      headers
+    );
+    assert.ok(
+      appointmentQueue.data.some(
+        (item) => item.appointment_id === appointment.data.id && item.status === 'waiting'
+      )
+    );
+
+    await evaluate(cdp, `
+      clickButtonByText('Notes');
+      clickButtonByText('เปิด SOAP');
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เปิด SOAP แล้ว') && document.querySelector('.soap-editor-form textarea[name="subjective"]')`);
+    const editedClinicalNoteId = await evaluate<string>(
+      cdp,
+      `return document.querySelector('.soap-editor-form .inline-form-heading span')?.textContent?.trim() ?? '';`
+    );
+    assert.ok(editedClinicalNoteId);
+    await evaluate(cdp, `
+      document.querySelector('.soap-editor-form textarea[name="subjective"]').value = 'Browser API updated subjective';
+      document.querySelector('.soap-editor-form textarea[name="objective"]').value = 'Browser API updated objective';
+      document.querySelector('.soap-editor-form textarea[name="assessment"]').value = 'Browser API updated assessment';
+      document.querySelector('.soap-editor-form textarea[name="plan"]').value = 'Browser API updated plan';
+      document.querySelector('.soap-editor-form').requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('บันทึก SOAP แล้ว')`);
+    const soap = await requestJson<{
+      subjective: string;
+      objective: string;
+      assessment: string;
+      plan: string;
+    }>(
+      API_PORT,
+      `/api/clinical-notes/${editedClinicalNoteId}/soap`,
+      headers
+    );
+    assert.equal(soap.data.subjective, 'Browser API updated subjective');
+    assert.equal(soap.data.objective, 'Browser API updated objective');
+    assert.equal(soap.data.assessment, 'Browser API updated assessment');
+    assert.equal(soap.data.plan, 'Browser API updated plan');
 
     await cdp.close();
     console.log('Browser API workflow smoke passed');

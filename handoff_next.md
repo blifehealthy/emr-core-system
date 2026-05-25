@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Add API-backed browser workflow smoke`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Expand API-backed browser workflow smoke`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -48,6 +48,8 @@
     start-checkup, patient record opening, and prescription print HTML generation
   - API-backed headless Chrome browser workflow smoke repeats the queue/print
     click path through the real API, frontend proxy, and temporary Docker Postgres
+  - API-backed browser workflow smoke also covers appointment check-in and SOAP
+    open/edit/save through the patient record UI
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
@@ -171,6 +173,8 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run browser:workflow-smoke`
   - API-backed browser workflow smoke coverage
   - current result: passing
+  - now covers queue load/claim/start-checkup, prescription print output,
+    appointment check-in, and SOAP open/edit/save against real API/frontend proxy
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run browser:api-workflow-smoke`
   - targeted admin list pagination/filter tests
@@ -337,14 +341,14 @@ incident guidance now live in `docs/object-storage-runbook.md`, with
 
 Remaining Phase 2A follow-ups:
 
-1. Add browser coverage for appointment check-in and SOAP editing once queue/print stabilizes under UAT.
+1. Add browser coverage for admin branding/logo upload and operations CSV export.
 2. Review operations chart labels with clinic users after real-world reporting data is available.
 
 ## Recommended Next Task
 
 If coming back fresh after this pass:
 
-1. add browser workflow smoke for appointment check-in and SOAP editing
+1. add browser workflow smoke for admin branding/logo upload and operations CSV export
 2. review and tune daily operations chart labels after clinical UAT
 
 The deliverables added in this worktree are:
@@ -368,11 +372,11 @@ The deliverables added in this worktree are:
 - duplicate conflict mapping for user/practitioner writes
 - expanded API/frontend smoke coverage for clinic setup, admin pagination/filtering, audit lookup, appointment reschedule, visit lifecycle/queue ownership filtering, queue encounter linking, note templates, clinic branding, logo asset policy/listing/upload/download, daily operations reporting/chart hooks, prescription print builder, and encounter edit
 - headless Chrome browser smoke coverage for queue claim/start-checkup and prescription print output
-- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres
+- API-backed headless Chrome browser smoke coverage through real API/frontend proxy and temporary Postgres, including queue claim/start-checkup, prescription print, appointment check-in, and SOAP editing
 - object storage deployment runbook, env example, and storage config validation script
 - queue operations charts and deterministic frontend workflow smoke script
 - browser-driven queue and prescription print workflow smoke script
-- API-backed browser workflow smoke script
+- expanded API-backed browser workflow smoke script
 
 This was the highest-leverage next move because:
 
@@ -396,5 +400,5 @@ Start by reading:
 
 Then produce:
 
-1. Appointment check-in and SOAP editing browser workflow smoke
+1. Admin branding/logo upload and operations CSV export browser workflow smoke
 2. Clinic UAT feedback for daily operations charts
