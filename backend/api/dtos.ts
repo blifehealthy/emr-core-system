@@ -120,10 +120,33 @@ const INVOICE_KEYS = [
   'paid_amount',
   'refunded_amount',
   'balance_amount',
+  'receipt_number',
+  'tax_invoice_number',
+  'receipt_issued_at',
   'issued_at',
   'due_at',
   'notes',
   'void_reason',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INSURANCE_CLAIM_KEYS = [
+  'id',
+  'clinic_id',
+  'patient_id',
+  'invoice_id',
+  'claim_number',
+  'status',
+  'insurer_name',
+  'policy_number',
+  'approved_amount',
+  'paid_amount',
+  'submitted_at',
+  'adjudicated_at',
+  'rejection_reason',
+  'notes',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -537,6 +560,14 @@ export function toChargeTemplateDto(row: unknown): Record<string, unknown> {
 
 export function toChargeTemplateDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toChargeTemplateDto(row));
+}
+
+export function toInsuranceClaimDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INSURANCE_CLAIM_KEYS]);
+}
+
+export function toInsuranceClaimDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInsuranceClaimDto(row));
 }
 
 export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {

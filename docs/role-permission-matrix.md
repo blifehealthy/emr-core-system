@@ -48,6 +48,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
 | `prescription_write` | Yes | No | Yes | Prescription create/update/delete |
+| `billing_read` | Yes | Yes | Yes | Invoice, charge template, and insurance claim reads |
+| `billing_write` | No | No | Yes | Invoice/payment/refund/void/template/claim writes |
 | `soap_update` | Yes | No | Yes | SOAP update/delete |
 | `diagnosis_update` | Yes | No | Yes | Diagnosis create/update/delete |
 | `vital_sign_update` | Yes | Yes | Yes | Vital sign create/update/delete |
@@ -111,6 +113,20 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `POST` | `/api/drug-interaction-rules` | `drug_interaction_rule_write` |
 | `PATCH` | `/api/drug-interaction-rules/:interactionRuleId` | `drug_interaction_rule_write` |
 | `POST` | `/api/prescription-safety-checks` | `prescription_write` |
+| `GET` | `/api/invoices` | `billing_read` |
+| `GET` | `/api/invoices/:invoiceId` | `billing_read` |
+| `POST` | `/api/invoices` | `billing_write` |
+| `POST` | `/api/invoices/from-encounter` | `billing_write` |
+| `PATCH` | `/api/invoices/:invoiceId` | `billing_write` |
+| `POST` | `/api/invoices/:invoiceId/payments` | `billing_write` |
+| `POST` | `/api/invoices/:invoiceId/refunds` | `billing_write` |
+| `PATCH` | `/api/invoices/:invoiceId/void` | `billing_write` |
+| `GET` | `/api/charge-templates` | `billing_read` |
+| `POST` | `/api/charge-templates` | `billing_write` |
+| `PATCH` | `/api/charge-templates/:chargeTemplateId` | `billing_write` |
+| `GET` | `/api/insurance-claims` | `billing_read` |
+| `POST` | `/api/insurance-claims` | `billing_write` |
+| `PATCH` | `/api/insurance-claims/:insuranceClaimId` | `billing_write` |
 | `GET` | `/api/consents/:consentId` | `consent_read` |
 | `POST` | `/api/consents` | `consent_write` |
 | `PATCH` | `/api/consents/:consentId` | `consent_write` |

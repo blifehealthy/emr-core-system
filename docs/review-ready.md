@@ -13,7 +13,7 @@
 - Phase 2F OIDC integration supports provider JWKS loading/cache, RS256 `kid` key selection, and MFA claim enforcement
 - Phase 2G security operations adds audit events for API auth/authorization failures and an identity incident runbook
 - Phase 2 implementation scope is closed for pilot UAT/go-no-go review
-- Phase 3A billing/payment foundation adds invoices, line items, payment/refund recording, invoice voiding, charge templates, cashier UI, receipt print, and billing audit events
+- Phase 3A billing/payment foundation adds invoices, multi-line editing, encounter charge capture, payment/refund recording, invoice voiding, charge templates, receipt/tax invoice numbering, insurance claims, cashier UI, receipt print, and billing audit events
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -38,7 +38,7 @@
 - Review `docs/phase-2f-plan.md`, `docs/phase-2f-clinician-summary-th.md`, and `docs/phase-2f-uat-checklist-th.md` with identity provider operators
 - Review `docs/phase-2g-plan.md`, `docs/phase-2g-clinician-summary-th.md`, `docs/phase-2g-uat-checklist-th.md`, and `docs/identity-security-operations-runbook.md` before pilot closure
 - Review `docs/phase-2-closure-summary-th.md`, `docs/phase-2-uat-master-checklist-th.md`, and `docs/phase-2-pilot-go-no-go-th.md` for final Phase 2 closure
-- Review `docs/phase-3a-plan.md`, `docs/phase-3a-clinician-summary-th.md`, and `docs/phase-3a-uat-checklist-th.md` with cashier/front desk users
+- Review `docs/phase-3a-plan.md`, `docs/phase-3a-clinician-summary-th.md`, `docs/phase-3a-uat-checklist-th.md`, and `docs/phase-3a-closure-summary-th.md` with cashier/front desk users
 
 ## Verified
 

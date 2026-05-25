@@ -17,6 +17,7 @@ import {
 } from '../backend/services/chargeTemplates.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createInvoice, getInvoiceById } from '../backend/services/createInvoice.ts';
+import { createInvoiceFromEncounter } from '../backend/services/createInvoiceFromEncounter.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPatient } from '../backend/services/createPatient.ts';
 import { createPatientAllergy } from '../backend/services/createPatientAllergy.ts';
@@ -100,6 +101,12 @@ import { resolveActor } from '../backend/services/resolveActor.ts';
 import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
 import { recordInvoicePayment } from '../backend/services/recordInvoicePayment.ts';
 import { recordInvoiceRefund } from '../backend/services/recordInvoiceRefund.ts';
+import { updateInvoice } from '../backend/services/updateInvoice.ts';
+import {
+  createInsuranceClaim,
+  listInsuranceClaims,
+  updateInsuranceClaim,
+} from '../backend/services/insuranceClaims.ts';
 import { voidInvoice } from '../backend/services/voidInvoice.ts';
 import { createOidcJwksCache } from '../backend/services/oidcJwks.ts';
 
@@ -196,12 +203,17 @@ const server = createNodeServer({
   listInvoices: listInvoices(db),
   getInvoiceById: getInvoiceById(db),
   createInvoice: createInvoice(db),
+  updateInvoice: updateInvoice(db),
+  createInvoiceFromEncounter: createInvoiceFromEncounter(db),
   recordInvoicePayment: recordInvoicePayment(db),
   recordInvoiceRefund: recordInvoiceRefund(db),
   voidInvoice: voidInvoice(db),
   listChargeTemplates: listChargeTemplates(db),
   createChargeTemplate: createChargeTemplate(db),
   updateChargeTemplate: updateChargeTemplate(db),
+  listInsuranceClaims: listInsuranceClaims(db),
+  createInsuranceClaim: createInsuranceClaim(db),
+  updateInsuranceClaim: updateInsuranceClaim(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),

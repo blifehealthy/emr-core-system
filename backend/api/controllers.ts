@@ -22,6 +22,8 @@ import {
   toFileAssetDtos,
   toInvoiceDto,
   toInvoiceDtos,
+  toInsuranceClaimDto,
+  toInsuranceClaimDtos,
   toChargeTemplateDto,
   toChargeTemplateDtos,
   toPatientDto,
@@ -64,7 +66,9 @@ import {
   validateAssessPrescriptionSafetyBody,
   validateCreateEncounterBody,
   validateCreateInvoiceBody,
+  validateCreateInvoiceFromEncounterBody,
   validateCreateChargeTemplateBody,
+  validateCreateInsuranceClaimBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -91,7 +95,9 @@ import {
   validateRecordInvoicePaymentBody,
   validateRecordInvoiceRefundBody,
   validateVoidInvoiceBody,
+  validateUpdateInvoiceBody,
   validateUpdateChargeTemplateBody,
+  validateUpdateInsuranceClaimBody,
 } from './validation.ts';
 import { getActorContext } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
@@ -2163,6 +2169,66 @@ export async function handleCreateInvoice(
   return { status: 201, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
 }
 
+export async function handleCreateInvoiceFromEncounter(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInvoiceFromEncounter) {
+    return mapError(new Error('Invoice charge capture dependency is not configured'));
+  }
+  const validation = validateCreateInvoiceFromEncounterBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+  const invoice = await dependencies.createInvoiceFromEncounter(validation.value);
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Encounter not found' } };
+  }
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: (invoice as { id: string }).id,
+    action: 'charge_captured',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      clinicId: validation.value.clinicId,
+      patientId: validation.value.patientId,
+      encounterId: validation.value.encounterId,
+    },
+  });
+  return { status: 201, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
+export async function handleUpdateInvoice(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  invoiceId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInvoice) {
+    return mapError(new Error('Invoice update dependency is not configured'));
+  }
+  const validation = validateUpdateInvoiceBody(request.body, invoiceId);
+  if (!validation.ok) return validationError(validation.error);
+  const invoice = await dependencies.updateInvoice(validation.value);
+  if (!invoice) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Invoice not found or not editable' } };
+  }
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'invoice',
+    entityId: invoiceId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      lineItemCount: validation.value.lineItems?.length,
+      receiptNumber: validation.value.receiptNumber,
+      taxInvoiceNumber: validation.value.taxInvoiceNumber,
+      status: validation.value.status,
+    },
+  });
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInvoiceDto(invoice) } };
+}
+
 export async function handleRecordInvoicePayment(
   request: HttpRequest,
   dependencies: Dependencies,
@@ -2349,6 +2415,93 @@ export async function handleUpdateChargeTemplate(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toChargeTemplateDto(template) } };
+}
+
+export async function handleListInsuranceClaims(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInsuranceClaims) {
+    return mapError(new Error('Insurance claim list dependency is not configured'));
+  }
+  const clinicId = readOptionalQueryString(request, 'clinicId');
+  if (!clinicId.ok) return validationError(clinicId.error);
+  if (!clinicId.value) return validationError('clinicId is required query parameter');
+  const invoiceId = readOptionalQueryString(request, 'invoiceId');
+  if (!invoiceId.ok) return validationError(invoiceId.error);
+  const status = readOptionalEnumQuery(request, 'status', [
+    'draft',
+    'submitted',
+    'accepted',
+    'rejected',
+    'paid',
+    'cancelled',
+  ]);
+  if (!status.ok) return validationError(status.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+  const claims = await dependencies.listInsuranceClaims({
+    clinicId: clinicId.value,
+    invoiceId: invoiceId.value,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInsuranceClaimDtos(claims.rows), meta: claims.meta },
+  };
+}
+
+export async function handleCreateInsuranceClaim(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInsuranceClaim) {
+    return mapError(new Error('Insurance claim create dependency is not configured'));
+  }
+  const validation = validateCreateInsuranceClaimBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+  const claim = await dependencies.createInsuranceClaim(validation.value);
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'insurance_claim',
+    entityId: (claim as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { invoiceId: validation.value.invoiceId, claimNumber: validation.value.claimNumber },
+  });
+  return { status: 201, headers: JSON_HEADERS, body: { data: toInsuranceClaimDto(claim) } };
+}
+
+export async function handleUpdateInsuranceClaim(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  insuranceClaimId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInsuranceClaim) {
+    return mapError(new Error('Insurance claim update dependency is not configured'));
+  }
+  const validation = validateUpdateInsuranceClaimBody(request.body, insuranceClaimId);
+  if (!validation.ok) return validationError(validation.error);
+  const claim = await dependencies.updateInsuranceClaim(validation.value);
+  if (!claim) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Insurance claim not found' } };
+  }
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'insurance_claim',
+    entityId: insuranceClaimId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { status: validation.value.status },
+  });
+  return { status: 200, headers: JSON_HEADERS, body: { data: toInsuranceClaimDto(claim) } };
 }
 
 export async function handleListDiagnosesByEncounter(

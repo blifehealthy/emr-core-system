@@ -109,12 +109,17 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/invoices` | List invoices by clinic with optional patient, status, limit, and offset filters. |
 | `GET` | `/api/invoices/:invoiceId` | Read one invoice with line items and payments. |
 | `POST` | `/api/invoices` | Create an invoice with line items and calculated totals. |
+| `POST` | `/api/invoices/from-encounter` | Create a draft invoice by capturing visit and prescription charges from an encounter. |
+| `PATCH` | `/api/invoices/:invoiceId` | Update editable invoice metadata and replace line items before payment/refund activity. |
 | `POST` | `/api/invoices/:invoiceId/payments` | Record an invoice payment and recalculate paid, balance, and status. |
 | `POST` | `/api/invoices/:invoiceId/refunds` | Record an invoice refund and recalculate paid, refunded, balance, and status. |
 | `PATCH` | `/api/invoices/:invoiceId/void` | Void an invoice with a required reason. |
 | `GET` | `/api/charge-templates` | List common charge templates by clinic and active status. |
 | `POST` | `/api/charge-templates` | Create a clinic charge template. |
 | `PATCH` | `/api/charge-templates/:chargeTemplateId` | Update or deactivate a clinic charge template. |
+| `GET` | `/api/insurance-claims` | List insurance claims by clinic, invoice, status, limit, and offset. |
+| `POST` | `/api/insurance-claims` | Create an insurance claim linked to an invoice. |
+| `PATCH` | `/api/insurance-claims/:insuranceClaimId` | Update insurance claim status and adjudication fields. |
 
 ## Reporting
 
@@ -171,15 +176,20 @@ All routes except `GET /health` can be protected by bearer token when
 ## Phase 3A Additions
 
 - Billing foundation tables now store invoices, invoice line items, invoice
-  payments, invoice refunds, and charge templates.
+  payments, invoice refunds, charge templates, receipt/tax invoice numbering,
+  and insurance claims.
 - Invoice creation calculates subtotal, discount, tax, total, paid amount, and
   balance from structured line items and payments.
+- Editable invoices can have line items replaced before payments/refunds.
+- Encounter charge capture can create draft invoices from visit and prescription
+  activity using clinic charge templates.
 - Payment and refund recording update invoice paid/refunded/balance values and
   status based on the remaining balance.
 - Invoice voiding stores a required reason and marks the invoice `voided`.
 - Billing routes use dedicated read/write permissions and write audit logs when
-  invoices are created, payments/refunds are recorded, invoices are voided, or
-  charge templates change.
+  invoices are created/updated, charge capture runs, payments/refunds are
+  recorded, invoices are voided, charge templates change, or insurance claims
+  change.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

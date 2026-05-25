@@ -513,6 +513,7 @@ export type InvoiceLineItemType =
   | 'discount'
   | 'other';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'qr' | 'insurance' | 'other';
+export type InsuranceClaimStatus = 'draft' | 'submitted' | 'accepted' | 'rejected' | 'paid' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type PrescriptionSafetyWarning = {
   type: 'allergy' | 'interaction';
@@ -695,6 +696,9 @@ export type CreateInvoiceInput = {
   currency?: string;
   issuedAt?: string | null;
   dueAt?: string | null;
+  receiptNumber?: string | null;
+  taxInvoiceNumber?: string | null;
+  receiptIssuedAt?: string | null;
   notes?: string | null;
   lineItems: Array<{
     itemType?: InvoiceLineItemType;
@@ -706,6 +710,28 @@ export type CreateInvoiceInput = {
     discountAmount?: number | string | null;
     taxAmount?: number | string | null;
   }>;
+};
+
+export type UpdateInvoiceInput = {
+  invoiceId: string;
+  status?: InvoiceStatus;
+  receiptNumber?: string | null;
+  taxInvoiceNumber?: string | null;
+  receiptIssuedAt?: string | null;
+  notes?: string | null;
+  lineItems?: CreateInvoiceInput['lineItems'];
+};
+
+export type CreateInvoiceFromEncounterInput = {
+  clinicId: string;
+  patientId: string;
+  encounterId: string;
+  invoiceNumber: string;
+  includeVisitCharge?: boolean;
+  includePrescriptions?: boolean;
+  receiptNumber?: string | null;
+  taxInvoiceNumber?: string | null;
+  notes?: string | null;
 };
 
 export type RecordInvoicePaymentInput = {
@@ -754,6 +780,35 @@ export type UpdateChargeTemplateInput = {
   unitPriceAmount?: number | string;
   taxAmount?: number | string | null;
   isActive?: boolean;
+  notes?: string | null;
+};
+
+export type CreateInsuranceClaimInput = {
+  clinicId: string;
+  patientId: string;
+  invoiceId: string;
+  claimNumber: string;
+  insurerName: string;
+  policyNumber?: string | null;
+  status?: InsuranceClaimStatus;
+  approvedAmount?: number | string;
+  paidAmount?: number | string;
+  submittedAt?: string | null;
+  adjudicatedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateInsuranceClaimInput = {
+  insuranceClaimId: string;
+  status?: InsuranceClaimStatus;
+  insurerName?: string;
+  policyNumber?: string | null;
+  approvedAmount?: number | string;
+  paidAmount?: number | string;
+  submittedAt?: string | null;
+  adjudicatedAt?: string | null;
+  rejectionReason?: string | null;
   notes?: string | null;
 };
 
@@ -935,6 +990,8 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   getInvoiceById?: (input: { invoiceId: string }) => Promise<unknown | null>;
   createInvoice?: (input: CreateInvoiceInput) => Promise<unknown>;
+  updateInvoice?: (input: UpdateInvoiceInput) => Promise<unknown | null>;
+  createInvoiceFromEncounter?: (input: CreateInvoiceFromEncounterInput) => Promise<unknown | null>;
   recordInvoicePayment?: (input: RecordInvoicePaymentInput) => Promise<unknown | null>;
   recordInvoiceRefund?: (input: RecordInvoiceRefundInput) => Promise<unknown | null>;
   voidInvoice?: (input: VoidInvoiceInput) => Promise<unknown | null>;
@@ -946,6 +1003,15 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createChargeTemplate?: (input: CreateChargeTemplateInput) => Promise<unknown>;
   updateChargeTemplate?: (input: UpdateChargeTemplateInput) => Promise<unknown | null>;
+  listInsuranceClaims?: (input: {
+    clinicId: string;
+    invoiceId?: string;
+    status?: InsuranceClaimStatus;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInsuranceClaim?: (input: CreateInsuranceClaimInput) => Promise<unknown>;
+  updateInsuranceClaim?: (input: UpdateInsuranceClaimInput) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
   updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;

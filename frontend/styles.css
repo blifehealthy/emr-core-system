@@ -747,6 +747,26 @@ button:disabled {
   padding-top: 10px;
 }
 
+.invoice-lines-editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+}
+
+.invoice-line-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.invoice-line-row label:nth-of-type(3) {
+  grid-column: span 2;
+}
+
 .compact-table-section {
   display: grid;
   gap: 6px;

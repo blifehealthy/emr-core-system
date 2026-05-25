@@ -53,6 +53,7 @@ const migrations = [
   '0021_add_user_oidc_subject.up.sql',
   '0022_add_billing_foundation.up.sql',
   '0023_add_billing_refunds_and_charge_templates.up.sql',
+  '0024_add_phase_3a_completion_billing.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -876,6 +877,33 @@ async function main() {
     );
     assert.ok(chargeTemplates.data.some((item) => item.id === chargeTemplate.data.id));
 
+    await requestJson(
+      '/api/charge-templates',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        code: 'VISIT',
+        description: 'Auto visit fee',
+        itemType: 'visit',
+        unitPriceAmount: 600,
+      }
+    );
+    await requestJson(
+      '/api/charge-templates',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        code: 'MEDICATION',
+        description: 'Auto medication fee',
+        itemType: 'medication',
+        unitPriceAmount: 80,
+      }
+    );
+
     const createdInvoice = await requestJson<{
       id: string;
       invoice_number: string;
@@ -916,6 +944,63 @@ async function main() {
     assert.equal(createdInvoice.data.line_items.length, 2);
     assert.equal(Number(createdInvoice.data.total_amount), 900);
     assert.equal(Number(createdInvoice.data.balance_amount), 900);
+
+    const autoCapturedInvoice = await requestJson<{
+      id: string;
+      receipt_number: string;
+      tax_invoice_number: string;
+      line_items: Array<{ item_type: string; description: string }>;
+    }>(
+      '/api/invoices/from-encounter',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        patientId: '10000000-0000-0000-0000-000000001001',
+        encounterId: '10000000-0000-0000-0000-000000002001',
+        invoiceNumber: `INV-AUTO-${Date.now()}`,
+        receiptNumber: `RCPT-AUTO-${Date.now()}`,
+        taxInvoiceNumber: `TAX-AUTO-${Date.now()}`,
+        includeVisitCharge: true,
+        includePrescriptions: true,
+      }
+    );
+    assert.ok(autoCapturedInvoice.data.line_items.some((item) => item.item_type === 'visit'));
+    assert.ok(autoCapturedInvoice.data.line_items.some((item) => item.item_type === 'medication'));
+
+    const updatedAutoInvoice = await requestJson<{
+      id: string;
+      receipt_number: string;
+      tax_invoice_number: string;
+      line_items: Array<{ description: string }>;
+    }>(
+      `/api/invoices/${autoCapturedInvoice.data.id}`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        receiptNumber: `RCPT-UPD-${Date.now()}`,
+        taxInvoiceNumber: `TAX-UPD-${Date.now()}`,
+        receiptIssuedAt: new Date().toISOString(),
+        lineItems: [
+          {
+            itemType: 'visit',
+            description: 'Updated visit fee',
+            quantity: 1,
+            unitPriceAmount: 650,
+          },
+          {
+            itemType: 'procedure',
+            description: 'Updated procedure fee',
+            quantity: 1,
+            unitPriceAmount: 120,
+          },
+        ],
+      }
+    );
+    assert.equal(updatedAutoInvoice.data.line_items.length, 2);
+    assert.equal(updatedAutoInvoice.data.line_items[0].description, 'Updated visit fee');
 
     const recordedPayment = await requestJson<{
       id: string;
@@ -976,6 +1061,38 @@ async function main() {
     );
     assert.equal(voidedInvoice.data.status, 'voided');
     assert.equal(voidedInvoice.data.void_reason, 'Smoke test void');
+
+    const insuranceClaim = await requestJson<{ id: string; status: string; claim_number: string }>(
+      '/api/insurance-claims',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        patientId: '10000000-0000-0000-0000-000000001001',
+        invoiceId: autoCapturedInvoice.data.id,
+        claimNumber: `CLM-SMOKE-${Date.now()}`,
+        insurerName: 'Smoke insurer',
+        status: 'draft',
+      }
+    );
+    const submittedClaim = await requestJson<{ id: string; status: string }>(
+      `/api/insurance-claims/${insuranceClaim.data.id}`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        status: 'submitted',
+        submittedAt: new Date().toISOString(),
+        approvedAmount: 500,
+      }
+    );
+    assert.equal(submittedClaim.data.status, 'submitted');
+    const claimList = await requestJson<Array<{ id: string }>>(
+      '/api/insurance-claims?clinicId=10000000-0000-0000-0000-000000000101&status=submitted&limit=5',
+      adminHeaders
+    );
+    assert.ok(claimList.data.some((item) => item.id === insuranceClaim.data.id));
 
     const updatedPrescription = await requestJson<{
       id: string;

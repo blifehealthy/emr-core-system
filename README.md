@@ -137,13 +137,16 @@ combined closure docs are tracked in:
 ## Phase 3A
 
 Phase 3A billing/payment foundation is now usable as a cashier workflow. It
-adds invoices, invoice line items, payment/refund recording, invoice voiding,
-charge templates, receipt print/export, billing permissions, and audit coverage.
+adds invoices, multi-line invoice editing, auto charge capture from encounters
+and prescriptions, payment/refund recording, invoice voiding, charge templates,
+receipt/tax invoice numbering, insurance claim lifecycle basics, receipt
+print/export, billing permissions, and audit coverage.
 Current scope and review docs are tracked in:
 
 - `docs/phase-3a-plan.md`
 - `docs/phase-3a-clinician-summary-th.md`
 - `docs/phase-3a-uat-checklist-th.md`
+- `docs/phase-3a-closure-summary-th.md`
 
 ## Current Scope
 

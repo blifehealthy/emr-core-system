@@ -11,6 +11,7 @@ Phase 3A เริ่มวาง foundation ของ billing/payment หลั
 - invoice payment
 - invoice refund
 - charge template สำหรับค่าบริการที่ใช้บ่อย
+- insurance claim เบื้องต้น
 
 invoice สามารถผูกกับ:
 
@@ -23,19 +24,23 @@ invoice สามารถผูกกับ:
 ## Flow ที่ API รองรับแล้ว
 
 - สร้าง invoice พร้อม line items
+- แก้ invoice หลาย line items ก่อนรับเงิน/คืนเงิน
 - ดู invoice พร้อมรายการ charge และ payment
 - list invoice ตาม clinic/patient/status
 - บันทึก payment
 - บันทึก refund
 - void invoice พร้อมเหตุผล
 - สร้าง charge template เช่น ค่าตรวจ/ค่าหัตถการ
-- ใช้หน้า Cashier เพื่อสร้าง invoice, รับชำระ, คืนเงิน และพิมพ์ใบเสร็จ
+- สร้าง invoice จาก encounter/prescription แบบ auto charge capture
+- เก็บเลข receipt และเลข tax invoice
+- สร้างและอัปเดต insurance claim เบื้องต้น
+- ใช้หน้า Cashier เพื่อสร้าง invoice, รับชำระ, คืนเงิน, สร้าง claim และพิมพ์ใบเสร็จ
 - ระบบคำนวณ paid amount, balance และ status เป็น `partially_paid` หรือ `paid`
 
 ## สิทธิ์การใช้งาน
 
 - doctor/nurse/admin อ่าน invoice ได้
-- admin สร้าง invoice, บันทึก payment/refund, void invoice และจัดการ charge template ได้
+- admin สร้าง/แก้ invoice, บันทึก payment/refund, void invoice, จัดการ charge template และจัดการ claim ได้
 
 ## Audit
 
@@ -46,14 +51,15 @@ invoice สามารถผูกกับ:
 - คืนเงิน
 - void invoice
 - เพิ่ม/แก้ charge template
+- สร้าง/แก้ insurance claim
+- auto charge capture จาก encounter
 
 ## สิ่งที่ยังไม่ใช่รอบนี้
 
-- ยังไม่มี multi-line invoice editor แบบเต็ม
-- ยังไม่มีเลขใบเสร็จ/ใบกำกับภาษีตาม policy จริง
-- ยังไม่มี auto charge capture จาก visit/procedure/prescription
-- ยังไม่มี insurance claim workflow เต็มรูปแบบ
+- ยังไม่มีการเชื่อมต่อ payer/insurer จริง
+- ยังไม่มี sequence generator สำหรับออกเลข receipt/tax invoice อัตโนมัติ
+- ยังไม่มี procedure/lab order module เต็มรูปแบบสำหรับ charge capture
 
 ## สถานะ
 
-Phase 3A cashier foundation พร้อมให้ทีมหน้าเคาน์เตอร์ทดสอบ flow invoice/payment/refund/void/receipt รอบแรก
+Phase 3A implementation scope พร้อมเข้า UAT กับทีมหน้าเคาน์เตอร์/การเงิน

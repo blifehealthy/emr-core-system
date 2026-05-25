@@ -9,6 +9,8 @@ import {
   handleCreateConsentRecord,
   handleCreateFileAsset,
   handleCreateInvoice,
+  handleCreateInvoiceFromEncounter,
+  handleCreateInsuranceClaim,
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
@@ -65,6 +67,7 @@ import {
   handleListDrugInteractionRules,
   handleListFileAssets,
   handleListInvoices,
+  handleListInsuranceClaims,
   handleListPatientAllergies,
   handleListPatientConditions,
   handleListPatientFlags,
@@ -96,6 +99,8 @@ import {
   handleRecordInvoicePayment,
   handleRecordInvoiceRefund,
   handleUpdateChargeTemplate,
+  handleUpdateInsuranceClaim,
+  handleUpdateInvoice,
   handleVoidInvoice,
   notFound,
 } from './controllers.ts';
@@ -230,6 +235,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_read');
       if (roleError) return roleError;
       return handleListChargeTemplates(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/insurance-claims') {
+      const roleError = requireRole(actorAwareRequest, 'billing_read');
+      if (roleError) return roleError;
+      return handleListInsuranceClaims(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/users') {
@@ -560,10 +571,32 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreateInvoice(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/invoices/from-encounter') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateInvoiceFromEncounter(actorAwareRequest, dependencies);
+    }
+
+    const invoiceUpdateMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/invoices\/([^/]+)$/)
+        : null;
+    if (invoiceUpdateMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleUpdateInvoice(actorAwareRequest, dependencies, invoiceUpdateMatch[1]);
+    }
+
     if (request.method === 'POST' && request.path === '/api/charge-templates') {
       const roleError = requireRole(actorAwareRequest, 'billing_write');
       if (roleError) return roleError;
       return handleCreateChargeTemplate(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/insurance-claims') {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleCreateInsuranceClaim(actorAwareRequest, dependencies);
     }
 
     const invoicePaymentMatch =
@@ -604,6 +637,16 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_write');
       if (roleError) return roleError;
       return handleUpdateChargeTemplate(actorAwareRequest, dependencies, chargeTemplateUpdateMatch[1]);
+    }
+
+    const insuranceClaimUpdateMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/insurance-claims\/([^/]+)$/)
+        : null;
+    if (insuranceClaimUpdateMatch) {
+      const roleError = requireRole(actorAwareRequest, 'billing_write');
+      if (roleError) return roleError;
+      return handleUpdateInsuranceClaim(actorAwareRequest, dependencies, insuranceClaimUpdateMatch[1]);
     }
 
     if (request.method === 'POST' && request.path === '/api/consents') {

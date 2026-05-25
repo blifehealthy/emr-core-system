@@ -530,7 +530,7 @@ Recommended next work:
 
 ## Phase 3A Status
 
-Phase 3A billing/payment foundation now includes a usable cashier foundation:
+Phase 3A billing/payment foundation implementation scope is complete:
 
 - Billing schema added:
   - `invoices`
@@ -538,32 +538,41 @@ Phase 3A billing/payment foundation now includes a usable cashier foundation:
   - `invoice_payments`
   - `invoice_refunds`
   - `charge_templates`
+  - `insurance_claims`
 - Billing APIs added:
   - `GET /api/invoices`
   - `GET /api/invoices/:id`
   - `POST /api/invoices`
+  - `POST /api/invoices/from-encounter`
+  - `PATCH /api/invoices/:id`
   - `POST /api/invoices/:id/payments`
   - `POST /api/invoices/:id/refunds`
   - `PATCH /api/invoices/:id/void`
   - `GET /api/charge-templates`
   - `POST /api/charge-templates`
   - `PATCH /api/charge-templates/:id`
-- Admin can create invoices, record payments/refunds, void invoices, and manage
-  charge templates.
+  - `GET /api/insurance-claims`
+  - `POST /api/insurance-claims`
+  - `PATCH /api/insurance-claims/:id`
+- Admin can create/update invoices, record payments/refunds, void invoices,
+  manage charge templates, run encounter charge capture, and manage insurance
+  claims.
 - Doctor, nurse, and admin can read invoices.
 - Invoice creation, payment/refund recording, invoice voiding, and charge
   template changes write audit logs.
-- Frontend Cashier tab added for invoice list/detail/create/payment/refund/void,
-  charge template creation, and receipt print.
-- API smoke covers charge template creation/listing, invoice creation, payment,
-  refund, partially-paid list, and void.
+- Frontend Cashier tab added for invoice list/detail/create/edit/payment/refund/void,
+  charge template creation, receipt/tax invoice number capture, encounter charge
+  capture, insurance claim creation, and receipt print.
+- API smoke covers charge template creation/listing, invoice creation/update,
+  encounter charge capture, payment, refund, partially-paid list, void, and
+  insurance claim create/update/list.
+- Phase 3A closure summary is available at `docs/phase-3a-closure-summary-th.md`.
 
-Recommended next Phase 3A batch:
+Recommended next work:
 
-1. Add multi-line invoice editor before issue/final payment.
-2. Add automated charge capture from visit/procedure/prescription/lab activity.
-3. Add receipt numbering and tax invoice policy fields.
-4. Add insurance claim lifecycle beyond payment method tagging.
+1. Run Phase 3A UAT with cashier/front desk users.
+2. Start Phase 3B for billing reports, reconciliation, and production numbering policy.
+3. Plan payer/insurer integration or claim export after UAT.
 
 The deliverables added in this worktree are:
 

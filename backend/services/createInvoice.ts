@@ -28,9 +28,12 @@ export function createInvoice(db: {
           balance_amount,
           issued_at,
           due_at,
+          receipt_number,
+          tax_invoice_number,
+          receipt_issued_at,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, $12, $13, $14, $15, $16, $17, $18)
         RETURNING id
       `,
       [
@@ -48,6 +51,9 @@ export function createInvoice(db: {
         total,
         input.issuedAt ?? null,
         input.dueAt ?? null,
+        input.receiptNumber ?? null,
+        input.taxInvoiceNumber ?? null,
+        input.receiptIssuedAt ?? null,
         input.notes ?? null,
       ]
     );

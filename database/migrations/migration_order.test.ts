@@ -105,6 +105,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0023_add_billing_refunds_and_charge_templates.up.sql'),
     'expected billing refunds and charge templates migration'
   );
+  assert.ok(
+    filenames.includes('0024_add_phase_3a_completion_billing.up.sql'),
+    'expected Phase 3A completion billing migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

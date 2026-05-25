@@ -29,6 +29,8 @@ import type {
   CreatePractitionerValidatedInput,
   CreatePrescriptionInput,
   CreateInvoiceInput,
+  UpdateInvoiceInput,
+  CreateInvoiceFromEncounterInput,
   CreateUserValidatedInput,
   CreateVitalSignInput,
   DiagnosisStatus,
@@ -58,6 +60,8 @@ import type {
   VoidInvoiceInput,
   CreateChargeTemplateInput,
   UpdateChargeTemplateInput,
+  CreateInsuranceClaimInput,
+  UpdateInsuranceClaimInput,
   UpdateUserValidatedInput,
   UpdateVitalSignInput,
   UserRole,
@@ -66,6 +70,7 @@ import type {
   DrugInteractionSeverity,
   InvoiceLineItemType,
   InvoiceStatus,
+  InsuranceClaimStatus,
   PaymentMethod,
 } from './types.ts';
 
@@ -78,6 +83,14 @@ const clinicVisitStatuses: ClinicVisitStatus[] = [
   'cancelled',
 ];
 const invoiceStatuses: InvoiceStatus[] = ['draft', 'issued', 'partially_paid', 'paid', 'voided'];
+const insuranceClaimStatuses: InsuranceClaimStatus[] = [
+  'draft',
+  'submitted',
+  'accepted',
+  'rejected',
+  'paid',
+  'cancelled',
+];
 const invoiceLineItemTypes: InvoiceLineItemType[] = [
   'visit',
   'procedure',
@@ -204,6 +217,12 @@ export function validateCreateInvoiceBody(body: unknown):
   if (!issuedAt.ok) return issuedAt;
   const dueAt = readOptionalNullableStringField(candidate, 'dueAt');
   if (!dueAt.ok) return dueAt;
+  const receiptNumber = readOptionalNullableStringField(candidate, 'receiptNumber');
+  if (!receiptNumber.ok) return receiptNumber;
+  const taxInvoiceNumber = readOptionalNullableStringField(candidate, 'taxInvoiceNumber');
+  if (!taxInvoiceNumber.ok) return taxInvoiceNumber;
+  const receiptIssuedAt = readOptionalNullableStringField(candidate, 'receiptIssuedAt');
+  if (!receiptIssuedAt.ok) return receiptIssuedAt;
   const notes = readOptionalNullableStringField(candidate, 'notes');
   if (!notes.ok) return notes;
 
@@ -223,8 +242,137 @@ export function validateCreateInvoiceBody(body: unknown):
           : undefined,
       issuedAt: issuedAt.value,
       dueAt: dueAt.value,
+      ...(receiptNumber.value !== undefined ? { receiptNumber: receiptNumber.value } : {}),
+      ...(taxInvoiceNumber.value !== undefined ? { taxInvoiceNumber: taxInvoiceNumber.value } : {}),
+      ...(receiptIssuedAt.value !== undefined ? { receiptIssuedAt: receiptIssuedAt.value } : {}),
       notes: notes.value,
       lineItems,
+    },
+  };
+}
+
+export function validateUpdateInvoiceBody(
+  body: unknown,
+  invoiceId: string
+): { ok: true; value: UpdateInvoiceInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const status = readEnumValue<InvoiceStatus>(candidate.status, 'status', invoiceStatuses);
+  if (!status.ok) return status;
+  const receiptNumber = readOptionalNullableStringField(candidate, 'receiptNumber');
+  if (!receiptNumber.ok) return receiptNumber;
+  const taxInvoiceNumber = readOptionalNullableStringField(candidate, 'taxInvoiceNumber');
+  if (!taxInvoiceNumber.ok) return taxInvoiceNumber;
+  const receiptIssuedAt = readOptionalNullableStringField(candidate, 'receiptIssuedAt');
+  if (!receiptIssuedAt.ok) return receiptIssuedAt;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  let lineItems: UpdateInvoiceInput['lineItems'];
+  if (candidate.lineItems !== undefined) {
+    if (!Array.isArray(candidate.lineItems) || candidate.lineItems.length === 0) {
+      return { ok: false, error: 'lineItems must be a non-empty array' };
+    }
+    lineItems = [];
+    for (const [index, item] of candidate.lineItems.entries()) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return { ok: false, error: `lineItems[${index}] must be an object` };
+      }
+      const entry = item as Record<string, unknown>;
+      const description = readRequiredString(entry.description, `lineItems[${index}].description`);
+      if (!description.ok) return description;
+      const itemType = readEnumValue<InvoiceLineItemType>(
+        entry.itemType,
+        `lineItems[${index}].itemType`,
+        invoiceLineItemTypes
+      );
+      if (!itemType.ok) return itemType;
+      const quantity = readPositiveNumberLikeValue(entry.quantity, `lineItems[${index}].quantity`);
+      if (!quantity.ok) return quantity;
+      const unitPriceAmount = readNonNegativeNumberLikeValue(
+        entry.unitPriceAmount,
+        `lineItems[${index}].unitPriceAmount`
+      );
+      if (!unitPriceAmount.ok) return unitPriceAmount;
+      const discountAmount = readOptionalNonNegativeNumberLikeValue(
+        entry.discountAmount,
+        `lineItems[${index}].discountAmount`
+      );
+      if (!discountAmount.ok) return discountAmount;
+      const taxAmount = readOptionalNonNegativeNumberLikeValue(entry.taxAmount, `lineItems[${index}].taxAmount`);
+      if (!taxAmount.ok) return taxAmount;
+      const referenceType = readOptionalNullableStringField(entry, 'referenceType');
+      if (!referenceType.ok) return referenceType;
+      const referenceId = readOptionalNullableStringField(entry, 'referenceId');
+      if (!referenceId.ok) return referenceId;
+
+      lineItems.push({
+        itemType: itemType.value,
+        description: description.value,
+        referenceType: referenceType.value,
+        referenceId: referenceId.value,
+        quantity: quantity.value,
+        unitPriceAmount: unitPriceAmount.value,
+        discountAmount: discountAmount.value,
+        taxAmount: taxAmount.value,
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    value: {
+      invoiceId,
+      status: status.value,
+      receiptNumber: receiptNumber.value,
+      taxInvoiceNumber: taxInvoiceNumber.value,
+      receiptIssuedAt: receiptIssuedAt.value,
+      notes: notes.value,
+      lineItems,
+    },
+  };
+}
+
+export function validateCreateInvoiceFromEncounterBody(body: unknown):
+  | { ok: true; value: CreateInvoiceFromEncounterInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+  const encounterId = readRequiredString(candidate.encounterId, 'encounterId');
+  if (!encounterId.ok) return encounterId;
+  const invoiceNumber = readRequiredString(candidate.invoiceNumber, 'invoiceNumber');
+  if (!invoiceNumber.ok) return invoiceNumber;
+  const includeVisitCharge = readOptionalBooleanField(candidate, 'includeVisitCharge');
+  if (!includeVisitCharge.ok) return includeVisitCharge;
+  const includePrescriptions = readOptionalBooleanField(candidate, 'includePrescriptions');
+  if (!includePrescriptions.ok) return includePrescriptions;
+  const receiptNumber = readOptionalNullableStringField(candidate, 'receiptNumber');
+  if (!receiptNumber.ok) return receiptNumber;
+  const taxInvoiceNumber = readOptionalNullableStringField(candidate, 'taxInvoiceNumber');
+  if (!taxInvoiceNumber.ok) return taxInvoiceNumber;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      encounterId: encounterId.value,
+      invoiceNumber: invoiceNumber.value,
+      includeVisitCharge: includeVisitCharge.value,
+      includePrescriptions: includePrescriptions.value,
+      receiptNumber: receiptNumber.value,
+      taxInvoiceNumber: taxInvoiceNumber.value,
+      notes: notes.value,
     },
   };
 }
@@ -398,6 +546,102 @@ export function validateUpdateChargeTemplateBody(
       unitPriceAmount: unitPriceAmount.value ?? undefined,
       taxAmount: taxAmount.value,
       isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateInsuranceClaimBody(body: unknown):
+  | { ok: true; value: CreateInsuranceClaimInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const patientId = readRequiredString(candidate.patientId, 'patientId');
+  if (!patientId.ok) return patientId;
+  const invoiceId = readRequiredString(candidate.invoiceId, 'invoiceId');
+  if (!invoiceId.ok) return invoiceId;
+  const claimNumber = readRequiredString(candidate.claimNumber, 'claimNumber');
+  if (!claimNumber.ok) return claimNumber;
+  const insurerName = readRequiredString(candidate.insurerName, 'insurerName');
+  if (!insurerName.ok) return insurerName;
+  const status = readEnumValue<InsuranceClaimStatus>(candidate.status, 'status', insuranceClaimStatuses);
+  if (!status.ok) return status;
+  const policyNumber = readOptionalNullableStringField(candidate, 'policyNumber');
+  if (!policyNumber.ok) return policyNumber;
+  const approvedAmount = readOptionalNonNegativeNumberLikeField(candidate, 'approvedAmount');
+  if (!approvedAmount.ok) return approvedAmount;
+  const paidAmount = readOptionalNonNegativeNumberLikeField(candidate, 'paidAmount');
+  if (!paidAmount.ok) return paidAmount;
+  const submittedAt = readOptionalNullableStringField(candidate, 'submittedAt');
+  if (!submittedAt.ok) return submittedAt;
+  const adjudicatedAt = readOptionalNullableStringField(candidate, 'adjudicatedAt');
+  if (!adjudicatedAt.ok) return adjudicatedAt;
+  const rejectionReason = readOptionalNullableStringField(candidate, 'rejectionReason');
+  if (!rejectionReason.ok) return rejectionReason;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      patientId: patientId.value,
+      invoiceId: invoiceId.value,
+      claimNumber: claimNumber.value,
+      insurerName: insurerName.value,
+      status: status.value,
+      policyNumber: policyNumber.value,
+      approvedAmount: approvedAmount.value ?? undefined,
+      paidAmount: paidAmount.value ?? undefined,
+      submittedAt: submittedAt.value,
+      adjudicatedAt: adjudicatedAt.value,
+      rejectionReason: rejectionReason.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateInsuranceClaimBody(
+  body: unknown,
+  insuranceClaimId: string
+): { ok: true; value: UpdateInsuranceClaimInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+  const candidate = body as Record<string, unknown>;
+  const status = readEnumValue<InsuranceClaimStatus>(candidate.status, 'status', insuranceClaimStatuses);
+  if (!status.ok) return status;
+  const insurerName = readOptionalTrimmedStringField(candidate, 'insurerName');
+  if (!insurerName.ok) return insurerName;
+  const policyNumber = readOptionalNullableStringField(candidate, 'policyNumber');
+  if (!policyNumber.ok) return policyNumber;
+  const approvedAmount = readOptionalNonNegativeNumberLikeField(candidate, 'approvedAmount');
+  if (!approvedAmount.ok) return approvedAmount;
+  const paidAmount = readOptionalNonNegativeNumberLikeField(candidate, 'paidAmount');
+  if (!paidAmount.ok) return paidAmount;
+  const submittedAt = readOptionalNullableStringField(candidate, 'submittedAt');
+  if (!submittedAt.ok) return submittedAt;
+  const adjudicatedAt = readOptionalNullableStringField(candidate, 'adjudicatedAt');
+  if (!adjudicatedAt.ok) return adjudicatedAt;
+  const rejectionReason = readOptionalNullableStringField(candidate, 'rejectionReason');
+  if (!rejectionReason.ok) return rejectionReason;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+  return {
+    ok: true,
+    value: {
+      insuranceClaimId,
+      status: status.value,
+      insurerName: insurerName.value,
+      policyNumber: policyNumber.value,
+      approvedAmount: approvedAmount.value ?? undefined,
+      paidAmount: paidAmount.value ?? undefined,
+      submittedAt: submittedAt.value,
+      adjudicatedAt: adjudicatedAt.value,
+      rejectionReason: rejectionReason.value,
       notes: notes.value,
     },
   };

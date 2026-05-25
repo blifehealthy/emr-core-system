@@ -18,7 +18,11 @@
 - ดู invoice เดิมได้
 - list invoice ตาม status ได้
 - สร้าง invoice จาก charge template ได้
+- สร้าง invoice หลาย line item ได้
+- แก้ line items ก่อนรับเงิน/คืนเงินได้
+- สร้าง invoice จาก encounter แล้วมี visit/prescription charge ได้
 - เปิดรายละเอียด invoice แล้วเห็น line items, payments, refunds
+- บันทึก receipt number และ tax invoice number ได้
 
 ## Payment
 
@@ -42,6 +46,13 @@
 - admin เพิ่ม charge template ได้
 - template ที่ active ถูกดึงมาใช้ในหน้า Cashier ได้
 
+## Insurance Claims
+
+- admin สร้าง insurance claim จาก invoice ได้
+- claim เปลี่ยนสถานะ `draft` เป็น `submitted` ได้
+- list claim ตาม clinic/status ได้
+- audit log มี insurance claim created/updated
+
 ## Role And Audit
 
 - admin สร้าง invoice ได้
@@ -53,11 +64,12 @@
 - audit log มี payment recorded
 - audit log มี refund recorded
 - audit log มี invoice voided
+- audit log มี invoice updated/charge captured
 
 ## Sign-Off
 
 เลือกผลลัพธ์:
 
-- ผ่าน พร้อมต่อ multi-line invoice/auto charge capture
+- ผ่าน ปิด Phase 3A implementation scope และไป Phase 3A UAT
 - ผ่านแบบมีข้อสังเกต
 - ไม่ผ่าน ต้องแก้ billing/cashier foundation ก่อนต่อยอด

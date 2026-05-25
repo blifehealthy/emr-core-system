@@ -31,7 +31,7 @@ let currentProfileSection = 'Flags';
 let currentAdmin = { users: [], practitioners: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
-let currentBilling = { invoices: [], chargeTemplates: [] };
+let currentBilling = { invoices: [], chargeTemplates: [], insuranceClaims: [] };
 let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
@@ -537,14 +537,16 @@ async function fetchQueue(clinicId, apiToken) {
 }
 
 async function fetchBillingBundle(clinicId, apiToken) {
-  const [invoicesPage, chargeTemplatesPage] = await Promise.all([
+  const [invoicesPage, chargeTemplatesPage, insuranceClaimsPage] = await Promise.all([
     fetchInvoices(clinicId, apiToken),
     fetchChargeTemplates(clinicId, apiToken),
+    fetchInsuranceClaims(clinicId, apiToken),
   ]);
 
   return {
     invoices: invoicesPage.items,
     chargeTemplates: chargeTemplatesPage.items,
+    insuranceClaims: insuranceClaimsPage.items,
   };
 }
 
@@ -593,6 +595,21 @@ async function fetchChargeTemplates(clinicId, apiToken) {
     throw new Error(result.detail || result.error || `HTTP ${response.status}`);
   }
 
+  return {
+    items: result.data ?? [],
+    meta: result.meta ?? { limit: 100, offset: 0, hasMore: false },
+  };
+}
+
+async function fetchInsuranceClaims(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId, limit: '100' });
+  const response = await fetch(`/api/insurance-claims?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
   return {
     items: result.data ?? [],
     meta: result.meta ?? { limit: 100, offset: 0, hasMore: false },
@@ -1134,8 +1151,10 @@ function renderBillingWorkspace() {
     ['Open balance', formatMoney(openTotal)],
     ['Paid', formatMoney(paidTotal)],
     ['Templates', currentBilling.chargeTemplates.length],
+    ['Claims', currentBilling.insuranceClaims.length],
   ]));
   fragment.append(createInvoiceCreateForm());
+  fragment.append(createAutoChargeCaptureForm());
   fragment.append(createChargeTemplateForm());
 
   const list = document.createElement('div');
@@ -1172,27 +1191,20 @@ function createInvoiceCreateForm() {
   form.append(
     createBillingInput('patientId', 'Patient ID', readValue('billingPatientId'), true),
     createBillingInput('invoiceNumber', 'Invoice number', `INV-${Date.now().toString().slice(-8)}`, true),
-    createBillingSelect('chargeTemplateId', 'Charge template', [
-      ['', 'กำหนดเอง'],
-      ...currentBilling.chargeTemplates.map((item) => [
-        item.id,
-        `${item.code ?? ''} · ${item.description ?? ''} · ${formatMoney(item.unit_price_amount ?? 0)}`,
-      ]),
-    ]),
-    createBillingInput('description', 'Description', '', true),
-    createBillingInput('quantity', 'Qty', '1', true, 'number'),
-    createBillingInput('unitPriceAmount', 'Unit price', '', true, 'number'),
-    createBillingInput('taxAmount', 'Tax', '0', false, 'number'),
+    createBillingInput('receiptNumber', 'Receipt number', ''),
+    createBillingInput('taxInvoiceNumber', 'Tax invoice number', ''),
     createFormField('notes', 'Notes', 'textarea')
   );
 
-  form.elements.chargeTemplateId.addEventListener('change', () => {
-    const template = currentBilling.chargeTemplates.find((item) => item.id === form.elements.chargeTemplateId.value);
-    if (!template) return;
-    form.elements.description.value = template.description ?? '';
-    form.elements.unitPriceAmount.value = template.unit_price_amount ?? '';
-    form.elements.taxAmount.value = template.tax_amount ?? '0';
-  });
+  const lines = document.createElement('div');
+  lines.className = 'invoice-lines-editor';
+  lines.append(createInvoiceLineEditorRow());
+  const addLine = document.createElement('button');
+  addLine.type = 'button';
+  addLine.className = 'secondary-button compact-button';
+  addLine.textContent = 'เพิ่ม line item';
+  addLine.addEventListener('click', () => lines.append(createInvoiceLineEditorRow()));
+  form.append(lines, addLine);
 
   const submit = document.createElement('button');
   submit.type = 'submit';
@@ -1206,6 +1218,83 @@ function createInvoiceCreateForm() {
   });
 
   return form;
+}
+
+function createAutoChargeCaptureForm() {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form billing-form';
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'สร้าง invoice จาก encounter';
+  const hint = document.createElement('span');
+  hint.textContent = 'auto charge';
+  heading.append(title, hint);
+  form.append(heading);
+  form.append(
+    createBillingInput('patientId', 'Patient ID', readValue('billingPatientId'), true),
+    createEncounterBillingSelect(),
+    createBillingInput('invoiceNumber', 'Invoice number', `INV-${Date.now().toString().slice(-8)}`, true),
+    createBillingInput('receiptNumber', 'Receipt number', ''),
+    createBillingInput('taxInvoiceNumber', 'Tax invoice number', ''),
+    createFormField('notes', 'Notes', 'textarea')
+  );
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'secondary-button compact-button';
+  submit.textContent = 'ดึง charge จาก encounter';
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInvoiceFromEncounterForm(form, submit);
+  });
+  return form;
+}
+
+function createInvoiceLineEditorRow(item = {}) {
+  const row = document.createElement('div');
+  row.className = 'invoice-line-row';
+  row.append(
+    createBillingSelect('itemType', 'Type', [
+      ['visit', 'visit'],
+      ['procedure', 'procedure'],
+      ['medication', 'medication'],
+      ['lab', 'lab'],
+      ['discount', 'discount'],
+      ['other', 'other'],
+    ], item.itemType ?? 'procedure'),
+    createBillingSelect('chargeTemplateId', 'Template', [
+      ['', 'กำหนดเอง'],
+      ...currentBilling.chargeTemplates.map((template) => [
+        template.id,
+        `${template.code ?? ''} · ${template.description ?? ''} · ${formatMoney(template.unit_price_amount ?? 0)}`,
+      ]),
+    ], item.chargeTemplateId ?? ''),
+    createBillingInput('description', 'Description', item.description ?? '', true),
+    createBillingInput('quantity', 'Qty', item.quantity ?? '1', true, 'number'),
+    createBillingInput('unitPriceAmount', 'Unit price', item.unitPriceAmount ?? '', true, 'number'),
+    createBillingInput('discountAmount', 'Discount', item.discountAmount ?? '0', false, 'number'),
+    createBillingInput('taxAmount', 'Tax', item.taxAmount ?? '0', false, 'number')
+  );
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'secondary-button danger-button small-button';
+  remove.textContent = 'ลบ line';
+  remove.addEventListener('click', () => {
+    if (row.parentElement?.querySelectorAll('.invoice-line-row').length === 1) return;
+    row.remove();
+  });
+  row.append(remove);
+  const templateSelect = row.querySelector('select[name="chargeTemplateId"]');
+  templateSelect.addEventListener('change', () => {
+    const template = currentBilling.chargeTemplates.find((entry) => entry.id === templateSelect.value);
+    if (!template) return;
+    row.querySelector('[name="itemType"]').value = template.item_type ?? 'procedure';
+    row.querySelector('[name="description"]').value = template.description ?? '';
+    row.querySelector('[name="unitPriceAmount"]').value = template.unit_price_amount ?? '';
+    row.querySelector('[name="taxAmount"]').value = template.tax_amount ?? '0';
+  });
+  return row;
 }
 
 function createChargeTemplateForm() {
@@ -1293,12 +1382,54 @@ function createInvoiceActions(invoice) {
     actions.append(
       createPaymentAction(invoice),
       createRefundAction(invoice),
+      createEditInvoiceAction(invoice),
+      createClaimAction(invoice),
       createVoidInvoiceAction(invoice)
     );
   }
 
   wrapper.append(actions);
   return wrapper;
+}
+
+function createEditInvoiceAction(invoice) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'แก้ invoice';
+  button.addEventListener('click', async () => {
+    const detail = await fetchInvoice(invoice.id, currentApiToken || readValue('apiToken'));
+    const receiptNumber = window.prompt('Receipt number', detail.receipt_number ?? '') ?? '';
+    const taxInvoiceNumber = window.prompt('Tax invoice number', detail.tax_invoice_number ?? '') ?? '';
+    await postInvoiceAction(`/api/invoices/${invoice.id}`, {
+      receiptNumber,
+      taxInvoiceNumber,
+      receiptIssuedAt: receiptNumber ? new Date().toISOString() : undefined,
+    }, 'PATCH');
+  });
+  return button;
+}
+
+function createClaimAction(invoice) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'secondary-button small-button';
+  button.textContent = 'สร้าง claim';
+  button.addEventListener('click', async () => {
+    const insurerName = window.prompt('Insurer name');
+    if (!insurerName) return;
+    await postInsuranceClaim({
+      clinicId: invoice.clinic_id,
+      patientId: invoice.patient_id,
+      invoiceId: invoice.id,
+      claimNumber: `CLM-${Date.now().toString().slice(-8)}`,
+      insurerName,
+      status: 'draft',
+      approvedAmount: 0,
+      paidAmount: 0,
+    });
+  });
+  return button;
 }
 
 async function expandInvoiceDetails(container, invoiceId) {
@@ -1311,7 +1442,14 @@ async function expandInvoiceDetails(container, invoiceId) {
     detail.append(
       createInvoiceTable('Line items', invoice.line_items ?? [], ['description', 'quantity', 'unit_price_amount', 'tax_amount', 'line_total_amount']),
       createInvoiceTable('Payments', invoice.payments ?? [], ['payment_number', 'method', 'amount', 'paid_at']),
-      createInvoiceTable('Refunds', invoice.refunds ?? [], ['refund_number', 'method', 'amount', 'refunded_at'])
+      createInvoiceTable('Refunds', invoice.refunds ?? [], ['refund_number', 'method', 'amount', 'refunded_at']),
+      createInvoiceTable('Claims', currentBilling.insuranceClaims.filter((claim) => claim.invoice_id === invoice.id), [
+        'claim_number',
+        'status',
+        'insurer_name',
+        'approved_amount',
+        'paid_amount',
+      ])
     );
     container.append(detail);
     setStatus('เปิด invoice แล้ว', 'success');
@@ -1399,22 +1537,29 @@ function createVoidInvoiceAction(invoice) {
 
 async function createInvoiceFromForm(form, submit) {
   const values = Object.fromEntries(new FormData(form).entries());
-  const template = currentBilling.chargeTemplates.find((item) => item.id === values.chargeTemplateId);
+  const lineItems = Array.from(form.querySelectorAll('.invoice-line-row')).map((row) => {
+    const line = Object.fromEntries(
+      Array.from(row.querySelectorAll('input, select, textarea')).map((input) => [input.name, input.value])
+    );
+    return compactPayload({
+      itemType: line.itemType,
+      description: line.description,
+      quantity: line.quantity,
+      unitPriceAmount: line.unitPriceAmount,
+      discountAmount: line.discountAmount,
+      taxAmount: line.taxAmount,
+    });
+  });
   const payload = compactPayload({
     clinicId: readValue('billingClinicId'),
     patientId: values.patientId,
     invoiceNumber: values.invoiceNumber,
     status: 'issued',
+    receiptNumber: values.receiptNumber,
+    taxInvoiceNumber: values.taxInvoiceNumber,
+    receiptIssuedAt: values.receiptNumber ? new Date().toISOString() : '',
     notes: values.notes,
-    lineItems: [
-      {
-        itemType: template?.item_type ?? 'procedure',
-        description: values.description,
-        quantity: values.quantity,
-        unitPriceAmount: values.unitPriceAmount,
-        taxAmount: values.taxAmount,
-      },
-    ],
+    lineItems,
   });
 
   submit.disabled = true;
@@ -1436,6 +1581,58 @@ async function createInvoiceFromForm(form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'สร้าง invoice';
+  }
+}
+
+async function createInvoiceFromEncounterForm(form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    clinicId: readValue('billingClinicId'),
+    patientId: values.patientId,
+    encounterId: values.encounterId,
+    invoiceNumber: values.invoiceNumber,
+    receiptNumber: values.receiptNumber,
+    taxInvoiceNumber: values.taxInvoiceNumber,
+    notes: values.notes,
+    includeVisitCharge: true,
+    includePrescriptions: true,
+  });
+  submit.disabled = true;
+  submit.textContent = 'กำลังดึง charge';
+  try {
+    const response = await fetch('/api/invoices/from-encounter', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await reloadBillingWorkspace();
+    setStatus('สร้าง invoice จาก encounter แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'ดึง charge ไม่สำเร็จ');
+    setStatus('ดึง charge ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'ดึง charge จาก encounter';
+  }
+}
+
+async function postInsuranceClaim(payload) {
+  setStatus('กำลังสร้าง claim', '');
+  try {
+    const response = await fetch('/api/insurance-claims', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadBillingWorkspace();
+    setStatus('สร้าง claim แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'สร้าง claim ไม่สำเร็จ', 'error');
   }
 }
 
@@ -1504,7 +1701,7 @@ function createBillingInput(name, labelText, value = '', required = false, type 
   return field;
 }
 
-function createBillingSelect(name, labelText, options) {
+function createBillingSelect(name, labelText, options, selectedValue = '') {
   const label = document.createElement('label');
   label.textContent = labelText;
   const select = document.createElement('select');
@@ -1515,8 +1712,19 @@ function createBillingSelect(name, labelText, options) {
     option.textContent = text;
     select.append(option);
   }
+  select.value = selectedValue;
   label.append(select);
   return label;
+}
+
+function createEncounterBillingSelect() {
+  const options = [['', 'เลือก encounter']];
+  for (const encounter of currentPatient?.encounters ?? []) {
+    options.push([encounter.id, `${encounter.encounter_number ?? encounter.id} · ${encounter.status ?? ''}`]);
+  }
+  const field = createBillingSelect('encounterId', 'Encounter', options);
+  field.querySelector('select').required = true;
+  return field;
 }
 
 function createQueueSummary() {
