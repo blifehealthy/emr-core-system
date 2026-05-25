@@ -26,12 +26,16 @@ support system yet.
   - `POST /api/prescription-safety-checks`
 - Prescription create/update can refresh safety warning snapshots when enough
   encounter/patient context is available.
+- Patient record Prescriptions tab now includes a prescription entry form with a
+  drug catalog selector, visible safety check button, warning panel, and create
+  flow that refreshes the patient record.
 - API smoke seed and smoke test cover a penicillin allergy warning for
   amoxicillin.
+- API-backed browser workflow smoke clicks the safety check UI, verifies the
+  allergy warning, creates a prescription, and confirms the warning snapshot.
 
 ## Remaining Phase 2B Follow-ups
 
-- Add frontend drug catalog picker and visible prescription warning banner.
 - Add medication interaction rules beyond allergy matching.
 - Add override reason workflow when a clinician proceeds despite warnings.
 - Add production readiness work: session/auth hardening, MFA/identity provider

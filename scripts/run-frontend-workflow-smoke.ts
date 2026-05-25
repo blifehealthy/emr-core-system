@@ -20,12 +20,16 @@ assertContains(app, 'function createStartVisitEncounterButton(', 'queue start en
 assertContains(app, 'function userSummary(', 'admin user summary helper');
 assertContains(app, 'function buildPrescriptionPrintHtml(', 'prescription print HTML builder');
 assertContains(app, 'ใบสั่งยา / Prescription', 'prescription print title');
+assertContains(app, 'function createPrescriptionEntryForm(', 'prescription entry form');
+assertContains(app, '/api/prescription-safety-checks', 'prescription safety check endpoint');
+assertContains(app, 'function fetchDrugCatalog(', 'drug catalog loader');
 assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');
 assertContains(styles, '.operations-charts', 'operations chart layout');
 assertContains(styles, '.bar-chart', 'bar chart card style');
 assertContains(styles, '.bar-track', 'bar chart track style');
+assertContains(styles, '.safety-warning-panel', 'prescription safety warning panel style');
 
 assertMatch(
   app,

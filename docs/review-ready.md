@@ -4,6 +4,7 @@
 
 - patient read now includes encounter-level prescriptions
 - clinical child entities now have read, update, and soft delete API coverage
+- Phase 2B prescription safety now includes drug catalog, allergy checks, warning snapshots, and frontend warning UI
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -16,7 +17,7 @@
 - Run `npm run api:smoke` to verify real HTTP requests against a temporary Docker Postgres database, including selected frontend proxy flows
 - Run `npm run frontend:workflow-smoke` after queue, report chart, or prescription print UI changes
 - Run `npm run browser:workflow-smoke` when Chrome is available to click through queue and prescription print workflows
-- Run `npm run browser:api-workflow-smoke` when Chrome and Docker Postgres are available to click queue, print, appointment check-in, SOAP editing, operations CSV export, clinic branding/logo upload, admin user/practitioner CRUD, and audit lookup workflows against the real API/frontend proxy
+- Run `npm run browser:api-workflow-smoke` when Chrome and Docker Postgres are available to click queue, print, prescription safety warning, appointment check-in, SOAP editing, operations CSV export, clinic branding/logo upload, admin user/practitioner CRUD, and audit lookup workflows against the real API/frontend proxy
 - Run `npm run storage:check` before deployment to verify file storage driver configuration
 
 ## Verified

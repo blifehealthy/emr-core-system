@@ -625,9 +625,44 @@ button:disabled {
 }
 
 .inline-profile-form input,
-.inline-profile-form select {
+.inline-profile-form select,
+.inline-profile-form textarea {
   min-height: 38px;
   padding: 7px 9px;
+}
+
+.inline-profile-form textarea {
+  min-height: 72px;
+}
+
+.prescription-entry-form label:nth-of-type(5),
+.prescription-entry-form label:nth-of-type(10),
+.safety-warning-panel {
+  grid-column: 1 / -1;
+}
+
+.safety-warning-panel {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(180, 35, 24, 0.24);
+  border-radius: 6px;
+  background: #fff7f5;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.safety-warning-panel[hidden] {
+  display: none;
+}
+
+.safety-warning-panel strong {
+  color: var(--text);
+}
+
+.critical-warning {
+  margin: 0;
+  color: var(--error);
+  font-weight: 800;
 }
 
 .compact-button {

@@ -30,6 +30,7 @@ let currentClinicalNoteTemplates = [];
 let currentClinicSettings = null;
 let currentLogoAssets = [];
 let currentFileAssetStoragePolicy = null;
+let currentDrugCatalog = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -268,6 +269,7 @@ searchForm.addEventListener('submit', async (event) => {
     const patient = await fetchPatientDetail(clinicId, medicalRecordNumber, apiToken);
     const profile = await fetchPatientProfileBundle(patient, apiToken);
     currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
+    currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -514,6 +516,27 @@ async function fetchClinicalNoteTemplates(clinicId, apiToken, activeOnly = true)
   if (activeOnly) params.set('active', 'true');
 
   const response = await fetch(`/api/clinical-note-templates?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchDrugCatalog(clinicId, apiToken, search = '') {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+  if (search) params.set('search', search);
+
+  const response = await fetch(`/api/drug-catalog?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -1207,6 +1230,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   const patient = await fetchPatientDetail(visit.clinic_id, visit.medical_record_number, apiToken);
   const profile = await fetchPatientProfileBundle(patient, apiToken);
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
+  currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -2558,6 +2582,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   );
   const profile = await fetchPatientProfileBundle(refreshed, apiToken);
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(refreshed.clinic_id, apiToken);
+  currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -2717,6 +2742,10 @@ function renderProfileSection(container, label, section) {
     container.append(createProfileForm(label, createConfig));
   }
 
+  if (label === 'Prescriptions' && currentPatient) {
+    container.append(createPrescriptionEntryForm(currentPatient));
+  }
+
   if (section.items.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'muted-text';
@@ -2772,6 +2801,274 @@ function createProfileForm(sectionLabel, config, initialValues = null) {
   });
 
   return form;
+}
+
+function createPrescriptionEntryForm(patient) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form prescription-entry-form';
+
+  const heading = document.createElement('div');
+  heading.className = 'inline-form-heading';
+  const title = document.createElement('h3');
+  title.textContent = 'เพิ่ม prescription';
+  const hint = document.createElement('span');
+  hint.textContent = 'Phase 2B safety check';
+  heading.append(title, hint);
+  form.append(heading);
+
+  const encounterField = createEncounterSelectField(patient);
+  const noteField = createClinicalNoteSelectField(patient);
+  const catalogField = createDrugCatalogField();
+  const warningPanel = document.createElement('div');
+  warningPanel.className = 'safety-warning-panel';
+  warningPanel.hidden = true;
+
+  form.append(
+    encounterField,
+    noteField,
+    catalogField,
+    createFormField('medicationName', 'Medication', 'input', true),
+    createFormField('rxnormCode', 'RxNorm code', 'input'),
+    createFormField('dosage', 'Dosage', 'input'),
+    createFormField('route', 'Route', 'input'),
+    createFormField('frequency', 'Frequency', 'input'),
+    createFormField('durationText', 'Duration', 'input'),
+    createFormField('instructions', 'Instructions', 'textarea'),
+    warningPanel
+  );
+
+  form.elements.drugCatalogId.addEventListener('change', () => {
+    applyDrugCatalogSelection(form);
+    clearSafetyWarningPanel(warningPanel);
+  });
+
+  for (const field of ['medicationName', 'rxnormCode']) {
+    form.elements[field].addEventListener('input', () => clearSafetyWarningPanel(warningPanel));
+  }
+
+  const checkButton = document.createElement('button');
+  checkButton.type = 'button';
+  checkButton.className = 'secondary-button compact-button';
+  checkButton.textContent = 'เช็ก safety';
+  checkButton.addEventListener('click', async () => {
+    await checkPrescriptionSafety(patient, form, warningPanel, checkButton);
+  });
+
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  submit.className = 'primary-button compact-button';
+  submit.textContent = 'เพิ่ม prescription';
+  form.append(checkButton, submit);
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createPrescriptionFromForm(patient, form, submit, warningPanel);
+  });
+
+  return form;
+}
+
+function createEncounterSelectField(patient) {
+  const label = document.createElement('label');
+  label.textContent = 'Encounter';
+  const select = document.createElement('select');
+  select.name = 'encounterId';
+  select.required = true;
+
+  for (const encounter of patient.encounters ?? []) {
+    const option = document.createElement('option');
+    option.value = encounter.id;
+    option.textContent = `${encounter.encounter_number ?? encounter.id} · ${encounter.status ?? ''}`;
+    select.append(option);
+  }
+
+  label.append(select);
+  return label;
+}
+
+function createClinicalNoteSelectField(patient) {
+  const label = document.createElement('label');
+  label.textContent = 'Clinical note';
+  const select = document.createElement('select');
+  select.name = 'clinicalNoteId';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่ผูก note';
+  select.append(empty);
+
+  for (const encounter of patient.encounters ?? []) {
+    for (const note of encounter.clinical_notes ?? []) {
+      const option = document.createElement('option');
+      option.value = note.id;
+      option.textContent = `${encounter.encounter_number ?? encounter.id} · ${note.title ?? note.note_type ?? note.id}`;
+      select.append(option);
+    }
+  }
+
+  label.append(select);
+  return label;
+}
+
+function createDrugCatalogField() {
+  const label = document.createElement('label');
+  label.textContent = 'Drug catalog';
+  const select = document.createElement('select');
+  select.name = 'drugCatalogId';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'ไม่เลือก catalog';
+  select.append(empty);
+
+  for (const item of currentDrugCatalog) {
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = `${item.medication_name ?? item.id}${item.rxnorm_code ? ` · ${item.rxnorm_code}` : ''}`;
+    select.append(option);
+  }
+
+  label.append(select);
+  return label;
+}
+
+function applyDrugCatalogSelection(form) {
+  const selected = currentDrugCatalog.find((item) => item.id === form.elements.drugCatalogId.value);
+  if (!selected) return;
+
+  form.elements.medicationName.value = selected.medication_name ?? form.elements.medicationName.value;
+  form.elements.rxnormCode.value = selected.rxnorm_code ?? form.elements.rxnormCode.value;
+  form.elements.route.value = selected.route ?? form.elements.route.value;
+}
+
+function clearSafetyWarningPanel(panel) {
+  panel.hidden = true;
+  panel.replaceChildren();
+}
+
+function renderSafetyWarningPanel(panel, assessment) {
+  panel.hidden = false;
+  panel.replaceChildren();
+  const warnings = assessment?.warnings ?? [];
+  const title = document.createElement('strong');
+  title.textContent = warnings.length > 0 ? 'Safety warnings' : 'ไม่พบ warning จากข้อมูล allergy/catalog';
+  panel.append(title);
+
+  for (const warning of warnings) {
+    const item = document.createElement('p');
+    item.className = warning.severity === 'critical' ? 'critical-warning' : 'muted-note';
+    item.textContent = `${warning.severity ?? 'warning'}: ${warning.message ?? warning.allergenName ?? 'warning'}`;
+    panel.append(item);
+  }
+}
+
+async function checkPrescriptionSafety(patient, form, panel, button) {
+  const payload = buildPrescriptionSafetyPayload(patient, form);
+  if (!payload.medicationName) {
+    renderSafetyWarningPanel(panel, { warnings: [] });
+    return { warnings: [] };
+  }
+
+  button.disabled = true;
+  button.textContent = 'กำลังเช็ก';
+  try {
+    const response = await fetch('/api/prescription-safety-checks', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+    renderSafetyWarningPanel(panel, result.data);
+    return result.data;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'เช็ก safety ไม่สำเร็จ';
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+    return { warnings: [] };
+  } finally {
+    button.disabled = false;
+    button.textContent = 'เช็ก safety';
+  }
+}
+
+function buildPrescriptionSafetyPayload(patient, form) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  return compactPayload({
+    patientId: patient.id,
+    medicationName: values.medicationName,
+    rxnormCode: values.rxnormCode,
+    drugCatalogId: values.drugCatalogId,
+  });
+}
+
+async function createPrescriptionFromForm(patient, form, submit, warningPanel) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = compactPayload({
+    encounterId: values.encounterId,
+    clinicalNoteId: values.clinicalNoteId,
+    drugCatalogId: values.drugCatalogId,
+    medicationName: values.medicationName,
+    rxnormCode: values.rxnormCode,
+    dosage: values.dosage,
+    route: values.route,
+    frequency: values.frequency,
+    durationText: values.durationText,
+    instructions: values.instructions,
+    status: 'active',
+  });
+
+  submit.disabled = true;
+  submit.textContent = 'กำลังบันทึก';
+  setStatus('กำลังเพิ่ม prescription', '');
+
+  try {
+    if (!warningPanel.hidden) {
+      clearSafetyWarningPanel(warningPanel);
+    }
+    const assessment = await fetchPrescriptionSafety(buildPrescriptionSafetyPayload(patient, form));
+    renderSafetyWarningPanel(warningPanel, assessment);
+
+    const response = await fetch('/api/prescriptions', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    }
+
+    form.reset();
+    currentProfileSection = 'Prescriptions';
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม prescription แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'เพิ่ม prescription ไม่สำเร็จ';
+    setStatus(message, 'error');
+    renderInlineFormError(form, message);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม prescription';
+  }
+}
+
+async function fetchPrescriptionSafety(payload) {
+  if (!payload.medicationName) return { warnings: [] };
+
+  const response = await fetch('/api/prescription-safety-checks', {
+    method: 'POST',
+    headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    body: JSON.stringify(payload),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
 }
 
 function createSelect(name, options) {

@@ -222,6 +222,30 @@ async function main() {
     assert.match(printHtml, /Jane Smoke/);
 
     await evaluate(cdp, `
+      const prescriptionForm = document.querySelector('.prescription-entry-form');
+      prescriptionForm.querySelector('select[name="encounterId"]').value = '${linkedVisit?.encounter_id}';
+      const catalog = prescriptionForm.querySelector('select[name="drugCatalogId"]');
+      catalog.value = '10000000-0000-0000-0000-000000020001';
+      catalog.dispatchEvent(new Event('change', { bubbles: true }));
+      clickButtonByText('เช็ก safety');
+      return true;
+    `);
+    await waitFor(cdp, `document.body.textContent.includes('Patient has active allergy to Penicillin')`);
+    await evaluate(cdp, `
+      const prescriptionForm = document.querySelector('.prescription-entry-form');
+      prescriptionForm.requestSubmit();
+      return true;
+    `);
+    await waitFor(cdp, `document.querySelector('#service-status')?.textContent.includes('เพิ่ม prescription แล้ว')`);
+    const safetyPrescriptions = await requestJson<Array<{ medication_name: string; safety_warnings: Array<{ type: string }> }>>(
+      API_PORT,
+      `/api/encounters/${linkedVisit?.encounter_id}/prescriptions?limit=25&offset=0`,
+      headers
+    );
+    const warningPrescription = safetyPrescriptions.data.find((item) => item.medication_name === 'Amoxicillin');
+    assert.equal(warningPrescription?.safety_warnings?.[0]?.type, 'allergy');
+
+    await evaluate(cdp, `
       clickButtonByText('Appointments');
       clickButtonByText('เช็กอิน');
       return true;
