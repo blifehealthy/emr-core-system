@@ -1,0 +1,150 @@
+import { fileURLToPath } from 'node:url';
+
+import { createFileAssetStoragePolicy } from '../backend/services/fileAssetStoragePolicy.ts';
+
+export type ReadinessLevel = 'error' | 'warning';
+
+export type ReadinessFinding = {
+  level: ReadinessLevel;
+  key: string;
+  message: string;
+};
+
+const WEAK_SECRET_PATTERNS = [
+  /^dev/i,
+  /dev-token/i,
+  /dev-secret/i,
+  /change-?me/i,
+  /password/i,
+  /secret/i,
+  /^test/i,
+];
+
+export function checkProductionReadiness(env: NodeJS.ProcessEnv = process.env) {
+  const findings: ReadinessFinding[] = [];
+  const strict = isStrictMode(env);
+
+  checkDeploymentMode(env, findings, strict);
+  checkDatabase(env, findings, strict);
+  checkApiToken(env, findings, strict);
+  checkStorage(env, findings, strict);
+
+  return findings;
+}
+
+function isStrictMode(env: NodeJS.ProcessEnv) {
+  const profile = (env.DEPLOYMENT_PROFILE ?? env.NODE_ENV ?? '').trim().toLowerCase();
+  return env.PRODUCTION_READINESS_STRICT === 'true' || ['pilot', 'staging', 'production'].includes(profile);
+}
+
+function checkDeploymentMode(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  const profile = (env.DEPLOYMENT_PROFILE ?? env.NODE_ENV ?? '').trim();
+  if (!profile) {
+    add(findings, strict ? 'error' : 'warning', 'DEPLOYMENT_PROFILE', 'Set DEPLOYMENT_PROFILE=pilot or NODE_ENV=production before a pilot deployment.');
+  }
+}
+
+function checkDatabase(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    add(findings, strict ? 'error' : 'warning', 'DATABASE_URL', 'DATABASE_URL is required for API startup and smoke checks.');
+    return;
+  }
+
+  if (/localhost|127\.0\.0\.1/i.test(databaseUrl) && strict) {
+    add(findings, 'warning', 'DATABASE_URL', 'DATABASE_URL points to localhost; confirm this is intentional for the target environment.');
+  }
+}
+
+function checkApiToken(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  const apiToken = env.API_TOKEN?.trim();
+  if (!apiToken) {
+    add(findings, strict ? 'error' : 'warning', 'API_TOKEN', 'Set API_TOKEN so API routes require bearer authentication outside local development.');
+    return;
+  }
+
+  if (!isStrongSecret(apiToken)) {
+    add(findings, strict ? 'error' : 'warning', 'API_TOKEN', 'API_TOKEN must be at least 32 characters and must not use dev/test/change-me style values.');
+  }
+}
+
+function checkStorage(
+  env: NodeJS.ProcessEnv,
+  findings: ReadinessFinding[],
+  strict: boolean
+) {
+  try {
+    const policy = createFileAssetStoragePolicy(env);
+
+    if (policy.driver === 'local') {
+      const storageRoot = policy.storageRoot ?? '';
+      if (!env.FILE_STORAGE_DIR?.trim()) {
+        add(findings, strict ? 'error' : 'warning', 'FILE_STORAGE_DIR', 'Set FILE_STORAGE_DIR to a persistent private disk path.');
+      }
+      if (strict && storageRoot.startsWith('/tmp')) {
+        add(findings, 'error', 'FILE_STORAGE_DIR', 'FILE_STORAGE_DIR must not use /tmp for pilot or production data.');
+      }
+    }
+
+    if (policy.maxUploadBytes > 25 * 1024 * 1024) {
+      add(findings, 'warning', 'FILE_STORAGE_MAX_BYTES', 'Upload limit is above 25 MiB; confirm this is intentional for clinic network bandwidth and backups.');
+    }
+
+    if (policy.allowedMimeTypes.some((mimeType) => mimeType === '*/*' || mimeType.endsWith('/*'))) {
+      add(findings, strict ? 'error' : 'warning', 'FILE_STORAGE_ALLOWED_MIME_TYPES', 'Allowed MIME types should be explicit for pilot and production uploads.');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid file storage configuration.';
+    add(findings, 'error', 'FILE_STORAGE_DRIVER', message);
+  }
+}
+
+function isStrongSecret(secret: string) {
+  return secret.length >= 32 && !WEAK_SECRET_PATTERNS.some((pattern) => pattern.test(secret));
+}
+
+function add(
+  findings: ReadinessFinding[],
+  level: ReadinessLevel,
+  key: string,
+  message: string
+) {
+  findings.push({ level, key, message });
+}
+
+function printFindings(findings: ReadinessFinding[]) {
+  if (findings.length === 0) {
+    console.log('Production readiness check passed.');
+    return;
+  }
+
+  for (const finding of findings) {
+    console.log(`[${finding.level}] ${finding.key}: ${finding.message}`);
+  }
+
+  const errorCount = findings.filter((finding) => finding.level === 'error').length;
+  const warningCount = findings.length - errorCount;
+  console.log(`Readiness findings: ${errorCount} error(s), ${warningCount} warning(s).`);
+}
+
+const isCli = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isCli) {
+  const findings = checkProductionReadiness(process.env);
+  printFindings(findings);
+  if (findings.some((finding) => finding.level === 'error')) {
+    process.exitCode = 1;
+  }
+}

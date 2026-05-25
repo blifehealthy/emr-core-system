@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { checkProductionReadiness } from './check-production-readiness.ts';
+
+test('warns instead of failing for incomplete local development config', () => {
+  const findings = checkProductionReadiness({});
+
+  assert.equal(findings.some((finding) => finding.level === 'error'), false);
+  assert.ok(findings.some((finding) => finding.key === 'DATABASE_URL'));
+  assert.ok(findings.some((finding) => finding.key === 'API_TOKEN'));
+});
+
+test('fails strict mode when production secrets and storage are unsafe', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DATABASE_URL: 'postgres://postgres:postgres@127.0.0.1:5432/emr_core',
+    API_TOKEN: 'dev-token',
+    FILE_STORAGE_DRIVER: 'local',
+    FILE_STORAGE_DIR: '/tmp/emr-core-file-assets',
+  });
+
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'API_TOKEN'));
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'FILE_STORAGE_DIR'));
+});
+
+test('passes strict mode with persistent storage and strong token', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DEPLOYMENT_PROFILE: 'pilot',
+    DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
+    API_TOKEN: '0123456789abcdef0123456789abcdef',
+    FILE_STORAGE_DRIVER: 'local',
+    FILE_STORAGE_DIR: '/var/lib/emr-core/file-assets',
+    FILE_STORAGE_MAX_BYTES: '5242880',
+    FILE_STORAGE_ALLOWED_MIME_TYPES: 'image/png,image/jpeg,application/pdf',
+  });
+
+  assert.deepEqual(findings, []);
+});
+
+test('reports invalid S3 storage config', () => {
+  const findings = checkProductionReadiness({
+    PRODUCTION_READINESS_STRICT: 'true',
+    DEPLOYMENT_PROFILE: 'production',
+    DATABASE_URL: 'postgres://emr:strong-password@db.internal:5432/emr_core',
+    API_TOKEN: '0123456789abcdef0123456789abcdef',
+    FILE_STORAGE_DRIVER: 's3',
+    FILE_STORAGE_S3_BUCKET: 'emr-assets',
+  });
+
+  assert.ok(findings.some((finding) => finding.level === 'error' && finding.key === 'FILE_STORAGE_DRIVER'));
+});

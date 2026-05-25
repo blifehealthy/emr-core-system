@@ -3,7 +3,7 @@
 ## Current State
 
 - Current branch: `main`
-- Latest completed checkpoint in this handoff: current `HEAD` (`Expand API-backed browser workflow smoke`)
+- Latest completed checkpoint in this handoff: current `HEAD` (`Add drug interaction safety rules`)
 - Previous checkpoint before this worktree: `4d7e01f` (`Close Phase 1 with clinician summary`)
 - This stretch extends the patient detail frontend and workflow guards:
   - static frontend under `frontend/`
@@ -52,8 +52,20 @@
   open/edit/save through the patient record UI
 - API-backed browser workflow smoke now covers operations CSV export plus admin
   branding/logo upload and save through the clinic admin UI
-- API-backed browser workflow smoke now covers admin user/practitioner create,
+  - API-backed browser workflow smoke now covers admin user/practitioner create,
   edit, deactivate, and audit lookup through the clinic admin UI
+  - Phase 2B prescription safety foundation:
+    - clinic drug catalog CRUD APIs
+    - patient allergy safety checks
+    - clinic-managed drug interaction rule APIs
+    - prescription warning snapshots
+    - required safety override reason before prescribing with active warnings
+    - patient-record prescription entry UI with visible safety feedback
+  - pilot/production readiness foundation:
+    - `npm run production:check`
+    - strict readiness checks for deployment profile, database URL, API token strength,
+      file storage persistence, upload size, and MIME allowlist
+    - deployment operator checklist in `docs/production-readiness-checklist.md`
   - checked-in appointments can open a visit/SOAP form and start an encounter with `appointmentId`
   - patient detail includes compact timeline panel
   - SOAP entry uses persisted clinic-managed note templates with starter fallbacks
@@ -199,6 +211,15 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/api/emrApi.test.ts backend/services/createClinicVisit.test.ts backend/services/updateClinicVisit.test.ts backend/services/listClinicQueue.test.ts database/migrations/0013_add_clinic_visits.test.ts database/migrations/migration_order.test.ts`
+  - Phase 2B production readiness checker tests
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test scripts/check-production-readiness.test.ts`
+  - production readiness CLI check
+  - current result: passing with expected local-development warnings when env is unset, and passing in strict mode with pilot-safe sample env
+  - commands used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run production:check`
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" PRODUCTION_READINESS_STRICT=true DEPLOYMENT_PROFILE=pilot DATABASE_URL=postgres://emr:strong-password@db.internal:5432/emr_core API_TOKEN=0123456789abcdef0123456789abcdef FILE_STORAGE_DRIVER=local FILE_STORAGE_DIR=/var/lib/emr-core/file-assets FILE_STORAGE_MAX_BYTES=5242880 FILE_STORAGE_ALLOWED_MIME_TYPES=image/png,image/jpeg,application/pdf npm run production:check`
 
 ## Local Tooling
 

@@ -57,10 +57,12 @@ Current scope, UAT follow-ups, and the Thai clinician summary are tracked in:
 Phase 2B has started pilot-readiness work. The first slice adds a clinic drug
 catalog, prescription allergy safety checks, warning snapshots on prescriptions,
 a patient-record prescription form with visible warning feedback, and a required
-override reason when prescribing despite active warnings. Current scope and
-follow-ups are tracked in:
+override reason when prescribing despite active warnings. It also includes
+clinic-managed drug interaction rules and a production readiness configuration
+gate for pilot deployment checks. Current scope and follow-ups are tracked in:
 
 - `docs/phase-2b-plan.md`
+- `docs/production-readiness-checklist.md`
 
 ## Current Scope
 
@@ -170,6 +172,15 @@ npm run storage:check
 ```
 
 Operational guidance lives in `docs/object-storage-runbook.md`.
+
+Run the production readiness gate before a pilot or production deployment:
+
+```bash
+PRODUCTION_READINESS_STRICT=true npm run production:check
+```
+
+The checklist for deployment operators lives in
+`docs/production-readiness-checklist.md`.
 
 Run the frontend patient registration and lookup MVP:
 

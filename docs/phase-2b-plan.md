@@ -6,9 +6,9 @@ operational hardening.
 
 ## Status
 
-Phase 2B has started. The current slice adds a drug catalog and allergy warning
-foundation for prescription safety. It is not a complete medication decision
-support system yet.
+Phase 2B is in pilot-readiness hardening. The current scope covers prescription
+safety foundations and an automated production readiness gate. It is not a
+complete medication decision support system yet.
 
 ## Completed In This Pass
 
@@ -45,11 +45,20 @@ support system yet.
   amoxicillin and an interaction warning for warfarin with active paracetamol.
 - API-backed browser workflow smoke clicks the safety check UI, verifies the
   allergy warning, creates a prescription, and confirms the warning snapshot.
+- `npm run production:check` verifies pilot/production configuration readiness
+  for deployment profile, database URL, API bearer token strength, local/S3 file
+  storage settings, upload limits, and explicit MIME allowlists.
+- `docs/production-readiness-checklist.md` now gives operators a go/no-go
+  checklist for smoke checks, backups, file storage, data protection, monitoring,
+  and pilot sign-off.
 
 ## Remaining Phase 2B Follow-ups
 
-- Add production readiness work: session/auth hardening, MFA/identity provider
-  integration plan, monitoring, backup checks, deployment readiness checklist,
-  and audit hardening.
+- Add clinician-facing Phase 2B pilot summary and UAT checklist for the doctor
+  and clinic operations team.
+- Add identity provider/MFA integration plan for a later production auth
+  replacement of the bearer-token gate.
+- Add monitoring/backup runbook details for the final target deployment
+  environment once hosting is selected.
 - Decide whether warning severity and allergen tags should be clinic-managed or
   centrally governed.
