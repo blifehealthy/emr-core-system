@@ -174,7 +174,7 @@ Phase 2A มี automated checks ครอบคลุม flow หลักแ�
 
 - ยังไม่มี billing/claims
 - ยังไม่มี lab, pharmacy dispensing, imaging/PACS integration
-- ยังไม่มี drug catalog, allergy/drug interaction warning หรือ inventory
+- Phase 2B เริ่มมี drug catalog, allergy warning และ interaction warning foundation แล้ว แต่ยังไม่มี inventory/pharmacy dispensing เต็มรูปแบบ
 - ยังไม่มี MFA/session management/identity provider ระดับ production
 - ยังไม่มี Playwright suite เต็มรูปแบบ แม้มี browser smoke ครอบคลุม flow สำคัญแล้ว
 - ยังต้อง harden audit, permission, backup, monitoring และ deployment ตามสภาพแวดล้อมจริง
@@ -201,4 +201,4 @@ Phase 2A ควรถูก sign off เชิง product/clinical ถ้าท�
 4. Reporting depth: PDF reports, department grouping, trend dashboards, financial/operational KPIs
 5. Integrations: lab, pharmacy, imaging, LINE/telemedicine
 
-ข้อเสนอเริ่มต้น: ถ้าต้องการ pilot ในคลินิกจริง ให้ให้ความสำคัญกับ production readiness และ clinical safety ก่อนเพิ่ม integration ใหญ่ โดย Phase 2B เริ่มวาง foundation ของ drug catalog และ allergy warning แล้วใน `docs/phase-2b-plan.md`
+ข้อเสนอเริ่มต้น: ถ้าต้องการ pilot ในคลินิกจริง ให้ให้ความสำคัญกับ production readiness และ clinical safety ก่อนเพิ่ม integration ใหญ่ โดย Phase 2B เริ่มวาง foundation ของ drug catalog, allergy warning และ interaction warning แล้วใน `docs/phase-2b-plan.md`

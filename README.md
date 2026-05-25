@@ -114,6 +114,9 @@ Not included yet:
 - `GET /api/drug-catalog?clinicId=...&search=...&active=...&limit=...&offset=...`
 - `POST /api/drug-catalog`
 - `PATCH /api/drug-catalog/:id`
+- `GET /api/drug-interaction-rules?clinicId=...&active=...&limit=...&offset=...`
+- `POST /api/drug-interaction-rules`
+- `PATCH /api/drug-interaction-rules/:id`
 - `POST /api/prescription-safety-checks`
 - `GET /api/queue?clinicId=...&status=...&practitionerId=...&roomName=...&limit=...`
 - `POST /api/visits`

@@ -50,6 +50,7 @@ const migrations = [
   '0016_add_clinic_logo_asset.up.sql',
   '0017_add_drug_catalog_and_safety_warnings.up.sql',
   '0018_add_prescription_safety_override.up.sql',
+  '0019_add_drug_interaction_rules.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {

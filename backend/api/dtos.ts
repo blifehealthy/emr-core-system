@@ -119,6 +119,24 @@ const DRUG_CATALOG_KEYS = [
   'deleted_at',
 ] as const;
 
+const DRUG_INTERACTION_RULE_KEYS = [
+  'id',
+  'clinic_id',
+  'primary_drug_catalog_id',
+  'interacting_drug_catalog_id',
+  'primary_rxnorm_code',
+  'interacting_rxnorm_code',
+  'primary_medication_name',
+  'interacting_medication_name',
+  'severity',
+  'description',
+  'recommendation',
+  'is_active',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const USER_KEYS = [
   'id',
   'clinic_id',
@@ -400,6 +418,14 @@ export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {
 
 export function toDrugCatalogItemDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toDrugCatalogItemDto(row));
+}
+
+export function toDrugInteractionRuleDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...DRUG_INTERACTION_RULE_KEYS]);
+}
+
+export function toDrugInteractionRuleDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toDrugInteractionRuleDto(row));
 }
 
 export function toUserDto(row: unknown): Record<string, unknown> {

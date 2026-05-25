@@ -44,6 +44,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `practitioner_write` | No | No | Yes | Practitioner create/update |
 | `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog listing |
 | `drug_catalog_write` | No | No | Yes | Clinic drug catalog create/update |
+| `drug_interaction_rule_read` | Yes | Yes | Yes | Clinic drug interaction rule listing |
+| `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
 | `prescription_write` | Yes | No | Yes | Prescription create/update/delete |
 | `soap_update` | Yes | No | Yes | SOAP update/delete |
@@ -105,6 +107,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/drug-catalog` | `drug_catalog_read` |
 | `POST` | `/api/drug-catalog` | `drug_catalog_write` |
 | `PATCH` | `/api/drug-catalog/:drugCatalogId` | `drug_catalog_write` |
+| `GET` | `/api/drug-interaction-rules` | `drug_interaction_rule_read` |
+| `POST` | `/api/drug-interaction-rules` | `drug_interaction_rule_write` |
+| `PATCH` | `/api/drug-interaction-rules/:interactionRuleId` | `drug_interaction_rule_write` |
 | `POST` | `/api/prescription-safety-checks` | `prescription_write` |
 | `GET` | `/api/consents/:consentId` | `consent_read` |
 | `POST` | `/api/consents` | `consent_write` |

@@ -85,6 +85,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0018_add_prescription_safety_override.up.sql'),
     'expected prescription safety override migration'
   );
+  assert.ok(
+    filenames.includes('0019_add_drug_interaction_rules.up.sql'),
+    'expected drug interaction rules migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

@@ -89,6 +89,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/drug-catalog` | List clinic drug catalog items with search, active status, and pagination filters. |
 | `POST` | `/api/drug-catalog` | Create clinic drug catalog item. |
 | `PATCH` | `/api/drug-catalog/:drugCatalogId` | Update or deactivate clinic drug catalog item. |
+| `GET` | `/api/drug-interaction-rules` | List clinic-managed interaction rules. |
+| `POST` | `/api/drug-interaction-rules` | Create clinic-managed interaction rule. |
+| `PATCH` | `/api/drug-interaction-rules/:interactionRuleId` | Update or deactivate clinic-managed interaction rule. |
 | `POST` | `/api/prescription-safety-checks` | Check a medication against active patient allergies and catalog allergen tags. |
 
 ## Files, Consent, and Audit
@@ -141,7 +144,8 @@ All routes except `GET /health` can be protected by bearer token when
 ## Phase 2B Additions
 
 - Drug catalog items can carry RxNorm/generic fields and allergen tags.
-- Prescription safety checks return allergy warnings before prescribing.
+- Prescription safety checks return allergy and medication interaction warnings
+  before prescribing.
 - Prescriptions can store warning snapshots in `safety_warnings`.
 
 ## Historical Phase 1 Mismatches and Follow-ups

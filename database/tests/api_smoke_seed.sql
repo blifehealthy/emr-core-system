@@ -136,6 +136,25 @@ VALUES (
     ARRAY['penicillin']
 );
 
+INSERT INTO drug_interaction_rules (
+    id,
+    clinic_id,
+    primary_medication_name,
+    interacting_medication_name,
+    severity,
+    description,
+    recommendation
+)
+VALUES (
+    '10000000-0000-0000-0000-000000021001',
+    '10000000-0000-0000-0000-000000000101',
+    'Warfarin',
+    'Paracetamol',
+    'warning',
+    'Review anticoagulation plan when adding Warfarin with active Paracetamol',
+    'Confirm INR monitoring plan'
+);
+
 INSERT INTO encounters (
     id,
     encounter_number,

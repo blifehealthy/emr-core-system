@@ -40,6 +40,7 @@ const migrations = [
   '0016_add_clinic_logo_asset.up.sql',
   '0017_add_drug_catalog_and_safety_warnings.up.sql',
   '0018_add_prescription_safety_override.up.sql',
+  '0019_add_drug_interaction_rules.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -680,6 +681,32 @@ async function main() {
     assert.equal(safetyCheck.data.drugCatalogId, '10000000-0000-0000-0000-000000020001');
     assert.equal(safetyCheck.data.warnings[0].type, 'allergy');
     assert.equal(safetyCheck.data.warnings[0].severity, 'critical');
+
+    const interactionRules = await requestJson<Array<{ id: string; severity: string }>>(
+      '/api/drug-interaction-rules?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=5&offset=0',
+      authHeaders
+    );
+    assert.ok(
+      interactionRules.data.some((item) => item.id === '10000000-0000-0000-0000-000000021001')
+    );
+
+    const interactionCheck = await requestJson<{
+      warnings: Array<{ type: string; severity: string; interactingMedicationName?: string }>;
+    }>(
+      '/api/prescription-safety-checks',
+      authHeaders,
+      'POST',
+      200,
+      {
+        patientId: '10000000-0000-0000-0000-000000001001',
+        medicationName: 'Warfarin',
+      }
+    );
+    assert.ok(
+      interactionCheck.data.warnings.some(
+        (item) => item.type === 'interaction' && item.interactingMedicationName === 'Paracetamol'
+      )
+    );
 
     const updatedEncounter = await requestJson<{
       id: string;

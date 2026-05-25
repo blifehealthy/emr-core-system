@@ -33,14 +33,21 @@ support system yet.
   reason before creation/update can proceed.
 - Safety override reason, timestamp, user id, and practitioner id are stored on
   the prescription record.
+- `drug_interaction_rules` stores clinic-managed medication interaction rules
+  using catalog id, RxNorm code, or medication name identifiers.
+- Prescription safety checks now compare the candidate medication against active
+  patient medications and active prescriptions to return interaction warnings.
+- New API routes:
+  - `GET /api/drug-interaction-rules`
+  - `POST /api/drug-interaction-rules`
+  - `PATCH /api/drug-interaction-rules/:id`
 - API smoke seed and smoke test cover a penicillin allergy warning for
-  amoxicillin.
+  amoxicillin and an interaction warning for warfarin with active paracetamol.
 - API-backed browser workflow smoke clicks the safety check UI, verifies the
   allergy warning, creates a prescription, and confirms the warning snapshot.
 
 ## Remaining Phase 2B Follow-ups
 
-- Add medication interaction rules beyond allergy matching.
 - Add production readiness work: session/auth hardening, MFA/identity provider
   integration plan, monitoring, backup checks, deployment readiness checklist,
   and audit hardening.

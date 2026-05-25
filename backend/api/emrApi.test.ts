@@ -1941,6 +1941,23 @@ test('drug catalog and prescription safety APIs enforce safety workflow', async 
         assert.equal(input.isActive, false);
         return { id: 'drug-1', is_active: false };
       },
+      async listDrugInteractionRules(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        return {
+          rows: [{ id: 'rule-1', severity: 'critical' }],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
+      async createDrugInteractionRule(input) {
+        assert.equal(input.primaryRxnormCode, 'RX-WARFARIN');
+        assert.equal(input.interactingMedicationName, 'Ibuprofen');
+        return { id: 'rule-1', severity: input.severity };
+      },
+      async updateDrugInteractionRule(input) {
+        assert.equal(input.interactionRuleId, 'rule-1');
+        assert.equal(input.isActive, false);
+        return { id: 'rule-1', is_active: false };
+      },
       async assessPrescriptionSafety(input) {
         assert.equal(input.patientId, 'patient-1');
         assert.equal(input.medicationName, 'Amoxicillin');
@@ -2005,6 +2022,36 @@ test('drug catalog and prescription safety APIs enforce safety workflow', async 
     body: { isActive: false },
   });
   assert.equal(updateCatalog.status, 200);
+
+  const listRules = await api({
+    method: 'GET',
+    path: '/api/drug-interaction-rules',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1' },
+  });
+  assert.equal(listRules.status, 200);
+
+  const createRule = await api({
+    method: 'POST',
+    path: '/api/drug-interaction-rules',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: {
+      clinicId: 'clinic-1',
+      primaryRxnormCode: 'RX-WARFARIN',
+      interactingMedicationName: 'Ibuprofen',
+      severity: 'critical',
+      description: 'Bleeding risk',
+    },
+  });
+  assert.equal(createRule.status, 201);
+
+  const updateRule = await api({
+    method: 'PATCH',
+    path: '/api/drug-interaction-rules/rule-1',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { isActive: false },
+  });
+  assert.equal(updateRule.status, 200);
 
   const check = await api({
     method: 'POST',

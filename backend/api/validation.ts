@@ -17,6 +17,7 @@ import type {
   CreateConsentRecordInput,
   CreateFileAssetInput,
   CreateDrugCatalogItemInput,
+  CreateDrugInteractionRuleInput,
   UploadFileAssetInput,
   CreatePatientInput,
   CreatePatientAllergyInput,
@@ -35,6 +36,7 @@ import type {
   EncounterStatus,
   UpdateEncounterInput,
   UpdateDrugCatalogItemInput,
+  UpdateDrugInteractionRuleInput,
   UpdateDiagnosisInput,
   FinalizeClinicalNoteInput,
   SignClinicalNoteInput,
@@ -55,6 +57,7 @@ import type {
   UserRole,
   PrescriptionStatus,
   AssessPrescriptionSafetyInput,
+  DrugInteractionSeverity,
 } from './types.ts';
 
 const clinicVisitStatuses: ClinicVisitStatus[] = [
@@ -1755,6 +1758,168 @@ export function validateAssessPrescriptionSafetyBody(body: unknown):
       medicationName: medicationName.value,
       rxnormCode: rxnormCode.value,
       drugCatalogId: drugCatalogId.value,
+    },
+  };
+}
+
+function validateInteractionRuleSides(candidate: Record<string, unknown>) {
+  const hasPrimary =
+    hasTextContent(candidate.primaryDrugCatalogId) ||
+    hasTextContent(candidate.primaryRxnormCode) ||
+    hasTextContent(candidate.primaryMedicationName);
+  if (!hasPrimary) {
+    return { ok: false as const, error: 'One primary drug identifier is required' };
+  }
+
+  const hasInteracting =
+    hasTextContent(candidate.interactingDrugCatalogId) ||
+    hasTextContent(candidate.interactingRxnormCode) ||
+    hasTextContent(candidate.interactingMedicationName);
+  if (!hasInteracting) {
+    return { ok: false as const, error: 'One interacting drug identifier is required' };
+  }
+
+  return { ok: true as const };
+}
+
+export function validateCreateDrugInteractionRuleBody(body: unknown):
+  | { ok: true; value: CreateDrugInteractionRuleInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const sides = validateInteractionRuleSides(candidate);
+  if (!sides.ok) return sides;
+
+  const primaryDrugCatalogId = readOptionalNullableStringField(candidate, 'primaryDrugCatalogId');
+  if (!primaryDrugCatalogId.ok) return primaryDrugCatalogId;
+
+  const interactingDrugCatalogId = readOptionalNullableStringField(candidate, 'interactingDrugCatalogId');
+  if (!interactingDrugCatalogId.ok) return interactingDrugCatalogId;
+
+  const primaryRxnormCode = readOptionalNullableStringField(candidate, 'primaryRxnormCode');
+  if (!primaryRxnormCode.ok) return primaryRxnormCode;
+
+  const interactingRxnormCode = readOptionalNullableStringField(candidate, 'interactingRxnormCode');
+  if (!interactingRxnormCode.ok) return interactingRxnormCode;
+
+  const primaryMedicationName = readOptionalNullableStringField(candidate, 'primaryMedicationName');
+  if (!primaryMedicationName.ok) return primaryMedicationName;
+
+  const interactingMedicationName = readOptionalNullableStringField(candidate, 'interactingMedicationName');
+  if (!interactingMedicationName.ok) return interactingMedicationName;
+
+  const severity = readEnumValue<DrugInteractionSeverity>(
+    candidate.severity,
+    'severity',
+    ['info', 'warning', 'critical']
+  );
+  if (!severity.ok) return severity;
+
+  const description = readRequiredString(candidate.description, 'description');
+  if (!description.ok) return description;
+
+  const recommendation = readOptionalNullableStringField(candidate, 'recommendation');
+  if (!recommendation.ok) return recommendation;
+
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      primaryDrugCatalogId: primaryDrugCatalogId.value,
+      interactingDrugCatalogId: interactingDrugCatalogId.value,
+      primaryRxnormCode: primaryRxnormCode.value,
+      interactingRxnormCode: interactingRxnormCode.value,
+      primaryMedicationName: primaryMedicationName.value,
+      interactingMedicationName: interactingMedicationName.value,
+      severity: severity.value,
+      description: description.value,
+      recommendation: recommendation.value,
+      isActive: isActive.value,
+    },
+  };
+}
+
+export function validateUpdateDrugInteractionRuleBody(body: unknown, interactionRuleId: string):
+  | { ok: true; value: UpdateDrugInteractionRuleInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const fields = [
+    'primaryDrugCatalogId',
+    'interactingDrugCatalogId',
+    'primaryRxnormCode',
+    'interactingRxnormCode',
+    'primaryMedicationName',
+    'interactingMedicationName',
+    'severity',
+    'description',
+    'recommendation',
+    'isActive',
+  ];
+  if (!fields.some((field) => Object.hasOwn(candidate, field))) {
+    return { ok: false, error: 'At least one interaction rule field must be provided for update' };
+  }
+
+  const primaryDrugCatalogId = readOptionalNullableStringField(candidate, 'primaryDrugCatalogId');
+  if (!primaryDrugCatalogId.ok) return primaryDrugCatalogId;
+
+  const interactingDrugCatalogId = readOptionalNullableStringField(candidate, 'interactingDrugCatalogId');
+  if (!interactingDrugCatalogId.ok) return interactingDrugCatalogId;
+
+  const primaryRxnormCode = readOptionalNullableStringField(candidate, 'primaryRxnormCode');
+  if (!primaryRxnormCode.ok) return primaryRxnormCode;
+
+  const interactingRxnormCode = readOptionalNullableStringField(candidate, 'interactingRxnormCode');
+  if (!interactingRxnormCode.ok) return interactingRxnormCode;
+
+  const primaryMedicationName = readOptionalNullableStringField(candidate, 'primaryMedicationName');
+  if (!primaryMedicationName.ok) return primaryMedicationName;
+
+  const interactingMedicationName = readOptionalNullableStringField(candidate, 'interactingMedicationName');
+  if (!interactingMedicationName.ok) return interactingMedicationName;
+
+  const severity = readEnumValue<DrugInteractionSeverity>(
+    candidate.severity,
+    'severity',
+    ['info', 'warning', 'critical']
+  );
+  if (!severity.ok) return severity;
+
+  const description = readOptionalTrimmedStringField(candidate, 'description');
+  if (!description.ok) return description;
+
+  const recommendation = readOptionalNullableStringField(candidate, 'recommendation');
+  if (!recommendation.ok) return recommendation;
+
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+
+  return {
+    ok: true,
+    value: {
+      interactionRuleId,
+      ...(Object.hasOwn(candidate, 'primaryDrugCatalogId') ? { primaryDrugCatalogId: primaryDrugCatalogId.value } : {}),
+      ...(Object.hasOwn(candidate, 'interactingDrugCatalogId') ? { interactingDrugCatalogId: interactingDrugCatalogId.value } : {}),
+      ...(Object.hasOwn(candidate, 'primaryRxnormCode') ? { primaryRxnormCode: primaryRxnormCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'interactingRxnormCode') ? { interactingRxnormCode: interactingRxnormCode.value } : {}),
+      ...(Object.hasOwn(candidate, 'primaryMedicationName') ? { primaryMedicationName: primaryMedicationName.value } : {}),
+      ...(Object.hasOwn(candidate, 'interactingMedicationName') ? { interactingMedicationName: interactingMedicationName.value } : {}),
+      ...(Object.hasOwn(candidate, 'severity') ? { severity: severity.value } : {}),
+      ...(Object.hasOwn(candidate, 'description') ? { description: description.value } : {}),
+      ...(Object.hasOwn(candidate, 'recommendation') ? { recommendation: recommendation.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
     },
   };
 }

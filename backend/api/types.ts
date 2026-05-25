@@ -471,15 +471,19 @@ export type UpdatePractitionerValidatedInput = UpdatePractitionerInput;
 export type PrescriptionStatus = 'active' | 'completed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type PrescriptionSafetyWarning = {
-  type: 'allergy';
+  type: 'allergy' | 'interaction';
   severity: 'critical' | 'warning';
   message: string;
-  allergyId: string;
-  allergenName: string;
+  allergyId?: string;
+  allergenName?: string;
   medicationName: string;
   matchedOn: string;
   reaction?: string | null;
+  interactionRuleId?: string;
+  interactingMedicationName?: string;
+  recommendation?: string | null;
 };
+export type DrugInteractionSeverity = 'info' | 'warning' | 'critical';
 
 export type FinalizeClinicalNoteInput = {
   clinicalNoteId: string;
@@ -547,6 +551,34 @@ export type UpdateDrugCatalogItemInput = {
   dosageForm?: string | null;
   route?: string | null;
   allergenTags?: string[];
+  isActive?: boolean;
+};
+
+export type CreateDrugInteractionRuleInput = {
+  clinicId: string;
+  primaryDrugCatalogId?: string | null;
+  interactingDrugCatalogId?: string | null;
+  primaryRxnormCode?: string | null;
+  interactingRxnormCode?: string | null;
+  primaryMedicationName?: string | null;
+  interactingMedicationName?: string | null;
+  severity?: DrugInteractionSeverity;
+  description: string;
+  recommendation?: string | null;
+  isActive?: boolean;
+};
+
+export type UpdateDrugInteractionRuleInput = {
+  interactionRuleId: string;
+  primaryDrugCatalogId?: string | null;
+  interactingDrugCatalogId?: string | null;
+  primaryRxnormCode?: string | null;
+  interactingRxnormCode?: string | null;
+  primaryMedicationName?: string | null;
+  interactingMedicationName?: string | null;
+  severity?: DrugInteractionSeverity;
+  description?: string;
+  recommendation?: string | null;
   isActive?: boolean;
 };
 
@@ -750,6 +782,16 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createDrugCatalogItem?: (input: CreateDrugCatalogItemInput) => Promise<unknown>;
   updateDrugCatalogItem?: (input: UpdateDrugCatalogItemInput) => Promise<unknown | null>;
+  listDrugInteractionRules?: (input: {
+    clinicId: string;
+    active?: DrugCatalogActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createDrugInteractionRule?: (input: CreateDrugInteractionRuleInput) => Promise<unknown>;
+  updateDrugInteractionRule?: (
+    input: UpdateDrugInteractionRuleInput
+  ) => Promise<unknown | null>;
   assessPrescriptionSafety?: (
     input: AssessPrescriptionSafetyInput
   ) => Promise<AssessPrescriptionSafetyResult>;

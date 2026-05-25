@@ -8,6 +8,7 @@ import { createAttachmentLink } from '../backend/services/createAttachmentLink.t
 import { createConsentRecord } from '../backend/services/createConsentRecord.ts';
 import { createDiagnosis } from '../backend/services/createDiagnosis.ts';
 import { createDrugCatalogItem } from '../backend/services/createDrugCatalogItem.ts';
+import { createDrugInteractionRule } from '../backend/services/createDrugInteractionRule.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createEncounterWithSOAP } from '../backend/services/createEncounterWithSOAP.ts';
 import { createPatient } from '../backend/services/createPatient.ts';
@@ -50,6 +51,7 @@ import { listClinicalNoteTemplates } from '../backend/services/listClinicalNoteT
 import { listConsentRecordsByPatient } from '../backend/services/listConsentRecordsByPatient.ts';
 import { listDiagnosesByEncounter } from '../backend/services/listDiagnosesByEncounter.ts';
 import { listDrugCatalog } from '../backend/services/listDrugCatalog.ts';
+import { listDrugInteractionRules } from '../backend/services/listDrugInteractionRules.ts';
 import { listFileAssets } from '../backend/services/listFileAssets.ts';
 import { listPatientAllergies } from '../backend/services/listPatientAllergies.ts';
 import { listPatientConditions } from '../backend/services/listPatientConditions.ts';
@@ -74,6 +76,7 @@ import { updateClinicalNoteTemplate } from '../backend/services/updateClinicalNo
 import { updateConsentRecord } from '../backend/services/updateConsentRecord.ts';
 import { updateDiagnosis } from '../backend/services/updateDiagnosis.ts';
 import { updateDrugCatalogItem } from '../backend/services/updateDrugCatalogItem.ts';
+import { updateDrugInteractionRule } from '../backend/services/updateDrugInteractionRule.ts';
 import { updateEncounter } from '../backend/services/updateEncounter.ts';
 import { updatePatientAllergy } from '../backend/services/updatePatientAllergy.ts';
 import { updatePatientCondition } from '../backend/services/updatePatientCondition.ts';
@@ -160,6 +163,9 @@ const server = createNodeServer({
   listDrugCatalog: listDrugCatalog(db),
   createDrugCatalogItem: createDrugCatalogItem(db),
   updateDrugCatalogItem: updateDrugCatalogItem(db),
+  listDrugInteractionRules: listDrugInteractionRules(db),
+  createDrugInteractionRule: createDrugInteractionRule(db),
+  updateDrugInteractionRule: updateDrugInteractionRule(db),
   assessPrescriptionSafety: assessPrescriptionSafety(db),
   listPrescriptionsByEncounter: listPrescriptionsByEncounter(db),
   createPrescription: createPrescription(db),

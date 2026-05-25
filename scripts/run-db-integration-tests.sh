@@ -55,7 +55,10 @@ for migration in \
   "$MIGRATIONS_DIR/0013_add_clinic_visits.up.sql" \
   "$MIGRATIONS_DIR/0014_add_clinical_note_templates.up.sql" \
   "$MIGRATIONS_DIR/0015_add_clinic_settings.up.sql" \
-  "$MIGRATIONS_DIR/0016_add_clinic_logo_asset.up.sql"
+  "$MIGRATIONS_DIR/0016_add_clinic_logo_asset.up.sql" \
+  "$MIGRATIONS_DIR/0017_add_drug_catalog_and_safety_warnings.up.sql" \
+  "$MIGRATIONS_DIR/0018_add_prescription_safety_override.up.sql" \
+  "$MIGRATIONS_DIR/0019_add_drug_interaction_rules.up.sql"
 do
   run_psql "$migration"
 done

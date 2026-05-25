@@ -8,6 +8,7 @@ import {
   handleCreateFileAsset,
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
+  handleCreateDrugInteractionRule,
   handleCreatePatientAllergy,
   handleCreatePatientCondition,
   handleCreatePatientFlag,
@@ -56,6 +57,7 @@ import {
   handleListConsentRecordsByPatient,
   handleListDiagnosesByEncounter,
   handleListDrugCatalog,
+  handleListDrugInteractionRules,
   handleListFileAssets,
   handleListPatientAllergies,
   handleListPatientConditions,
@@ -71,6 +73,7 @@ import {
   handleUpdateClinicalNoteTemplate,
   handleUpdateConsentRecord,
   handleUpdateDrugCatalogItem,
+  handleUpdateDrugInteractionRule,
   handleUpsertClinicSettings,
   handleUpdatePatientAllergy,
   handleUpdatePatientCondition,
@@ -190,6 +193,12 @@ export function createEmrApi(dependencies: Dependencies) {
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListDrugCatalog(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/drug-interaction-rules') {
+      const roleError = requireRole(actorAwareRequest, 'drug_interaction_rule_read');
+      if (roleError) return roleError;
+      return handleListDrugInteractionRules(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/clinical-note-templates') {
@@ -464,6 +473,12 @@ export function createEmrApi(dependencies: Dependencies) {
       return handleCreateDrugCatalogItem(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/drug-interaction-rules') {
+      const roleError = requireRole(actorAwareRequest, 'drug_interaction_rule_write');
+      if (roleError) return roleError;
+      return handleCreateDrugInteractionRule(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/prescription-safety-checks') {
       const roleError = requireRole(actorAwareRequest, 'prescription_write');
       if (roleError) return roleError;
@@ -556,6 +571,17 @@ export function createEmrApi(dependencies: Dependencies) {
         const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
         if (roleError) return roleError;
         return handleUpdateDrugCatalogItem(actorAwareRequest, dependencies, drugCatalogMatch[1]);
+      }
+
+      const interactionRuleMatch = request.path.match(/^\/api\/drug-interaction-rules\/([^/]+)$/);
+      if (interactionRuleMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_interaction_rule_write');
+        if (roleError) return roleError;
+        return handleUpdateDrugInteractionRule(
+          actorAwareRequest,
+          dependencies,
+          interactionRuleMatch[1]
+        );
       }
 
       const appointmentMatch = request.path.match(/^\/api\/appointments\/([^/]+)$/);

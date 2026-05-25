@@ -15,6 +15,8 @@ import {
   toDiagnosisDtos,
   toDrugCatalogItemDto,
   toDrugCatalogItemDtos,
+  toDrugInteractionRuleDto,
+  toDrugInteractionRuleDtos,
   toEncounterDto,
   toFileAssetDto,
   toFileAssetDtos,
@@ -45,6 +47,7 @@ import {
   validateCreateConsentRecordBody,
   validateCreateDiagnosisBody,
   validateCreateDrugCatalogItemBody,
+  validateCreateDrugInteractionRuleBody,
   validateCreatePatientAllergyBody,
   validateCreatePatientConditionBody,
   validateCreatePatientFlagBody,
@@ -65,6 +68,7 @@ import {
   validateUpdateClinicalNoteTemplateBody,
   validateUpdateConsentRecordBody,
   validateUpdateDrugCatalogItemBody,
+  validateUpdateDrugInteractionRuleBody,
   validateUpsertClinicSettingsBody,
   validateUpdateEncounterBody,
   validateUpdatePatientAllergyBody,
@@ -1844,6 +1848,97 @@ export async function handleAssessPrescriptionSafety(
     headers: JSON_HEADERS,
     body: { data: assessment },
   };
+}
+
+export async function handleListDrugInteractionRules(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listDrugInteractionRules) {
+    return mapError(new Error('Drug interaction rule list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) {
+    return validationError('clinicId is required query parameter');
+  }
+
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const rules = await dependencies.listDrugInteractionRules({
+    clinicId,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toDrugInteractionRuleDtos(rules.rows), meta: rules.meta },
+  };
+}
+
+export async function handleCreateDrugInteractionRule(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createDrugInteractionRule) {
+    return mapError(new Error('Drug interaction rule create dependency is not configured'));
+  }
+
+  const validation = validateCreateDrugInteractionRuleBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  const rule = await dependencies.createDrugInteractionRule(validation.value);
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'drug_interaction_rule',
+    entityId: (rule as { id: string }).id,
+    action: 'created',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { severity: validation.value.severity ?? 'warning' },
+  });
+
+  return { status: 201, headers: JSON_HEADERS, body: { data: toDrugInteractionRuleDto(rule) } };
+}
+
+export async function handleUpdateDrugInteractionRule(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  interactionRuleId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateDrugInteractionRule) {
+    return mapError(new Error('Drug interaction rule update dependency is not configured'));
+  }
+
+  const validation = validateUpdateDrugInteractionRuleBody(request.body, interactionRuleId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const rule = await dependencies.updateDrugInteractionRule(validation.value);
+  if (!rule) {
+    return { status: 404, headers: JSON_HEADERS, body: { error: 'Drug interaction rule not found' } };
+  }
+
+  const actor = getActorContext(request);
+  await dependencies.createAuditLog({
+    entityType: 'drug_interaction_rule',
+    entityId: interactionRuleId,
+    action: 'updated',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+  });
+
+  return { status: 200, headers: JSON_HEADERS, body: { data: toDrugInteractionRuleDto(rule) } };
 }
 
 export async function handleListPrescriptionsByEncounter(

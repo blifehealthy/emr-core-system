@@ -367,8 +367,8 @@ Remaining Phase 2A follow-ups:
 
 If coming back fresh after this pass:
 
-1. add medication interaction rules beyond allergy matching
-2. start production readiness hardening checks for auth/session/deployment/monitoring
+1. start production readiness hardening checks for auth/session/deployment/monitoring
+2. add clinician-facing Phase 2B pilot readiness summary after hardening checks land
 
 The deliverables added in this worktree are:
 
@@ -401,6 +401,7 @@ The deliverables added in this worktree are:
 - expanded API-backed browser workflow smoke script
 - Phase 2B drug catalog and allergy warning foundation with prescription safety warning snapshots
 - Phase 2B frontend prescription entry form with drug catalog picker, visible safety warning panel, required override reason, and browser smoke coverage
+- Phase 2B clinic-managed drug interaction rules and safety checks against active medications/prescriptions
 
 This was the highest-leverage next move because:
 
@@ -424,5 +425,5 @@ Start by reading:
 
 Then produce:
 
-1. medication interaction rules beyond allergy matching
-2. production readiness hardening checks for auth/session/deployment/monitoring
+1. production readiness hardening checks for auth/session/deployment/monitoring
+2. Phase 2B pilot readiness summary for clinician/product-owner review
