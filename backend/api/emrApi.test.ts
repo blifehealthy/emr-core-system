@@ -1957,6 +1957,134 @@ test('POST diagnosis and vital sign routes create entities and honor roles', asy
   assert.equal(vitalSign.status, 201);
 });
 
+test('pharmacy FEFO and expiry overrides require admin override permission', async () => {
+  let dispenseCalls = 0;
+  const api = createEmrApi(
+    makeDeps({
+      async dispensePrescription(input) {
+        dispenseCalls += 1;
+        return {
+          id: `dispense-${dispenseCalls}`,
+          prescription_id: input.prescriptionId,
+          inventory_item_id: input.inventoryItemId,
+          inventory_lot_id: input.inventoryLotId ?? null,
+          quantity: input.quantity,
+          fefo_override_reason: input.fefoOverrideReason ?? null,
+          expiry_override_reason: input.expiryOverrideReason ?? null,
+        };
+      },
+    })
+  );
+
+  const normalDoctorDispense = await api({
+    method: 'POST',
+    path: '/api/prescriptions/prescription-1/dispenses',
+    headers: { 'x-user-role': 'doctor' },
+    body: { inventoryItemId: 'inventory-item-1', quantity: 1 },
+  });
+  assert.equal(normalDoctorDispense.status, 201);
+  assert.equal(dispenseCalls, 1);
+
+  const overrideDoctorDispense = await api({
+    method: 'POST',
+    path: '/api/prescriptions/prescription-1/dispenses',
+    headers: { 'x-user-role': 'doctor' },
+    body: {
+      inventoryItemId: 'inventory-item-1',
+      quantity: 1,
+      fefoOverrideReason: 'Doctor tried to bypass FEFO',
+    },
+  });
+  assert.equal(overrideDoctorDispense.status, 403);
+  assert.deepEqual(overrideDoctorDispense.body, {
+    error: 'Role doctor is not allowed for pharmacy_override_write',
+  });
+  assert.equal(dispenseCalls, 1);
+
+  const overrideAdminDispense = await api({
+    method: 'POST',
+    path: '/api/prescriptions/prescription-1/dispenses',
+    headers: { 'x-user-role': 'admin' },
+    body: {
+      inventoryItemId: 'inventory-item-1',
+      quantity: 1,
+      expiryOverrideReason: 'Admin approved expired stock use',
+    },
+  });
+  assert.equal(overrideAdminDispense.status, 201);
+  assert.equal(dispenseCalls, 2);
+});
+
+test('inventory transfer actions use separated approve receive and cancel permissions', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async approveInventoryTransfer(input) {
+        assert.equal(input.transferId, 'transfer-1');
+        return { id: 'transfer-1', status: 'in_transit', approved_by_user_id: input.approvedByUserId };
+      },
+      async receiveInventoryTransfer(input) {
+        assert.equal(input.transferId, 'transfer-1');
+        return { id: 'transfer-1', status: 'completed', received_by_user_id: input.receivedByUserId };
+      },
+      async cancelInventoryTransfer(input) {
+        assert.equal(input.transferId, 'transfer-1');
+        return {
+          id: 'transfer-1',
+          status: 'cancelled',
+          cancelled_by_user_id: input.cancelledByUserId,
+          cancellation_reason: input.cancellationReason,
+        };
+      },
+    })
+  );
+
+  const nurseApprove = await api({
+    method: 'POST',
+    path: '/api/inventory-transfers/transfer-1/approve',
+    headers: { 'x-user-role': 'nurse' },
+    body: { approvedByUserId: 'user-1' },
+  });
+  assert.equal(nurseApprove.status, 403);
+  assert.deepEqual(nurseApprove.body, {
+    error: 'Role nurse is not allowed for inventory_transfer_approve',
+  });
+
+  const adminApprove = await api({
+    method: 'POST',
+    path: '/api/inventory-transfers/transfer-1/approve',
+    headers: { 'x-user-role': 'admin' },
+    body: { approvedByUserId: 'user-1' },
+  });
+  assert.equal(adminApprove.status, 200);
+
+  const nurseReceive = await api({
+    method: 'POST',
+    path: '/api/inventory-transfers/transfer-1/receive',
+    headers: { 'x-user-role': 'nurse' },
+    body: { receivedByUserId: 'user-2' },
+  });
+  assert.equal(nurseReceive.status, 200);
+
+  const nurseCancel = await api({
+    method: 'POST',
+    path: '/api/inventory-transfers/transfer-1/cancel',
+    headers: { 'x-user-role': 'nurse' },
+    body: { cancelledByUserId: 'user-2', cancellationReason: 'Wrong destination' },
+  });
+  assert.equal(nurseCancel.status, 403);
+  assert.deepEqual(nurseCancel.body, {
+    error: 'Role nurse is not allowed for inventory_transfer_cancel',
+  });
+
+  const adminCancel = await api({
+    method: 'POST',
+    path: '/api/inventory-transfers/transfer-1/cancel',
+    headers: { 'x-user-role': 'admin' },
+    body: { cancelledByUserId: 'user-1', cancellationReason: 'Wrong destination' },
+  });
+  assert.equal(adminCancel.status, 200);
+});
+
 test('POST diagnosis and vital sign routes validate bad payloads', async () => {
   const api = createEmrApi(makeDeps());
 

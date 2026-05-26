@@ -46,9 +46,11 @@ real UAT findings, but the likely product directions are below.
 - Phase 3P completed pharmacy override review reporting for FEFO/expiry
   dispense and transfer override events, including CSV export and dashboard
   visibility.
+- Phase 3Q completed pharmacy role separation for FEFO/expiry override,
+  transfer approval, transfer receiving, and transfer cancellation permissions.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  role-separated transfer/override approval, or controlled substance workflow.
+  database-backed permission customization, or controlled substance workflow.
 
 ### Patient Communication
 

@@ -154,7 +154,7 @@ import {
   validateUpdateChargeTemplateBody,
   validateUpdateInsuranceClaimBody,
 } from './validation.ts';
-import { getActorContext } from './auth.ts';
+import { getActorContext, requireRole } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
 import type {
   AppointmentStatus,
@@ -204,6 +204,13 @@ function readEncounterId(row: unknown): string | null {
 
 function hasSafetyWarnings(warnings: unknown[]): boolean {
   return Array.isArray(warnings) && warnings.length > 0;
+}
+
+function hasPharmacyOverrideReason(input: {
+  expiryOverrideReason?: string | null;
+  fefoOverrideReason?: string | null;
+}): boolean {
+  return Boolean(input.expiryOverrideReason?.trim() || input.fefoOverrideReason?.trim());
 }
 
 function readOverrideReason(value: string | null | undefined): string | null {
@@ -2440,6 +2447,11 @@ export async function handleCreateInventoryTransfer(
   const validation = validateCreateInventoryTransferBody(request.body);
   if (!validation.ok) return validationError(validation.error);
 
+  if (hasPharmacyOverrideReason(validation.value)) {
+    const roleError = requireRole(request, 'pharmacy_override_write');
+    if (roleError) return roleError;
+  }
+
   try {
     const transfer = await dependencies.createInventoryTransfer(validation.value);
     if (!transfer) {
@@ -4388,6 +4400,11 @@ export async function handleDispensePrescription(
 
   const validation = validateDispensePrescriptionBody(request.body, prescriptionId);
   if (!validation.ok) return validationError(validation.error);
+
+  if (hasPharmacyOverrideReason(validation.value)) {
+    const roleError = requireRole(request, 'pharmacy_override_write');
+    if (roleError) return roleError;
+  }
 
   try {
     const dispense = await dependencies.dispensePrescription(validation.value);

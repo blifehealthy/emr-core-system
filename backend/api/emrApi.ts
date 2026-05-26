@@ -744,7 +744,7 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/approve$/)
         : null;
     if (inventoryTransferApproveMatch) {
-      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      const roleError = requireRole(actorAwareRequest, 'inventory_transfer_approve');
       if (roleError) return roleError;
       return handleApproveInventoryTransfer(
         actorAwareRequest,
@@ -758,7 +758,7 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/receive$/)
         : null;
     if (inventoryTransferReceiveMatch) {
-      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      const roleError = requireRole(actorAwareRequest, 'inventory_transfer_receive');
       if (roleError) return roleError;
       return handleReceiveInventoryTransfer(
         actorAwareRequest,
@@ -772,7 +772,7 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/cancel$/)
         : null;
     if (inventoryTransferCancelMatch) {
-      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      const roleError = requireRole(actorAwareRequest, 'inventory_transfer_cancel');
       if (roleError) return roleError;
       return handleCancelInventoryTransfer(
         actorAwareRequest,

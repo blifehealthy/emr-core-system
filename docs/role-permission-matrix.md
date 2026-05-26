@@ -44,6 +44,10 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `practitioner_write` | No | No | Yes | Practitioner create/update |
 | `drug_catalog_read` | Yes | Yes | Yes | Clinic drug catalog, inventory, supplier, purchase order, and barcode listing |
 | `drug_catalog_write` | No | No | Yes | Clinic drug catalog, inventory, supplier, purchase order create/update/approval/policy/receiving/barcode scan |
+| `pharmacy_override_write` | No | No | Yes | Required when dispense or transfer payload includes expiry/FEFO override reason |
+| `inventory_transfer_approve` | No | No | Yes | Approve pending inventory transfers |
+| `inventory_transfer_receive` | No | Yes | Yes | Receive in-transit inventory transfers |
+| `inventory_transfer_cancel` | No | No | Yes | Cancel pending or in-transit inventory transfers |
 | `drug_interaction_rule_read` | Yes | Yes | Yes | Clinic drug interaction rule listing |
 | `drug_interaction_rule_write` | No | No | Yes | Clinic drug interaction rule create/update |
 | `prescription_read` | Yes | Yes | Yes | Prescription list and detail |
@@ -108,7 +112,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/prescriptions/:prescriptionId/dispenses` | `prescription_read` |
 | `GET` | `/api/medication-dispenses` | `prescription_read` |
 | `POST` | `/api/prescriptions` | `prescription_write` |
-| `POST` | `/api/prescriptions/:prescriptionId/dispenses` | `prescription_write` |
+| `POST` | `/api/prescriptions/:prescriptionId/dispenses` | `prescription_write`; `pharmacy_override_write` if override reason is present |
 | `PATCH` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
 | `DELETE` | `/api/prescriptions/:prescriptionId` | `prescription_write` |
 | `GET` | `/api/drug-catalog` | `drug_catalog_read` |
@@ -123,10 +127,10 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `PATCH` | `/api/inventory-locations/:locationId` | `drug_catalog_write` |
 | `GET` | `/api/inventory-location-stocks` | `drug_catalog_read` |
 | `GET` | `/api/inventory-transfers` | `drug_catalog_read` |
-| `POST` | `/api/inventory-transfers` | `drug_catalog_write` |
-| `POST` | `/api/inventory-transfers/:transferId/approve` | `drug_catalog_write` |
-| `POST` | `/api/inventory-transfers/:transferId/receive` | `drug_catalog_write` |
-| `POST` | `/api/inventory-transfers/:transferId/cancel` | `drug_catalog_write` |
+| `POST` | `/api/inventory-transfers` | `drug_catalog_write`; `pharmacy_override_write` if override reason is present |
+| `POST` | `/api/inventory-transfers/:transferId/approve` | `inventory_transfer_approve` |
+| `POST` | `/api/inventory-transfers/:transferId/receive` | `inventory_transfer_receive` |
+| `POST` | `/api/inventory-transfers/:transferId/cancel` | `inventory_transfer_cancel` |
 | `GET` | `/api/inventory-lots` | `drug_catalog_read` |
 | `POST` | `/api/inventory-lots/receive` | `drug_catalog_write` |
 | `POST` | `/api/inventory-barcode-scans` | `drug_catalog_write` |
@@ -212,6 +216,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 ## Phase 1 Gaps
 
 - Permissions are currently defined in code, not in database tables.
+- Pharmacy override and transfer action permissions are now separated, but the
+  permission policy is still static per role until a future database-backed
+  permission model is introduced.
 - Role checks are route-level checks; they do not yet express patient assignment,
   clinic membership, or ownership policies.
 - Several clinical read routes share `patient_read` rather than entity-specific

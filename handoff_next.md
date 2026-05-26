@@ -187,6 +187,12 @@
     - report combines dispense and transfer expiry/FEFO override rows
     - Operations dashboard shows pharmacy override chart and recent override notes
     - Phase 3P plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3Q pharmacy role separation:
+    - `pharmacy_override_write` gates dispense/transfer payloads with expiry or FEFO override reason
+    - `inventory_transfer_approve` gates transfer approval
+    - `inventory_transfer_receive` allows nurse/admin transfer receiving
+    - `inventory_transfer_cancel` gates transfer cancellation
+    - Phase 3Q plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -223,8 +229,8 @@
     creation, Phase 3K printer profile routing, and Phase 3L inventory
     location-aware receiving/dispensing, Phase 3M location stock ledger and
     transfer workflow, Phase 3N transfer approval/receiving workflow, plus
-    Phase 3O FEFO/expiry override fields and Phase 3P pharmacy override
-    JSON/CSV report
+    Phase 3O FEFO/expiry override fields, Phase 3P pharmacy override
+    JSON/CSV report, and Phase 3Q separated transfer/override permissions
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

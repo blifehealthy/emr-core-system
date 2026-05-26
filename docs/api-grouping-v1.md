@@ -324,6 +324,31 @@ All routes except `GET /health` can be protected by bearer token when
 - Inventory transfers move quantity between two locations/bins and create stock movement audit rows.
 - The Pharmacy inventory panel can view location stock rows and create transfer records.
 
+## Phase 3N Additions
+
+- Inventory transfers support pending, in-transit, completed, and cancelled statuses.
+- Transfer approval moves stock from source into transit; receiving completes the move into destination stock.
+- Transfer cancellation records the cancellation actor and reason.
+
+## Phase 3O Additions
+
+- Dispense and transfer requests that select a lot enforce expiry and FEFO picking rules.
+- Expired lots require `expiryOverrideReason`.
+- Later-expiring selected lots require `fefoOverrideReason` when an earlier non-expired lot has sufficient stock.
+- Override reasons are stored on dispense and transfer rows for audit review.
+
+## Phase 3P Additions
+
+- Pharmacy override reports combine dispense and transfer override rows.
+- The report exposes JSON and CSV views for expiry/FEFO override review.
+- Operations dashboard can show override totals and recent override events.
+
+## Phase 3Q Additions
+
+- FEFO/expiry override reasons now require `pharmacy_override_write` in addition to the base dispense or transfer permission.
+- Inventory transfer approve, receive, and cancel actions now use separate permissions instead of generic drug catalog write permission.
+- Nurses can receive in-transit transfers, while transfer approval/cancellation and FEFO/expiry override remain admin-only.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while
