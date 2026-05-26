@@ -49,6 +49,7 @@ let currentInventoryLots = [];
 let currentSuppliers = [];
 let currentPurchaseOrders = [];
 let currentPurchaseOrderApprovalPolicies = [];
+let currentInventoryPrinterProfiles = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentAdminFilters = {
@@ -356,6 +357,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -870,6 +872,26 @@ async function fetchPurchaseOrderApprovalPolicies(clinicId, apiToken) {
   });
 
   const response = await fetch(`/api/purchase-order-approval-policies?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryPrinterProfiles(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-printer-profiles?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2379,6 +2401,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -3740,6 +3763,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentSuppliers = await fetchSuppliers(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -3947,6 +3971,7 @@ function createPharmacyInventoryPanel(patient) {
     ['Suppliers', currentSuppliers.length],
     ['PO open', currentPurchaseOrders.filter((order) => !['received', 'cancelled'].includes(order.status)).length],
     ['Approval policies', currentPurchaseOrderApprovalPolicies.length],
+    ['Printer profiles', currentInventoryPrinterProfiles.length],
     ['Barcode required', currentInventoryItems.filter((item) => item.barcode_required).length],
   ]));
 
@@ -4063,6 +4088,33 @@ function createPharmacyInventoryPanel(patient) {
   });
   section.append(policyForm);
 
+  const printerProfileForm = document.createElement('form');
+  printerProfileForm.className = 'nested-inline-form';
+  printerProfileForm.append(
+    createFormField('profileName', 'Printer profile', 'input', true),
+    createPrinterLanguageSelectField('printerLanguage', 'Language'),
+    createPrinterConnectionSelectField('connectionType', 'Connection'),
+    createFormField('endpointUrl', 'Endpoint', 'input'),
+    createFormField('locationName', 'Location', 'input')
+  );
+  const defaultLabel = document.createElement('label');
+  defaultLabel.textContent = 'Default';
+  const defaultCheckbox = document.createElement('input');
+  defaultCheckbox.type = 'checkbox';
+  defaultCheckbox.name = 'isDefault';
+  defaultCheckbox.value = 'true';
+  defaultLabel.append(defaultCheckbox);
+  const printerProfileSubmit = document.createElement('button');
+  printerProfileSubmit.type = 'submit';
+  printerProfileSubmit.className = 'secondary-button compact-button';
+  printerProfileSubmit.textContent = 'เพิ่ม printer profile';
+  printerProfileForm.append(defaultLabel, printerProfileSubmit);
+  printerProfileForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInventoryPrinterProfileFromForm(patient, printerProfileForm, printerProfileSubmit);
+  });
+  section.append(printerProfileForm);
+
   const list = document.createElement('div');
   list.className = 'record-list';
   for (const item of currentInventoryItems.slice(0, 6)) {
@@ -4110,7 +4162,58 @@ function createPharmacyInventoryPanel(patient) {
     section.append(policyList);
   }
 
+  const printerProfileList = document.createElement('div');
+  printerProfileList.className = 'record-list';
+  for (const profile of currentInventoryPrinterProfiles.slice(0, 4)) {
+    printerProfileList.append(createRecordCard(profile, printerProfileSummary, [
+      'printer_language',
+      'connection_type',
+      'endpoint_url',
+      'location_name',
+      'is_default',
+    ]));
+  }
+  if (currentInventoryPrinterProfiles.length > 0) {
+    section.append(printerProfileList);
+  }
+
   return section;
+}
+
+function createPrinterLanguageSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = createSelect(name, ['zpl', 'escpos', 'html']);
+  label.append(select);
+  return label;
+}
+
+function createPrinterConnectionSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = createSelect(name, ['browser', 'network', 'utility_bridge']);
+  label.append(select);
+  return label;
+}
+
+function createPrinterProfileSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = 'Manual export';
+  select.append(emptyOption);
+  for (const profile of currentInventoryPrinterProfiles) {
+    const option = document.createElement('option');
+    option.value = profile.id;
+    option.textContent = `${profile.profile_name} (${profile.printer_language})`;
+    if (profile.is_default) option.selected = true;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
 }
 
 function createRoleSelectField(name, labelText) {
@@ -4130,7 +4233,8 @@ function createBarcodeScannerPanel(patient) {
   contextLabel.append(contextSelect);
   panel.append(
     createFormField('barcode', 'Scan barcode', 'input', true),
-    contextLabel
+    contextLabel,
+    createPrinterProfileSelectField('printerProfileId', 'Printer profile')
   );
 
   const scanButton = document.createElement('button');
@@ -4154,14 +4258,24 @@ function createBarcodeScannerPanel(patient) {
   zplButton.className = 'secondary-button compact-button';
   zplButton.textContent = 'Export ZPL';
   zplButton.addEventListener('click', async () => {
-    await exportBarcodePrintJob(patient, getLoadedBarcodeLabels(), 'zpl');
+    await exportBarcodePrintJob(
+      patient,
+      getLoadedBarcodeLabels(),
+      'zpl',
+      panel.elements.printerProfileId?.value || ''
+    );
   });
   const escposButton = document.createElement('button');
   escposButton.type = 'button';
   escposButton.className = 'secondary-button compact-button';
   escposButton.textContent = 'Export ESC/POS';
   escposButton.addEventListener('click', async () => {
-    await exportBarcodePrintJob(patient, getLoadedBarcodeLabels(), 'escpos');
+    await exportBarcodePrintJob(
+      patient,
+      getLoadedBarcodeLabels(),
+      'escpos',
+      panel.elements.printerProfileId?.value || ''
+    );
   });
   panel.append(scanButton, printAllButton, zplButton, escposButton);
 
@@ -4549,6 +4663,38 @@ async function createPurchaseOrderApprovalPolicyFromForm(patient, form, submit) 
   } finally {
     submit.disabled = false;
     submit.textContent = 'เพิ่ม approval policy';
+  }
+}
+
+async function createInventoryPrinterProfileFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/inventory-printer-profiles', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        profileName: values.profileName,
+        printerLanguage: values.printerLanguage || 'zpl',
+        connectionType: values.connectionType || 'browser',
+        endpointUrl: values.endpointUrl,
+        locationName: values.locationName,
+        isDefault: values.isDefault === 'true',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม printer profile แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม printer profile ไม่สำเร็จ');
+    setStatus('เพิ่ม printer profile ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม printer profile';
   }
 }
 
@@ -5245,7 +5391,7 @@ function openBarcodeLabelPrint(labels, title = 'Barcode labels') {
   printWindow.print();
 }
 
-async function exportBarcodePrintJob(patient, labels, printerLanguage) {
+async function exportBarcodePrintJob(patient, labels, printerLanguage, printerProfileId = '') {
   if (labels.length === 0) {
     setStatus('ยังไม่มี barcode สำหรับ export', 'error');
     return;
@@ -5259,6 +5405,7 @@ async function exportBarcodePrintJob(patient, labels, printerLanguage) {
       body: JSON.stringify(compactPayload({
         clinicId: patient.clinic_id,
         printerLanguage,
+        printerProfileId,
         requestedByUserId: readValue('userId'),
         labels,
         notes: 'Barcode label export from pharmacy inventory',
@@ -5267,7 +5414,13 @@ async function exportBarcodePrintJob(patient, labels, printerLanguage) {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
     openTextExportWindow(payload.data?.rendered_payload ?? '', `${printerLanguage.toUpperCase()} barcode labels`);
-    setStatus(`export ${printerLanguage.toUpperCase()} แล้ว`, 'success');
+    const deliveryStatus = payload.data?.delivery_status;
+    setStatus(
+      deliveryStatus === 'queued'
+        ? `ส่ง ${printerLanguage.toUpperCase()} เข้า printer queue แล้ว`
+        : `export ${printerLanguage.toUpperCase()} แล้ว`,
+      'success'
+    );
   } catch (error) {
     setStatus(error instanceof Error ? error.message : `export ${printerLanguage} ไม่สำเร็จ`, 'error');
   }
@@ -6121,6 +6274,10 @@ function purchaseOrderSummary(item) {
 
 function approvalPolicySummary(item) {
   return `${item.policy_name ?? item.id} · ${item.required_role ?? 'admin'} #${item.approval_sequence ?? 1}`;
+}
+
+function printerProfileSummary(item) {
+  return `${item.profile_name ?? item.id} · ${item.connection_type ?? 'browser'}`;
 }
 
 function invoiceSummary(item) {

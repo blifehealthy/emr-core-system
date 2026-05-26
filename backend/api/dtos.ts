@@ -493,13 +493,33 @@ const INVENTORY_BARCODE_SCAN_KEYS = [
 const INVENTORY_BARCODE_PRINT_JOB_KEYS = [
   'id',
   'clinic_id',
+  'printer_profile_id',
   'printer_language',
+  'connection_type',
+  'delivery_status',
+  'target_endpoint',
   'label_count',
   'rendered_payload',
   'requested_by_user_id',
   'requested_at',
   'notes',
   'created_at',
+  'deleted_at',
+] as const;
+
+const INVENTORY_PRINTER_PROFILE_KEYS = [
+  'id',
+  'clinic_id',
+  'profile_name',
+  'printer_language',
+  'connection_type',
+  'endpoint_url',
+  'location_name',
+  'is_default',
+  'is_active',
+  'notes',
+  'created_at',
+  'updated_at',
   'deleted_at',
 ] as const;
 
@@ -879,6 +899,14 @@ export function toInventoryBarcodeScanDto(row: unknown): Record<string, unknown>
 
 export function toInventoryBarcodePrintJobDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...INVENTORY_BARCODE_PRINT_JOB_KEYS]);
+}
+
+export function toInventoryPrinterProfileDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_PRINTER_PROFILE_KEYS]);
+}
+
+export function toInventoryPrinterProfileDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryPrinterProfileDto(row));
 }
 
 export function toSupplierDto(row: unknown): Record<string, unknown> {

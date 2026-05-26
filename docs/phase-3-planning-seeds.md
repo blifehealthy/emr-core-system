@@ -32,8 +32,10 @@ real UAT findings, but the likely product directions are below.
   capture, scan audit, receiving verification, and dispensing verification.
 - Phase 3I completed pharmacy scanner UX and barcode label printing foundation.
 - Phase 3J completed ZPL/ESC/POS label export and print-job audit foundation.
+- Phase 3K completed printer profiles for barcode label routing, including
+  connection type, endpoint, default profile, and print-job routing audit.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
-  notification integration, multi-location stock, direct printer integration,
+  notification integration, multi-location stock, printer bridge delivery,
   supplier payment handoff, or controlled substance workflow.
 
 ### Patient Communication

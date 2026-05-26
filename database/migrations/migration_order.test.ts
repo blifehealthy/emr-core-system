@@ -141,6 +141,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0032_add_phase_3j_barcode_print_jobs.up.sql'),
     'expected Phase 3J barcode print job migration'
   );
+  assert.ok(
+    filenames.includes('0033_add_phase_3k_printer_profiles.up.sql'),
+    'expected Phase 3K printer profiles migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

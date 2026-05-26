@@ -37,6 +37,10 @@ assertContains(app, 'function buildBarcodeLabelPrintHtml(', 'barcode label print
 assertContains(app, 'พิมพ์ labels ทั้งหมด', 'barcode label print action');
 assertContains(app, '/api/inventory-barcode-print-jobs', 'barcode print job endpoint');
 assertContains(app, 'function exportBarcodePrintJob(', 'barcode print job export helper');
+assertContains(app, '/api/inventory-printer-profiles', 'printer profile endpoint');
+assertContains(app, 'function createInventoryPrinterProfileFromForm(', 'printer profile form handler');
+assertContains(app, 'Printer profile', 'printer profile selector label');
+assertContains(app, 'printerProfileId', 'barcode print job profile payload');
 assertContains(app, 'Export ZPL', 'ZPL export action');
 assertContains(app, 'Export ESC/POS', 'ESC/POS export action');
 assertContains(app, 'inventoryLotId', 'lot-aware dispense payload');

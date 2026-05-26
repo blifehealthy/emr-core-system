@@ -32,7 +32,10 @@ import type {
   UpdatePurchaseOrderApprovalPolicyInput,
   InventoryBarcodeScanContext,
   InventoryBarcodePrintLanguage,
+  InventoryPrinterConnectionType,
   CreateInventoryBarcodePrintJobInput,
+  CreateInventoryPrinterProfileInput,
+  UpdateInventoryPrinterProfileInput,
   ScanInventoryBarcodeInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
@@ -144,6 +147,11 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
 ];
 const inventoryBarcodeScanContexts: InventoryBarcodeScanContext[] = ['lookup', 'receiving', 'dispensing'];
 const inventoryBarcodePrintLanguages: InventoryBarcodePrintLanguage[] = ['html', 'zpl', 'escpos'];
+const inventoryPrinterConnectionTypes: InventoryPrinterConnectionType[] = [
+  'browser',
+  'network',
+  'utility_bridge',
+];
 const userRoles: UserRole[] = ['doctor', 'nurse', 'admin'];
 const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
 const purchaseOrderStatuses: PurchaseOrderStatus[] = [
@@ -3158,6 +3166,107 @@ export function validateDispensePrescriptionBody(
   };
 }
 
+export function validateCreateInventoryPrinterProfileBody(body: unknown):
+  | { ok: true; value: CreateInventoryPrinterProfileInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const profileName = readRequiredString(candidate.profileName, 'profileName');
+  if (!profileName.ok) return profileName;
+  const printerLanguage = readEnumValue<InventoryBarcodePrintLanguage>(
+    candidate.printerLanguage,
+    'printerLanguage',
+    inventoryBarcodePrintLanguages
+  );
+  if (!printerLanguage.ok) return printerLanguage;
+  const connectionType = readEnumValue<InventoryPrinterConnectionType>(
+    candidate.connectionType,
+    'connectionType',
+    inventoryPrinterConnectionTypes
+  );
+  if (!connectionType.ok) return connectionType;
+  const endpointUrl = readOptionalNullableStringField(candidate, 'endpointUrl');
+  if (!endpointUrl.ok) return endpointUrl;
+  const locationName = readOptionalNullableStringField(candidate, 'locationName');
+  if (!locationName.ok) return locationName;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      profileName: profileName.value,
+      printerLanguage: printerLanguage.value,
+      connectionType: connectionType.value,
+      endpointUrl: endpointUrl.value,
+      locationName: locationName.value,
+      isDefault: isDefault.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateInventoryPrinterProfileBody(
+  body: unknown,
+  profileId: string
+): { ok: true; value: UpdateInventoryPrinterProfileInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const profileName = readOptionalTrimmedStringField(candidate, 'profileName');
+  if (!profileName.ok) return profileName;
+  const printerLanguage = readEnumValue<InventoryBarcodePrintLanguage>(
+    candidate.printerLanguage,
+    'printerLanguage',
+    inventoryBarcodePrintLanguages
+  );
+  if (!printerLanguage.ok) return printerLanguage;
+  const connectionType = readEnumValue<InventoryPrinterConnectionType>(
+    candidate.connectionType,
+    'connectionType',
+    inventoryPrinterConnectionTypes
+  );
+  if (!connectionType.ok) return connectionType;
+  const endpointUrl = readOptionalNullableStringField(candidate, 'endpointUrl');
+  if (!endpointUrl.ok) return endpointUrl;
+  const locationName = readOptionalNullableStringField(candidate, 'locationName');
+  if (!locationName.ok) return locationName;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      profileId,
+      profileName: profileName.value,
+      printerLanguage: printerLanguage.value,
+      connectionType: connectionType.value,
+      endpointUrl: endpointUrl.value,
+      locationName: locationName.value,
+      isDefault: isDefault.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
 export function validateScanInventoryBarcodeBody(body: unknown):
   | { ok: true; value: ScanInventoryBarcodeInput }
   | { ok: false; error: string } {
@@ -3209,6 +3318,8 @@ export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
     inventoryBarcodePrintLanguages
   );
   if (!printerLanguage.ok) return printerLanguage;
+  const printerProfileId = readOptionalNullableStringField(candidate, 'printerProfileId');
+  if (!printerProfileId.ok) return printerProfileId;
   const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
   if (!requestedByUserId.ok) return requestedByUserId;
   const notes = readOptionalNullableStringField(candidate, 'notes');
@@ -3245,6 +3356,7 @@ export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
     value: {
       clinicId: clinicId.value,
       printerLanguage: printerLanguage.value,
+      printerProfileId: printerProfileId.value,
       requestedByUserId: requestedByUserId.value,
       notes: notes.value,
       labels,

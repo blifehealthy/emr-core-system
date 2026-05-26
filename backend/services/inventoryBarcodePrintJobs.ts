@@ -5,27 +5,48 @@ type Db = {
 };
 
 type BarcodeLabel = CreateInventoryBarcodePrintJobInput['labels'][number];
+type PrinterProfile = {
+  id: string;
+  printer_language: CreateInventoryBarcodePrintJobInput['printerLanguage'];
+  connection_type: 'browser' | 'network' | 'utility_bridge';
+  endpoint_url: string | null;
+};
 
 export function createInventoryBarcodePrintJob(db: Db) {
   return async function run(input: CreateInventoryBarcodePrintJobInput) {
-    const printerLanguage = input.printerLanguage ?? 'html';
+    const printerProfile = input.printerProfileId
+      ? await findPrinterProfile(db, input.clinicId, input.printerProfileId)
+      : null;
+    if (input.printerProfileId && !printerProfile) return null;
+
+    const printerLanguage = input.printerLanguage ?? printerProfile?.printer_language ?? 'html';
+    const connectionType = printerProfile?.connection_type ?? 'browser';
+    const deliveryStatus = connectionType === 'browser' ? 'exported' : 'queued';
     const renderedPayload = renderBarcodePayload(input.labels, printerLanguage);
     const result = await db.query(
       `
         INSERT INTO inventory_barcode_print_jobs (
           clinic_id,
+          printer_profile_id,
           printer_language,
+          connection_type,
+          delivery_status,
+          target_endpoint,
           label_count,
           rendered_payload,
           requested_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
       `,
       [
         input.clinicId,
+        printerProfile?.id ?? null,
         printerLanguage,
+        connectionType,
+        deliveryStatus,
+        printerProfile?.endpoint_url ?? null,
         input.labels.length,
         renderedPayload,
         input.requestedByUserId ?? null,
@@ -35,6 +56,21 @@ export function createInventoryBarcodePrintJob(db: Db) {
 
     return result.rows[0] ?? null;
   };
+}
+
+async function findPrinterProfile(db: Db, clinicId: string, printerProfileId: string) {
+  const result = await db.query<PrinterProfile>(
+    `
+      SELECT id, printer_language, connection_type, endpoint_url
+      FROM inventory_printer_profiles
+      WHERE id = $1
+        AND clinic_id = $2
+        AND is_active IS TRUE
+        AND deleted_at IS NULL
+    `,
+    [printerProfileId, clinicId]
+  );
+  return result.rows[0] ?? null;
 }
 
 export function renderBarcodePayload(

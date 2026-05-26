@@ -105,6 +105,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
 | `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |
 | `POST` | `/api/inventory-barcode-print-jobs` | Create barcode label print/export job and return rendered payload. |
+| `GET` | `/api/inventory-printer-profiles` | List active or inactive barcode printer profiles for a clinic. |
+| `POST` | `/api/inventory-printer-profiles` | Create barcode printer profile with language, connection type, endpoint, and default flag. |
+| `PATCH` | `/api/inventory-printer-profiles/:profileId` | Update barcode printer profile metadata, default flag, or active state. |
 | `GET` | `/api/stock-movements` | List stock movement audit rows by clinic and optional inventory item. |
 | `GET` | `/api/medication-dispenses` | List medication dispense rows by clinic. |
 | `GET` | `/api/drug-interaction-rules` | List clinic-managed interaction rules. |
@@ -286,6 +289,12 @@ All routes except `GET /health` can be protected by bearer token when
 - Barcode print jobs audit label export requests.
 - The print job API renders `html`, `zpl`, and `escpos` payloads.
 - The Pharmacy inventory panel can export loaded labels as ZPL or ESC/POS.
+
+## Phase 3K Additions
+
+- Printer profiles store clinic label printer language, connection type, endpoint, location, and default profile.
+- Barcode print jobs can reference a printer profile and record connection type, target endpoint, and delivery status.
+- The Pharmacy inventory panel can create printer profiles and select one when exporting ZPL or ESC/POS labels.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

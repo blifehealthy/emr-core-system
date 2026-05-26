@@ -520,6 +520,7 @@ export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' | 'return';
 export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
 export type InventoryBarcodePrintLanguage = 'html' | 'zpl' | 'escpos';
+export type InventoryPrinterConnectionType = 'browser' | 'network' | 'utility_bridge';
 export type SupplierStatus = 'active' | 'inactive';
 export type PurchaseOrderStatus =
   | 'draft'
@@ -775,6 +776,30 @@ export type UpdatePurchaseOrderApprovalPolicyInput = {
   notes?: string | null;
 };
 
+export type CreateInventoryPrinterProfileInput = {
+  clinicId: string;
+  profileName: string;
+  printerLanguage?: InventoryBarcodePrintLanguage;
+  connectionType?: InventoryPrinterConnectionType;
+  endpointUrl?: string | null;
+  locationName?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdateInventoryPrinterProfileInput = {
+  profileId: string;
+  profileName?: string;
+  printerLanguage?: InventoryBarcodePrintLanguage;
+  connectionType?: InventoryPrinterConnectionType;
+  endpointUrl?: string | null;
+  locationName?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
 export type CreateDrugInteractionRuleInput = {
   clinicId: string;
   primaryDrugCatalogId?: string | null;
@@ -881,6 +906,7 @@ export type ScanInventoryBarcodeInput = {
 export type CreateInventoryBarcodePrintJobInput = {
   clinicId: string;
   printerLanguage?: InventoryBarcodePrintLanguage;
+  printerProfileId?: string | null;
   requestedByUserId?: string | null;
   notes?: string | null;
   labels: Array<{
@@ -1221,6 +1247,18 @@ export type Dependencies = {
   scanInventoryBarcode?: (input: ScanInventoryBarcodeInput) => Promise<unknown | null>;
   createInventoryBarcodePrintJob?: (
     input: CreateInventoryBarcodePrintJobInput
+  ) => Promise<unknown | null>;
+  listInventoryPrinterProfiles?: (input: {
+    clinicId: string;
+    active?: DrugCatalogActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInventoryPrinterProfile?: (
+    input: CreateInventoryPrinterProfileInput
+  ) => Promise<unknown>;
+  updateInventoryPrinterProfile?: (
+    input: UpdateInventoryPrinterProfileInput
   ) => Promise<unknown | null>;
   listSuppliers?: (input: {
     clinicId: string;

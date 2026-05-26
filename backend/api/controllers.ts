@@ -21,6 +21,8 @@ import {
   toInventoryItemDtos,
   toInventoryBarcodeScanDto,
   toInventoryBarcodePrintJobDto,
+  toInventoryPrinterProfileDto,
+  toInventoryPrinterProfileDtos,
   toInventoryLotDto,
   toInventoryLotDtos,
   toPurchaseOrderDto,
@@ -80,6 +82,8 @@ import {
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
   validateCreateInventoryBarcodePrintJobBody,
+  validateCreateInventoryPrinterProfileBody,
+  validateUpdateInventoryPrinterProfileBody,
   validateCreateSupplierBody,
   validateUpdateSupplierBody,
   validateCreatePurchaseOrderBody,
@@ -2301,11 +2305,118 @@ export async function handleCreateInventoryBarcodePrintJob(
       actorPractitionerId: actor.practitionerId,
       metadata: {
         printerLanguage: validation.value.printerLanguage ?? 'html',
+        printerProfileId: validation.value.printerProfileId ?? null,
         labelCount: validation.value.labels.length,
       },
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListInventoryPrinterProfiles(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryPrinterProfiles) {
+    return mapError(new Error('Inventory printer profile list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const profiles = await dependencies.listInventoryPrinterProfiles({
+    clinicId,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryPrinterProfileDtos(profiles.rows), meta: profiles.meta },
+  };
+}
+
+export async function handleCreateInventoryPrinterProfile(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryPrinterProfile) {
+    return mapError(new Error('Inventory printer profile create dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryPrinterProfileBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const profile = await dependencies.createInventoryPrinterProfile(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_printer_profile',
+      entityId: (profile as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        profileName: validation.value.profileName,
+        printerLanguage: validation.value.printerLanguage ?? 'zpl',
+        connectionType: validation.value.connectionType ?? 'browser',
+      },
+    });
+
+    return {
+      status: 201,
+      headers: JSON_HEADERS,
+      body: { data: toInventoryPrinterProfileDto(profile) },
+    };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateInventoryPrinterProfile(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  profileId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInventoryPrinterProfile) {
+    return mapError(new Error('Inventory printer profile update dependency is not configured'));
+  }
+
+  const validation = validateUpdateInventoryPrinterProfileBody(request.body, profileId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const profile = await dependencies.updateInventoryPrinterProfile(validation.value);
+    if (!profile) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Printer profile not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_printer_profile',
+      entityId: profileId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return {
+      status: 200,
+      headers: JSON_HEADERS,
+      body: { data: toInventoryPrinterProfileDto(profile) },
+    };
   } catch (error) {
     return mapError(error);
   }

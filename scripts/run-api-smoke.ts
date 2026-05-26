@@ -62,6 +62,7 @@ const migrations = [
   '0030_add_phase_3g_multi_approver_routing.up.sql',
   '0031_add_phase_3h_barcode_verification.up.sql',
   '0032_add_phase_3j_barcode_print_jobs.up.sql',
+  '0033_add_phase_3k_printer_profiles.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -947,9 +948,42 @@ async function main() {
     assert.equal(barcodeScan.data.matched, true);
     assert.equal(barcodeScan.data.inventory_item_id, inventoryItem.data.id);
 
-    const barcodePrintJob = await requestJson<{
+    const printerProfile = await requestJson<{
       id: string;
       printer_language: string;
+      connection_type: string;
+      is_default: boolean;
+    }>(
+      '/api/inventory-printer-profiles',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        profileName: 'Smoke ZPL Printer',
+        printerLanguage: 'zpl',
+        connectionType: 'utility_bridge',
+        endpointUrl: 'bridge://pharmacy-label',
+        locationName: 'Pharmacy',
+        isDefault: true,
+      }
+    );
+    assert.equal(printerProfile.data.printer_language, 'zpl');
+    assert.equal(printerProfile.data.connection_type, 'utility_bridge');
+    assert.equal(printerProfile.data.is_default, true);
+
+    const printerProfiles = await requestJson<Array<{ id: string }>>(
+      '/api/inventory-printer-profiles?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=10',
+      adminHeaders
+    );
+    assert.ok(printerProfiles.data.some((profile) => profile.id === printerProfile.data.id));
+
+    const barcodePrintJob = await requestJson<{
+      id: string;
+      printer_profile_id: string;
+      printer_language: string;
+      connection_type: string;
+      delivery_status: string;
       label_count: number;
       rendered_payload: string;
     }>(
@@ -960,6 +994,7 @@ async function main() {
       {
         clinicId: '10000000-0000-0000-0000-000000000101',
         printerLanguage: 'zpl',
+        printerProfileId: printerProfile.data.id,
         labels: [
           {
             type: 'ITEM',
@@ -971,7 +1006,10 @@ async function main() {
         ],
       }
     );
+    assert.equal(barcodePrintJob.data.printer_profile_id, printerProfile.data.id);
     assert.equal(barcodePrintJob.data.printer_language, 'zpl');
+    assert.equal(barcodePrintJob.data.connection_type, 'utility_bridge');
+    assert.equal(barcodePrintJob.data.delivery_status, 'queued');
     assert.equal(barcodePrintJob.data.label_count, 1);
     assert.match(barcodePrintJob.data.rendered_payload, /\^XA/);
 

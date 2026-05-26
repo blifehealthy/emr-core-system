@@ -142,6 +142,13 @@
     - server-rendered payloads for `html`, `zpl`, and `escpos`
     - Pharmacy inventory Export ZPL and Export ESC/POS actions
     - Phase 3J plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3K printer profile foundation:
+    - migration `0033_add_phase_3k_printer_profiles`
+    - `inventory_printer_profiles` table with language, connection type, endpoint, location, default flag, and active flag
+    - print jobs now record `printer_profile_id`, `connection_type`, `delivery_status`, and `target_endpoint`
+    - `GET/POST/PATCH /api/inventory-printer-profiles`
+    - Pharmacy inventory printer profile create form, profile list, and scanner export profile selector
+    - Phase 3K plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -149,7 +156,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `139/139` passing
+  - current result: `141/141` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -162,7 +169,7 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
   - frontend workflow smoke coverage
   - current result: passing, including Phase 3J scanner panel, barcode label
-    print builder, and label printer export checks
+    print builder, label printer export checks, and Phase 3K printer profile checks
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - `npm run db:test`
@@ -173,8 +180,8 @@
   - current result: passing, including Phase 3E supplier creation/listing,
     purchase order creation/listing, Phase 3G approval policy creation,
     two-step approval, Phase 3H barcode scan lookup, verified receiving,
-    verified PO receiving, verified dispensing, and Phase 3J ZPL print job
-    creation
+    verified PO receiving, verified dispensing, Phase 3J ZPL print job
+    creation, and Phase 3K printer profile routing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
