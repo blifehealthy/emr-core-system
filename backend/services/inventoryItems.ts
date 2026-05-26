@@ -86,13 +86,15 @@ export function createInventoryItem(db: {
           display_name,
           barcode,
           barcode_required,
+          is_controlled_substance,
+          controlled_substance_schedule,
           unit,
           quantity_on_hand,
           reorder_level,
           is_active,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `,
       [
@@ -102,6 +104,8 @@ export function createInventoryItem(db: {
         input.displayName,
         input.barcode ?? null,
         input.barcodeRequired ?? false,
+        input.isControlledSubstance ?? false,
+        input.controlledSubstanceSchedule ?? null,
         input.unit ?? 'unit',
         Number(input.quantityOnHand ?? 0),
         Number(input.reorderLevel ?? 0),
@@ -126,6 +130,8 @@ export function updateInventoryItem(db: {
       ['displayName', 'display_name'],
       ['barcode', 'barcode'],
       ['barcodeRequired', 'barcode_required'],
+      ['isControlledSubstance', 'is_controlled_substance'],
+      ['controlledSubstanceSchedule', 'controlled_substance_schedule'],
       ['unit', 'unit'],
       ['reorderLevel', 'reorder_level'],
       ['isActive', 'is_active'],

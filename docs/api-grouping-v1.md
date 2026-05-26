@@ -161,6 +161,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/reports/billing-summary.csv` | CSV export for billing summary metrics. |
 | `GET` | `/api/reports/pharmacy-overrides` | Date-range expiry and FEFO override review report for dispensing and transfer events. |
 | `GET` | `/api/reports/pharmacy-overrides.csv` | CSV export for the pharmacy override review report. |
+| `GET` | `/api/reports/controlled-substances` | Date-range controlled item receiving, dispensing, and transfer register. |
+| `GET` | `/api/reports/controlled-substances.csv` | CSV export for the controlled substance register. |
 
 | Method | Route | Purpose |
 | --- | --- | --- |
@@ -348,6 +350,13 @@ All routes except `GET /health` can be protected by bearer token when
 - FEFO/expiry override reasons now require `pharmacy_override_write` in addition to the base dispense or transfer permission.
 - Inventory transfer approve, receive, and cancel actions now use separate permissions instead of generic drug catalog write permission.
 - Nurses can receive in-transit transfers, while transfer approval/cancellation and FEFO/expiry override remain admin-only.
+
+## Phase 3R Additions
+
+- Inventory items can be marked as controlled substances and assigned an optional schedule/category.
+- Controlled substance reports combine controlled item receiving, dispensing, and transfer activity.
+- The report exposes JSON and CSV views for clinic owner or pharmacy lead review.
+- Operations dashboard can show controlled item totals, register event totals, and recent controlled item activity.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

@@ -627,6 +627,8 @@ export type CreateInventoryItemInput = {
   displayName: string;
   barcode?: string | null;
   barcodeRequired?: boolean;
+  isControlledSubstance?: boolean;
+  controlledSubstanceSchedule?: string | null;
   unit?: string;
   quantityOnHand?: number | string;
   reorderLevel?: number | string;
@@ -641,6 +643,8 @@ export type UpdateInventoryItemInput = {
   displayName?: string;
   barcode?: string | null;
   barcodeRequired?: boolean;
+  isControlledSubstance?: boolean;
+  controlledSubstanceSchedule?: string | null;
   unit?: string;
   reorderLevel?: number | string;
   isActive?: boolean;
@@ -1200,6 +1204,11 @@ export type Dependencies = {
     endDate: string;
   }) => Promise<unknown | null>;
   getPharmacyOverrideReport?: (input: {
+    clinicId: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<unknown | null>;
+  getControlledSubstanceRegister?: (input: {
     clinicId: string;
     startDate: string;
     endDate: string;

@@ -68,6 +68,10 @@ assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch
 assertContains(app, 'fetchPharmacyOverrideReport', 'pharmacy override report fetch');
 assertContains(app, '/api/reports/pharmacy-overrides', 'pharmacy override report endpoint');
 assertContains(app, 'function createPharmacyOverrideChart(', 'pharmacy override chart');
+assertContains(app, 'fetchControlledSubstanceRegister', 'controlled substance register fetch');
+assertContains(app, '/api/reports/controlled-substances', 'controlled substance register endpoint');
+assertContains(app, 'function createControlledSubstanceChart(', 'controlled substance chart');
+assertContains(app, 'isControlledSubstance', 'controlled inventory item payload');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');
 assertContains(styles, '.operations-charts', 'operations chart layout');

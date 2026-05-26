@@ -288,6 +288,8 @@ const INVENTORY_ITEM_KEYS = [
   'display_name',
   'barcode',
   'barcode_required',
+  'is_controlled_substance',
+  'controlled_substance_schedule',
   'unit',
   'quantity_on_hand',
   'reorder_level',

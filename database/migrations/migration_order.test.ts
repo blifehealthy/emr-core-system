@@ -161,6 +161,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0037_add_phase_3o_fefo_picking_guard.up.sql'),
     'expected Phase 3O FEFO picking guard migration'
   );
+  assert.ok(
+    filenames.includes('0038_add_phase_3r_controlled_substance_register.up.sql'),
+    'expected Phase 3R controlled substance register migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

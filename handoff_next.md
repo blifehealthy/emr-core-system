@@ -193,6 +193,14 @@
     - `inventory_transfer_receive` allows nurse/admin transfer receiving
     - `inventory_transfer_cancel` gates transfer cancellation
     - Phase 3Q plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3R controlled substance register:
+    - migration `0038_add_phase_3r_controlled_substance_register`
+    - `inventory_items` can mark `is_controlled_substance` and `controlled_substance_schedule`
+    - `GET /api/reports/controlled-substances`
+    - `GET /api/reports/controlled-substances.csv`
+    - report combines controlled item lot receiving, dispensing, and transfer events
+    - Operations dashboard shows controlled substance chart and recent events
+    - Phase 3R plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -200,7 +208,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `149/149` passing
+  - current result: `151/151` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -230,7 +238,8 @@
     location-aware receiving/dispensing, Phase 3M location stock ledger and
     transfer workflow, Phase 3N transfer approval/receiving workflow, plus
     Phase 3O FEFO/expiry override fields, Phase 3P pharmacy override
-    JSON/CSV report, and Phase 3Q separated transfer/override permissions
+    JSON/CSV report, Phase 3Q separated transfer/override permissions, and
+    Phase 3R controlled substance register JSON/CSV report
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

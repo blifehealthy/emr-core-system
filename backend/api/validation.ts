@@ -2516,6 +2516,13 @@ export function validateCreateInventoryItemBody(body: unknown):
   if (!barcode.ok) return barcode;
   const barcodeRequired = readOptionalBooleanField(candidate, 'barcodeRequired');
   if (!barcodeRequired.ok) return barcodeRequired;
+  const isControlledSubstance = readOptionalBooleanField(candidate, 'isControlledSubstance');
+  if (!isControlledSubstance.ok) return isControlledSubstance;
+  const controlledSubstanceSchedule = readOptionalNullableStringField(
+    candidate,
+    'controlledSubstanceSchedule'
+  );
+  if (!controlledSubstanceSchedule.ok) return controlledSubstanceSchedule;
   const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
   if (!drugCatalogId.ok) return drugCatalogId;
   const unit = readOptionalTrimmedStringField(candidate, 'unit');
@@ -2537,6 +2544,8 @@ export function validateCreateInventoryItemBody(body: unknown):
       displayName: displayName.value,
       barcode: barcode.value,
       barcodeRequired: barcodeRequired.value,
+      isControlledSubstance: isControlledSubstance.value,
+      controlledSubstanceSchedule: controlledSubstanceSchedule.value,
       drugCatalogId: drugCatalogId.value,
       unit: unit.value,
       quantityOnHand: quantityOnHand.value ?? undefined,
@@ -2562,6 +2571,8 @@ export function validateUpdateInventoryItemBody(
     'displayName',
     'barcode',
     'barcodeRequired',
+    'isControlledSubstance',
+    'controlledSubstanceSchedule',
     'unit',
     'reorderLevel',
     'isActive',
@@ -2579,6 +2590,13 @@ export function validateUpdateInventoryItemBody(
   if (!barcode.ok) return barcode;
   const barcodeRequired = readOptionalBooleanField(candidate, 'barcodeRequired');
   if (!barcodeRequired.ok) return barcodeRequired;
+  const isControlledSubstance = readOptionalBooleanField(candidate, 'isControlledSubstance');
+  if (!isControlledSubstance.ok) return isControlledSubstance;
+  const controlledSubstanceSchedule = readOptionalNullableStringField(
+    candidate,
+    'controlledSubstanceSchedule'
+  );
+  if (!controlledSubstanceSchedule.ok) return controlledSubstanceSchedule;
   const unit = readOptionalTrimmedStringField(candidate, 'unit');
   if (!unit.ok) return unit;
   const reorderLevel = readOptionalNonNegativeNumberLikeField(candidate, 'reorderLevel');
@@ -2597,6 +2615,12 @@ export function validateUpdateInventoryItemBody(
       ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
       ...(Object.hasOwn(candidate, 'barcode') ? { barcode: barcode.value } : {}),
       ...(Object.hasOwn(candidate, 'barcodeRequired') ? { barcodeRequired: barcodeRequired.value } : {}),
+      ...(Object.hasOwn(candidate, 'isControlledSubstance')
+        ? { isControlledSubstance: isControlledSubstance.value }
+        : {}),
+      ...(Object.hasOwn(candidate, 'controlledSubstanceSchedule')
+        ? { controlledSubstanceSchedule: controlledSubstanceSchedule.value }
+        : {}),
       ...(Object.hasOwn(candidate, 'unit') ? { unit: unit.value } : {}),
       ...(Object.hasOwn(candidate, 'reorderLevel') ? { reorderLevel: reorderLevel.value ?? undefined } : {}),
       ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),

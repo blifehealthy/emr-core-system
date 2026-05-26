@@ -67,6 +67,7 @@ const migrations = [
   '0035_add_phase_3m_location_stock_ledger.up.sql',
   '0036_add_phase_3n_transfer_workflow.up.sql',
   '0037_add_phase_3o_fefo_picking_guard.up.sql',
+  '0038_add_phase_3r_controlled_substance_register.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -870,6 +871,8 @@ async function main() {
       barcode: string;
       quantity_on_hand: string;
       low_stock: boolean;
+      is_controlled_substance: boolean;
+      controlled_substance_schedule: string | null;
     }>(
       '/api/inventory-items',
       adminHeaders,
@@ -884,9 +887,13 @@ async function main() {
         unit: 'tablet',
         quantityOnHand: 10,
         reorderLevel: 5,
+        isControlledSubstance: true,
+        controlledSubstanceSchedule: 'Schedule 4',
       }
     );
     assert.equal(Number(inventoryItem.data.quantity_on_hand), 10);
+    assert.equal(inventoryItem.data.is_controlled_substance, true);
+    assert.equal(inventoryItem.data.controlled_substance_schedule, 'Schedule 4');
 
     const adjustedInventoryItem = await requestJson<{ id: string; quantity_on_hand: string }>(
       `/api/inventory-items/${inventoryItem.data.id}/stock`,
@@ -1389,6 +1396,28 @@ async function main() {
     assert.ok(pharmacyOverrideReport.data.dispense_override_total >= 1);
     assert.ok(pharmacyOverrideReport.data.transfer_override_total >= 2);
     assert.ok(Array.isArray(pharmacyOverrideReport.data.recent_events));
+
+    const controlledSubstanceRegister = await requestJson<{
+      controlled_item_total: number;
+      event_total: number;
+      received_total: number;
+      dispensed_total: number;
+      recent_events: unknown[];
+    }>(
+      `/api/reports/controlled-substances?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.ok(controlledSubstanceRegister.data.controlled_item_total >= 1);
+    assert.ok(controlledSubstanceRegister.data.event_total >= 2);
+    assert.ok(Number(controlledSubstanceRegister.data.received_total) >= 1);
+    assert.ok(Number(controlledSubstanceRegister.data.dispensed_total) >= 1);
+    assert.ok(Array.isArray(controlledSubstanceRegister.data.recent_events));
+
+    const controlledSubstanceCsv = await requestText(
+      `/api/reports/controlled-substances.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.match(controlledSubstanceCsv.body, /controlled_item_total/);
 
     const pharmacyOverrideCsv = await requestText(
       `/api/reports/pharmacy-overrides.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,

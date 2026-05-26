@@ -30,6 +30,7 @@
 - Phase 3O FEFO picking guard blocks expired/non-FEFO lot use without override reasons and stores override audit fields
 - Phase 3P pharmacy override report adds JSON/CSV review for expiry and FEFO override events plus dashboard visibility
 - Phase 3Q pharmacy role separation adds dedicated override and transfer action permissions for FEFO/expiry override, approve, receive, and cancel workflows
+- Phase 3R controlled substance register adds controlled item flags plus JSON/CSV review for receiving, dispensing, and transfer activity
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -71,6 +72,7 @@
 - Review `docs/phase-3o-plan.md`, `docs/phase-3o-clinician-summary-th.md`, `docs/phase-3o-uat-checklist-th.md`, and `docs/phase-3o-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 - Review `docs/phase-3p-plan.md`, `docs/phase-3p-clinician-summary-th.md`, `docs/phase-3p-uat-checklist-th.md`, and `docs/phase-3p-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 - Review `docs/phase-3q-plan.md`, `docs/phase-3q-clinician-summary-th.md`, `docs/phase-3q-uat-checklist-th.md`, and `docs/phase-3q-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
+- Review `docs/phase-3r-plan.md`, `docs/phase-3r-clinician-summary-th.md`, `docs/phase-3r-uat-checklist-th.md`, and `docs/phase-3r-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 
 ## Verified
 
@@ -108,4 +110,5 @@
 - Phase 3P targeted pharmacy override report, frontend syntax, and API route tests pass
 - Phase 3P full suite passes `149/149`, and API smoke passes pharmacy override JSON/CSV report
 - Phase 3Q targeted pharmacy role separation API tests, TypeScript compile, frontend workflow smoke, full suite `149/149`, and API smoke pass
+- Phase 3R targeted controlled substance register service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `151/151`, and API smoke pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

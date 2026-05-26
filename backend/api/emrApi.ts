@@ -57,6 +57,8 @@ import {
   handleGetBillingSummaryReportCsv,
   handleGetPharmacyOverrideReport,
   handleGetPharmacyOverrideReportCsv,
+  handleGetControlledSubstanceRegister,
+  handleGetControlledSubstanceRegisterCsv,
   handleGetDiagnosis,
   handleAssessPrescriptionSafety,
   handleGetEncounter,
@@ -431,6 +433,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'audit_read');
       if (roleError) return roleError;
       return handleGetPharmacyOverrideReportCsv(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/controlled-substances') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetControlledSubstanceRegister(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/controlled-substances.csv') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetControlledSubstanceRegisterCsv(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/audit-logs') {

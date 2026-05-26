@@ -97,6 +97,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPharmacyOverrideReport() {
       return { start_date: '2026-05-24', end_date: '2026-05-24', override_total: 0 };
     },
+    async getControlledSubstanceRegister() {
+      return { start_date: '2026-05-24', end_date: '2026-05-24', event_total: 0 };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -1077,6 +1080,19 @@ test('clinic settings and daily operations report APIs work', async () => {
           by_item: [{ inventory_item_display_name: 'Amoxicillin', count: 2 }],
         };
       },
+      async getControlledSubstanceRegister(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.startDate, '2026-05-24');
+        assert.equal(input.endDate, '2026-05-31');
+        return {
+          start_date: input.startDate,
+          end_date: input.endDate,
+          controlled_item_total: 1,
+          event_total: 3,
+          by_event_type: [{ event_type: 'dispense', quantity: 2 }],
+          by_item: [{ inventory_item_display_name: 'Diazepam', count: 3 }],
+        };
+      },
     })
   );
 
@@ -1151,6 +1167,35 @@ test('clinic settings and daily operations report APIs work', async () => {
   assert.match(overrideCsv.body as string, /override_total,2/);
   assert.match(overrideCsv.body as string, /by_event_type:dispense,1/);
   assert.match(overrideCsv.body as string, /by_item:Amoxicillin,2/);
+
+  const controlledReport = await api({
+    method: 'GET',
+    path: '/api/reports/controlled-substances',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(controlledReport.status, 200);
+  assert.deepEqual(controlledReport.body, {
+    data: {
+      start_date: '2026-05-24',
+      end_date: '2026-05-31',
+      controlled_item_total: 1,
+      event_total: 3,
+      by_event_type: [{ event_type: 'dispense', quantity: 2 }],
+      by_item: [{ inventory_item_display_name: 'Diazepam', count: 3 }],
+    },
+  });
+
+  const controlledCsv = await api({
+    method: 'GET',
+    path: '/api/reports/controlled-substances.csv',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(controlledCsv.status, 200);
+  assert.match(controlledCsv.body as string, /controlled_item_total,1/);
+  assert.match(controlledCsv.body as string, /by_event_type:dispense,2/);
+  assert.match(controlledCsv.body as string, /by_item:Diazepam,3/);
 });
 
 test('appointments API rejects unsupported status transitions', async () => {

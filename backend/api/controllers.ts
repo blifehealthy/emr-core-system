@@ -951,6 +951,66 @@ export async function handleGetPharmacyOverrideReportCsv(
   };
 }
 
+export async function handleGetControlledSubstanceRegister(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.getControlledSubstanceRegister) {
+    return mapError(new Error('Controlled substance register dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const startDate = request.query?.startDate?.trim() || request.query?.date?.trim();
+  if (!startDate) return validationError('startDate is required query parameter');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return validationError('startDate must be YYYY-MM-DD');
+  }
+  const endDate = request.query?.endDate?.trim() || startDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return validationError('endDate must be YYYY-MM-DD');
+  }
+  if (endDate < startDate) {
+    return validationError('endDate must be on or after startDate');
+  }
+
+  const report = await dependencies.getControlledSubstanceRegister({ clinicId, startDate, endDate });
+  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { start_date: startDate, end_date: endDate } } };
+}
+
+export async function handleGetControlledSubstanceRegisterCsv(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const reportResponse = await handleGetControlledSubstanceRegister(request, dependencies);
+  if (reportResponse.status !== 200) return reportResponse;
+
+  const report = (reportResponse.body as { data?: Record<string, unknown> }).data ?? {};
+  const rows = [
+    ['metric', 'value'],
+    ['start_date', String(report.start_date ?? '')],
+    ['end_date', String(report.end_date ?? '')],
+    ['controlled_item_total', String(report.controlled_item_total ?? 0)],
+    ['event_total', String(report.event_total ?? 0)],
+    ['received_total', String(report.received_total ?? 0)],
+    ['dispensed_total', String(report.dispensed_total ?? 0)],
+    ['transfer_total', String(report.transfer_total ?? 0)],
+  ];
+  appendAggregateRows(rows, 'by_event_type', report.by_event_type, 'event_type', 'quantity');
+  appendAggregateRows(rows, 'by_item', report.by_item, 'inventory_item_display_name', 'count');
+  appendAggregateRows(rows, 'recent_events', report.recent_events, 'id', 'event_type');
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+
+  return {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': 'attachment; filename="controlled-substances.csv"',
+    },
+    body: `${csv}\n`,
+  };
+}
+
 export async function handleCreateAppointment(
   request: HttpRequest,
   dependencies: Dependencies

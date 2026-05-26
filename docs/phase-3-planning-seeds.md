@@ -48,9 +48,12 @@ real UAT findings, but the likely product directions are below.
   visibility.
 - Phase 3Q completed pharmacy role separation for FEFO/expiry override,
   transfer approval, transfer receiving, and transfer cancellation permissions.
+- Phase 3R completed the controlled-substance register foundation for
+  controlled item receiving, dispensing, and transfer review.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  database-backed permission customization, or controlled substance workflow.
+  witness/co-sign controlled dispense workflow, or database-backed permission
+  customization.
 
 ### Patient Communication
 

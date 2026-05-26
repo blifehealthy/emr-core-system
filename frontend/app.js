@@ -56,6 +56,7 @@ let currentInventoryPrinterProfiles = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentPharmacyOverrideReport = null;
+let currentControlledSubstanceRegister = null;
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -268,6 +269,7 @@ queueForm.addEventListener('submit', async (event) => {
     currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
     currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
     currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
+    currentControlledSubstanceRegister = await fetchControlledSubstanceRegister(clinicId, apiToken).catch(() => null);
     renderQueueBoard();
     setStatus('โหลดคิวแล้ว', 'success');
   } catch (error) {
@@ -1009,6 +1011,24 @@ async function fetchPharmacyOverrideReport(clinicId, apiToken) {
     endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
   });
   const response = await fetch(`/api/reports/pharmacy-overrides?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+async function fetchControlledSubstanceRegister(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+  });
+  const response = await fetch(`/api/reports/controlled-substances?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2248,7 +2268,8 @@ function createOperationsCharts() {
       practitionerLabel(item.prescribed_by_practitioner_id) || 'No prescriber',
       item.prescriptions ?? 0,
     ])),
-    createPharmacyOverrideChart()
+    createPharmacyOverrideChart(),
+    createControlledSubstanceChart()
   );
 
   return section;
@@ -2276,6 +2297,31 @@ function createPharmacyOverrideChart() {
         event.fefo_recommended_lot_number ||
         event.inventory_lot_number ||
         '';
+      list.append(term, description);
+    }
+    chart.append(list);
+  }
+  return chart;
+}
+
+function createControlledSubstanceChart() {
+  const report = currentControlledSubstanceRegister ?? {};
+  const rows = [
+    ['Controlled items', report.controlled_item_total ?? 0],
+    ['Register events', report.event_total ?? 0],
+    ['Received qty', report.received_total ?? 0],
+    ['Dispensed qty', report.dispensed_total ?? 0],
+    ['Transfer qty', report.transfer_total ?? 0],
+  ];
+  const chart = createBarChart('Controlled substances', rows);
+  const events = (report.recent_events ?? []).slice(0, 3);
+  if (events.length > 0) {
+    const list = document.createElement('dl');
+    for (const event of events) {
+      const term = document.createElement('dt');
+      term.textContent = `${event.event_type ?? 'event'} · ${event.inventory_item_display_name ?? event.inventory_item_id ?? ''}`;
+      const description = document.createElement('dd');
+      description.textContent = `${event.quantity ?? 0} ${event.direction ?? ''} · ${event.inventory_lot_number ?? event.reference_number ?? ''}`;
       list.append(term, description);
     }
     chart.append(list);
@@ -4090,6 +4136,7 @@ function createPharmacyInventoryPanel(patient) {
     ['Locations', currentInventoryLocations.length],
     ['Location stocks', currentInventoryLocationStocks.length],
     ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
+    ['Controlled', currentInventoryItems.filter((item) => item.is_controlled_substance).length],
     ['Lots', currentInventoryLots.length],
     ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
     ['Suppliers', currentSuppliers.length],
@@ -4108,6 +4155,8 @@ function createPharmacyInventoryPanel(patient) {
     createFormField('itemCode', 'Item code', 'input', true),
     createFormField('displayName', 'Display name', 'input', true),
     createFormField('barcode', 'Barcode', 'input'),
+    createAdminSelect('isControlledSubstance', 'Controlled', ['false', 'true'], 'false'),
+    createFormField('controlledSubstanceSchedule', 'Controlled schedule', 'input'),
     createFormField('unit', 'Unit', 'input'),
     createFormField('quantityOnHand', 'Quantity on hand', 'input'),
     createFormField('reorderLevel', 'Reorder level', 'input')
@@ -4641,6 +4690,8 @@ function createInventoryItemCard(item) {
     'item_code',
     'barcode',
     'barcode_required',
+    'is_controlled_substance',
+    'controlled_substance_schedule',
     'quantity_on_hand',
     'reorder_level',
     'unit',
@@ -4774,6 +4825,8 @@ async function createInventoryItemFromForm(patient, form, submit) {
         itemCode: values.itemCode,
         displayName: values.displayName,
         barcode: values.barcode,
+        isControlledSubstance: values.isControlledSubstance === 'true',
+        controlledSubstanceSchedule: values.controlledSubstanceSchedule,
         unit: values.unit || 'unit',
         quantityOnHand: values.quantityOnHand || '0',
         reorderLevel: values.reorderLevel || '0',
