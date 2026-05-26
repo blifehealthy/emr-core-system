@@ -490,6 +490,19 @@ const INVENTORY_BARCODE_SCAN_KEYS = [
   'deleted_at',
 ] as const;
 
+const INVENTORY_BARCODE_PRINT_JOB_KEYS = [
+  'id',
+  'clinic_id',
+  'printer_language',
+  'label_count',
+  'rendered_payload',
+  'requested_by_user_id',
+  'requested_at',
+  'notes',
+  'created_at',
+  'deleted_at',
+] as const;
+
 const USER_KEYS = [
   'id',
   'clinic_id',
@@ -862,6 +875,10 @@ export function toInventoryLotDtos(rows: unknown[]): Record<string, unknown>[] {
 
 export function toInventoryBarcodeScanDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...INVENTORY_BARCODE_SCAN_KEYS]);
+}
+
+export function toInventoryBarcodePrintJobDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_BARCODE_PRINT_JOB_KEYS]);
 }
 
 export function toSupplierDto(row: unknown): Record<string, unknown> {

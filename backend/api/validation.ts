@@ -31,6 +31,8 @@ import type {
   CreatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderApprovalPolicyInput,
   InventoryBarcodeScanContext,
+  InventoryBarcodePrintLanguage,
+  CreateInventoryBarcodePrintJobInput,
   ScanInventoryBarcodeInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
@@ -141,6 +143,7 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
   'return',
 ];
 const inventoryBarcodeScanContexts: InventoryBarcodeScanContext[] = ['lookup', 'receiving', 'dispensing'];
+const inventoryBarcodePrintLanguages: InventoryBarcodePrintLanguage[] = ['html', 'zpl', 'escpos'];
 const userRoles: UserRole[] = ['doctor', 'nurse', 'admin'];
 const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
 const purchaseOrderStatuses: PurchaseOrderStatus[] = [
@@ -3186,6 +3189,65 @@ export function validateScanInventoryBarcodeBody(body: unknown):
       scanContext: scanContext.value,
       scannedByUserId: scannedByUserId.value,
       notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
+  | { ok: true; value: CreateInventoryBarcodePrintJobInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const printerLanguage = readEnumValue<InventoryBarcodePrintLanguage>(
+    candidate.printerLanguage,
+    'printerLanguage',
+    inventoryBarcodePrintLanguages
+  );
+  if (!printerLanguage.ok) return printerLanguage;
+  const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
+  if (!requestedByUserId.ok) return requestedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  if (!Array.isArray(candidate.labels) || candidate.labels.length === 0) {
+    return { ok: false, error: 'labels must be a non-empty array' };
+  }
+  const labels: CreateInventoryBarcodePrintJobInput['labels'] = [];
+  for (const [index, item] of candidate.labels.entries()) {
+    const entry = asObject(item);
+    if (!entry) return { ok: false, error: `labels[${index}] must be an object` };
+    const title = readRequiredString(entry.title, `labels[${index}].title`);
+    if (!title.ok) return title;
+    const barcode = readRequiredString(entry.barcode, `labels[${index}].barcode`);
+    if (!barcode.ok) return barcode;
+    const type = readOptionalNullableStringField(entry, 'type');
+    if (!type.ok) return type;
+    const subtitle = readOptionalNullableStringField(entry, 'subtitle');
+    if (!subtitle.ok) return subtitle;
+    const detail = readOptionalNullableStringField(entry, 'detail');
+    if (!detail.ok) return detail;
+    labels.push({
+      type: type.value,
+      title: title.value,
+      subtitle: subtitle.value,
+      barcode: barcode.value,
+      detail: detail.value,
+    });
+  }
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      printerLanguage: printerLanguage.value,
+      requestedByUserId: requestedByUserId.value,
+      notes: notes.value,
+      labels,
     },
   };
 }

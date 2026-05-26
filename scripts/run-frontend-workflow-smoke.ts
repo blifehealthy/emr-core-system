@@ -35,6 +35,10 @@ assertContains(app, 'function receiveInventoryLotFromForm(', 'inventory lot rece
 assertContains(app, 'function createBarcodeScannerPanel(', 'barcode scanner panel');
 assertContains(app, 'function buildBarcodeLabelPrintHtml(', 'barcode label print HTML builder');
 assertContains(app, 'พิมพ์ labels ทั้งหมด', 'barcode label print action');
+assertContains(app, '/api/inventory-barcode-print-jobs', 'barcode print job endpoint');
+assertContains(app, 'function exportBarcodePrintJob(', 'barcode print job export helper');
+assertContains(app, 'Export ZPL', 'ZPL export action');
+assertContains(app, 'Export ESC/POS', 'ESC/POS export action');
 assertContains(app, 'inventoryLotId', 'lot-aware dispense payload');
 assertContains(app, 'safetyOverrideReason', 'prescription safety override reason field');
 assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch');

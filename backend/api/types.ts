@@ -519,6 +519,7 @@ export type CashierReconciliationStatus = 'open' | 'closed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' | 'return';
 export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
+export type InventoryBarcodePrintLanguage = 'html' | 'zpl' | 'escpos';
 export type SupplierStatus = 'active' | 'inactive';
 export type PurchaseOrderStatus =
   | 'draft'
@@ -877,6 +878,20 @@ export type ScanInventoryBarcodeInput = {
   notes?: string | null;
 };
 
+export type CreateInventoryBarcodePrintJobInput = {
+  clinicId: string;
+  printerLanguage?: InventoryBarcodePrintLanguage;
+  requestedByUserId?: string | null;
+  notes?: string | null;
+  labels: Array<{
+    type?: string | null;
+    title: string;
+    subtitle?: string | null;
+    barcode: string;
+    detail?: string | null;
+  }>;
+};
+
 export type CreateInvoiceInput = {
   clinicId: string;
   patientId: string;
@@ -1204,6 +1219,9 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   receiveInventoryLot?: (input: ReceiveInventoryLotInput) => Promise<unknown | null>;
   scanInventoryBarcode?: (input: ScanInventoryBarcodeInput) => Promise<unknown | null>;
+  createInventoryBarcodePrintJob?: (
+    input: CreateInventoryBarcodePrintJobInput
+  ) => Promise<unknown | null>;
   listSuppliers?: (input: {
     clinicId: string;
     search?: string;

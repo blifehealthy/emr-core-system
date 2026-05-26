@@ -104,6 +104,7 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/inventory-lots` | List inventory lots by clinic and optional inventory item. |
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
 | `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |
+| `POST` | `/api/inventory-barcode-print-jobs` | Create barcode label print/export job and return rendered payload. |
 | `GET` | `/api/stock-movements` | List stock movement audit rows by clinic and optional inventory item. |
 | `GET` | `/api/medication-dispenses` | List medication dispense rows by clinic. |
 | `GET` | `/api/drug-interaction-rules` | List clinic-managed interaction rules. |
@@ -279,6 +280,12 @@ All routes except `GET /health` can be protected by bearer token when
 - The Prescriptions tab exposes a scanner panel backed by the barcode scan API.
 - Inventory item and lot cards can open printable barcode labels.
 - The Pharmacy inventory panel can print a bulk sheet of loaded barcode labels.
+
+## Phase 3J Additions
+
+- Barcode print jobs audit label export requests.
+- The print job API renders `html`, `zpl`, and `escpos` payloads.
+- The Pharmacy inventory panel can export loaded labels as ZPL or ESC/POS.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

@@ -20,6 +20,7 @@ import {
   toInventoryItemDto,
   toInventoryItemDtos,
   toInventoryBarcodeScanDto,
+  toInventoryBarcodePrintJobDto,
   toInventoryLotDto,
   toInventoryLotDtos,
   toPurchaseOrderDto,
@@ -78,6 +79,7 @@ import {
   validateAdjustInventoryStockBody,
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
+  validateCreateInventoryBarcodePrintJobBody,
   validateCreateSupplierBody,
   validateUpdateSupplierBody,
   validateCreatePurchaseOrderBody,
@@ -2269,6 +2271,41 @@ export async function handleScanInventoryBarcode(
   try {
     const scan = await dependencies.scanInventoryBarcode(validation.value);
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodeScanDto(scan) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCreateInventoryBarcodePrintJob(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryBarcodePrintJob) {
+    return mapError(new Error('Inventory barcode print job dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryBarcodePrintJobBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const job = await dependencies.createInventoryBarcodePrintJob(validation.value);
+    if (!job) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory barcode print job not created' } };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_print_job',
+      entityId: (job as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        printerLanguage: validation.value.printerLanguage ?? 'html',
+        labelCount: validation.value.labels.length,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
   } catch (error) {
     return mapError(error);
   }

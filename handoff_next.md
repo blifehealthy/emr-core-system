@@ -135,6 +135,13 @@
     - item and lot barcode label print views
     - bulk print sheet for loaded barcode-enabled items/lots
     - Phase 3I plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3J ZPL/ESC/POS label export and print-job audit:
+    - migration `0032_add_phase_3j_barcode_print_jobs`
+    - `inventory_barcode_print_jobs` audit table
+    - `POST /api/inventory-barcode-print-jobs`
+    - server-rendered payloads for `html`, `zpl`, and `escpos`
+    - Pharmacy inventory Export ZPL and Export ESC/POS actions
+    - Phase 3J plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -142,7 +149,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `137/137` passing
+  - current result: `139/139` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -154,8 +161,8 @@
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
   - frontend workflow smoke coverage
-  - current result: passing, including Phase 3I scanner panel and barcode label
-    print builder checks
+  - current result: passing, including Phase 3J scanner panel, barcode label
+    print builder, and label printer export checks
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - `npm run db:test`
@@ -166,7 +173,8 @@
   - current result: passing, including Phase 3E supplier creation/listing,
     purchase order creation/listing, Phase 3G approval policy creation,
     two-step approval, Phase 3H barcode scan lookup, verified receiving,
-    verified PO receiving, and verified dispensing
+    verified PO receiving, verified dispensing, and Phase 3J ZPL print job
+    creation
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -735,8 +743,9 @@ Then produce:
    verified dispensing.
 6. Run Phase 3I pharmacy UAT for scanner panel ergonomics and barcode label
    printing.
-7. Start the next Phase 3 pharmacy follow-up from UAT findings: ZPL/ESC/POS
-   printer export, GS1 parsing, budget controls, multi-location stock, supplier
+7. Run Phase 3J pharmacy/IT UAT for ZPL/ESC/POS export and print-job audit.
+8. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+   integration, GS1 parsing, budget controls, multi-location stock, supplier
    payment handoff, or controlled-substance register.
-8. If pharmacy UAT is not the blocker, switch to accounting or payer export
+9. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

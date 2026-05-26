@@ -4142,17 +4142,28 @@ function createBarcodeScannerPanel(patient) {
   printAllButton.className = 'secondary-button compact-button';
   printAllButton.textContent = 'พิมพ์ labels ทั้งหมด';
   printAllButton.addEventListener('click', () => {
-    const labels = [
-      ...currentInventoryItems.filter((item) => item.barcode).map(toInventoryItemLabel),
-      ...currentInventoryLots.filter((lot) => lot.barcode).map(toInventoryLotLabel),
-    ];
+    const labels = getLoadedBarcodeLabels();
     if (labels.length === 0) {
       setStatus('ยังไม่มี barcode สำหรับพิมพ์ label', 'error');
       return;
     }
     openBarcodeLabelPrint(labels, 'Pharmacy barcode labels');
   });
-  panel.append(scanButton, printAllButton);
+  const zplButton = document.createElement('button');
+  zplButton.type = 'button';
+  zplButton.className = 'secondary-button compact-button';
+  zplButton.textContent = 'Export ZPL';
+  zplButton.addEventListener('click', async () => {
+    await exportBarcodePrintJob(patient, getLoadedBarcodeLabels(), 'zpl');
+  });
+  const escposButton = document.createElement('button');
+  escposButton.type = 'button';
+  escposButton.className = 'secondary-button compact-button';
+  escposButton.textContent = 'Export ESC/POS';
+  escposButton.addEventListener('click', async () => {
+    await exportBarcodePrintJob(patient, getLoadedBarcodeLabels(), 'escpos');
+  });
+  panel.append(scanButton, printAllButton, zplButton, escposButton);
 
   const result = document.createElement('p');
   result.className = 'muted-text compact-note';
@@ -4195,6 +4206,13 @@ function createBarcodeScannerPanel(patient) {
   });
 
   return panel;
+}
+
+function getLoadedBarcodeLabels() {
+  return [
+    ...currentInventoryItems.filter((item) => item.barcode).map(toInventoryItemLabel),
+    ...currentInventoryLots.filter((lot) => lot.barcode).map(toInventoryLotLabel),
+  ];
 }
 
 function createSupplierSelectField(name, labelText, required = false) {
@@ -5225,6 +5243,63 @@ function openBarcodeLabelPrint(labels, title = 'Barcode labels') {
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();
+}
+
+async function exportBarcodePrintJob(patient, labels, printerLanguage) {
+  if (labels.length === 0) {
+    setStatus('ยังไม่มี barcode สำหรับ export', 'error');
+    return;
+  }
+
+  setStatus(`กำลัง export ${printerLanguage.toUpperCase()}`, '');
+  try {
+    const response = await fetch('/api/inventory-barcode-print-jobs', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        printerLanguage,
+        requestedByUserId: readValue('userId'),
+        labels,
+        notes: 'Barcode label export from pharmacy inventory',
+      })),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
+    openTextExportWindow(payload.data?.rendered_payload ?? '', `${printerLanguage.toUpperCase()} barcode labels`);
+    setStatus(`export ${printerLanguage.toUpperCase()} แล้ว`, 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : `export ${printerLanguage} ไม่สำเร็จ`, 'error');
+  }
+}
+
+function openTextExportWindow(text, title = 'Export') {
+  const exportWindow = window.open('', '_blank', 'width=720,height=840');
+  if (!exportWindow) return;
+
+  exportWindow.document.write(`
+    <!doctype html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { margin: 0; color: #17211f; font-family: Arial, sans-serif; }
+          main { padding: 24px; }
+          h1 { font-size: 20px; margin: 0 0 12px; }
+          pre { white-space: pre-wrap; word-break: break-word; border: 1px solid #d9e4e0; padding: 16px; }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>${escapeHtml(title)}</h1>
+          <pre>${escapeHtml(text)}</pre>
+        </main>
+      </body>
+    </html>
+  `);
+  exportWindow.document.close();
+  exportWindow.focus();
 }
 
 function toInventoryItemLabel(item) {

@@ -61,6 +61,7 @@ const migrations = [
   '0029_add_phase_3f_purchase_order_approvals.up.sql',
   '0030_add_phase_3g_multi_approver_routing.up.sql',
   '0031_add_phase_3h_barcode_verification.up.sql',
+  '0032_add_phase_3j_barcode_print_jobs.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -945,6 +946,34 @@ async function main() {
     );
     assert.equal(barcodeScan.data.matched, true);
     assert.equal(barcodeScan.data.inventory_item_id, inventoryItem.data.id);
+
+    const barcodePrintJob = await requestJson<{
+      id: string;
+      printer_language: string;
+      label_count: number;
+      rendered_payload: string;
+    }>(
+      '/api/inventory-barcode-print-jobs',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        printerLanguage: 'zpl',
+        labels: [
+          {
+            type: 'ITEM',
+            title: 'Amoxicillin 500mg stock',
+            subtitle: 'AMOX',
+            barcode: inventoryItem.data.barcode,
+            detail: 'Smoke label',
+          },
+        ],
+      }
+    );
+    assert.equal(barcodePrintJob.data.printer_language, 'zpl');
+    assert.equal(barcodePrintJob.data.label_count, 1);
+    assert.match(barcodePrintJob.data.rendered_payload, /\^XA/);
 
     const inventoryLots = await requestJson<Array<{ id: string; lot_number: string }>>(
       `/api/inventory-lots?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&includeEmpty=true&limit=10`,

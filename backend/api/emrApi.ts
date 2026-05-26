@@ -17,6 +17,7 @@ import {
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
   handleCreateInventoryItem,
+  handleCreateInventoryBarcodePrintJob,
   handleCreatePurchaseOrder,
   handleCreatePurchaseOrderApprovalPolicy,
   handleCreateSupplier,
@@ -680,6 +681,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
       return handleScanInventoryBarcode(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/inventory-barcode-print-jobs') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateInventoryBarcodePrintJob(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/suppliers') {
