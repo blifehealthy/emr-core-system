@@ -3393,6 +3393,10 @@ export function validateDispensePrescriptionBody(
   if (!fefoOverrideReason.ok) return fefoOverrideReason;
   const dispensedByUserId = readOptionalNullableStringField(candidate, 'dispensedByUserId');
   if (!dispensedByUserId.ok) return dispensedByUserId;
+  const witnessUserId = readOptionalNullableStringField(candidate, 'witnessUserId');
+  if (!witnessUserId.ok) return witnessUserId;
+  const witnessNote = readOptionalNullableStringField(candidate, 'witnessNote');
+  if (!witnessNote.ok) return witnessNote;
   const notes = readOptionalNullableStringField(candidate, 'notes');
   if (!notes.ok) return notes;
 
@@ -3409,6 +3413,8 @@ export function validateDispensePrescriptionBody(
       expiryOverrideReason: expiryOverrideReason.value,
       fefoOverrideReason: fefoOverrideReason.value,
       dispensedByUserId: dispensedByUserId.value,
+      witnessUserId: witnessUserId.value,
+      witnessNote: witnessNote.value,
       notes: notes.value,
     },
   };

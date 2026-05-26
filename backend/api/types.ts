@@ -958,6 +958,8 @@ export type DispensePrescriptionInput = {
   expiryOverrideReason?: string | null;
   fefoOverrideReason?: string | null;
   dispensedByUserId?: string | null;
+  witnessUserId?: string | null;
+  witnessNote?: string | null;
   notes?: string | null;
 };
 

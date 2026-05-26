@@ -201,6 +201,13 @@
     - report combines controlled item lot receiving, dispensing, and transfer events
     - Operations dashboard shows controlled substance chart and recent events
     - Phase 3R plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3S controlled dispense witness:
+    - migration `0039_add_phase_3s_controlled_dispense_witness`
+    - `medication_dispenses` stores `witness_user_id`, `witnessed_at`, and `witness_note`
+    - controlled inventory item dispense requires `witnessUserId`
+    - dispenser and witness must be different users
+    - controlled substance register includes witness metadata for dispense events
+    - Phase 3S plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -208,7 +215,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `151/151` passing
+  - current result: `152/152` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -238,8 +245,9 @@
     location-aware receiving/dispensing, Phase 3M location stock ledger and
     transfer workflow, Phase 3N transfer approval/receiving workflow, plus
     Phase 3O FEFO/expiry override fields, Phase 3P pharmacy override
-    JSON/CSV report, Phase 3Q separated transfer/override permissions, and
-    Phase 3R controlled substance register JSON/CSV report
+    JSON/CSV report, Phase 3Q separated transfer/override permissions,
+    Phase 3R controlled substance register JSON/CSV report, and Phase 3S
+    controlled dispense witness metadata
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

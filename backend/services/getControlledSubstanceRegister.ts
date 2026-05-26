@@ -28,6 +28,9 @@ export function getControlledSubstanceRegister(db: {
             l.received_quantity AS quantity,
             'in' AS direction,
             l.received_by_user_id AS actor_user_id,
+            NULL::uuid AS witness_user_id,
+            NULL::timestamptz AS witnessed_at,
+            NULL::text AS witness_note,
             l.reference_number,
             l.notes
           FROM inventory_lots l
@@ -53,6 +56,9 @@ export function getControlledSubstanceRegister(db: {
             d.quantity,
             'out' AS direction,
             d.dispensed_by_user_id AS actor_user_id,
+            d.witness_user_id,
+            d.witnessed_at,
+            d.witness_note,
             d.prescription_id::text AS reference_number,
             d.notes
           FROM medication_dispenses d
@@ -79,6 +85,9 @@ export function getControlledSubstanceRegister(db: {
             t.quantity,
             'transfer' AS direction,
             COALESCE(t.received_by_user_id, t.approved_by_user_id, t.requested_by_user_id, t.transferred_by_user_id) AS actor_user_id,
+            NULL::uuid AS witness_user_id,
+            NULL::timestamptz AS witnessed_at,
+            NULL::text AS witness_note,
             t.status::text AS reference_number,
             CONCAT_WS(' -> ', from_loc.display_name, to_loc.display_name) AS notes
           FROM inventory_transfers t

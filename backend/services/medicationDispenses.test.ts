@@ -44,3 +44,51 @@ test('medication dispense service reduces stock and records movement', async () 
   assert.ok(calls.some((call) => /UPDATE inventory_items/.test(call.sql) && call.params?.[1] === 8));
   assert.ok(calls.some((call) => /INSERT INTO stock_movements/.test(call.sql) && call.params?.[2] === 'lot-1'));
 });
+
+test('controlled medication dispense requires a different witness user', async () => {
+  const db = {
+    async query<T = unknown>(sql: string) {
+      if (sql.includes('FROM prescriptions')) {
+        return { rows: [{ id: 'rx-1', encounter_id: 'encounter-1' }] as T[] };
+      }
+      if (sql.includes('FROM inventory_items') && sql.includes('is_active')) {
+        return {
+          rows: [
+            {
+              id: 'item-1',
+              clinic_id: 'clinic-1',
+              barcode: null,
+              barcode_required: false,
+              is_controlled_substance: true,
+              quantity_on_hand: '10.00',
+            },
+          ] as T[],
+        };
+      }
+      return { rows: [] as T[] };
+    },
+  };
+
+  await assert.rejects(
+    () =>
+      dispensePrescription(db)({
+        prescriptionId: 'rx-1',
+        inventoryItemId: 'item-1',
+        quantity: 1,
+        dispensedByUserId: 'user-1',
+      }),
+    /requires witnessUserId/
+  );
+
+  await assert.rejects(
+    () =>
+      dispensePrescription(db)({
+        prescriptionId: 'rx-1',
+        inventoryItemId: 'item-1',
+        quantity: 1,
+        dispensedByUserId: 'user-1',
+        witnessUserId: 'user-1',
+      }),
+    /witness must be different/
+  );
+});

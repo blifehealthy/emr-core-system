@@ -4486,6 +4486,8 @@ export async function handleDispensePrescription(
         quantity: validation.value.quantity,
         expiryOverrideReason: validation.value.expiryOverrideReason,
         fefoOverrideReason: validation.value.fefoOverrideReason,
+        witnessUserId: validation.value.witnessUserId,
+        witnessNote: validation.value.witnessNote,
       },
     });
 

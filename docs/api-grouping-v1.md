@@ -358,6 +358,13 @@ All routes except `GET /health` can be protected by bearer token when
 - The report exposes JSON and CSV views for clinic owner or pharmacy lead review.
 - Operations dashboard can show controlled item totals, register event totals, and recent controlled item activity.
 
+## Phase 3S Additions
+
+- Controlled substance dispensing now requires a witness user.
+- The same user cannot be both dispenser and witness for a controlled dispense.
+- Medication dispense rows store witness user, witness time, and optional witness note.
+- Controlled substance register dispense events include witness metadata.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

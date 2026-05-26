@@ -72,6 +72,8 @@ assertContains(app, 'fetchControlledSubstanceRegister', 'controlled substance re
 assertContains(app, '/api/reports/controlled-substances', 'controlled substance register endpoint');
 assertContains(app, 'function createControlledSubstanceChart(', 'controlled substance chart');
 assertContains(app, 'isControlledSubstance', 'controlled inventory item payload');
+assertContains(app, 'witnessUserId', 'controlled dispense witness payload');
+assertContains(app, 'Witness user ID for controlled dispense', 'controlled dispense witness prompt');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');
 assertContains(styles, '.operations-charts', 'operations chart layout');

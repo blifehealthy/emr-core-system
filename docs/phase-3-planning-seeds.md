@@ -50,9 +50,11 @@ real UAT findings, but the likely product directions are below.
   transfer approval, transfer receiving, and transfer cancellation permissions.
 - Phase 3R completed the controlled-substance register foundation for
   controlled item receiving, dispensing, and transfer review.
+- Phase 3S completed the controlled dispense witness foundation for two-person
+  review metadata on controlled item dispensing.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  witness/co-sign controlled dispense workflow, or database-backed permission
+  witness re-authentication/digital signature, or database-backed permission
   customization.
 
 ### Patient Communication

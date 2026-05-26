@@ -165,6 +165,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0038_add_phase_3r_controlled_substance_register.up.sql'),
     'expected Phase 3R controlled substance register migration'
   );
+  assert.ok(
+    filenames.includes('0039_add_phase_3s_controlled_dispense_witness.up.sql'),
+    'expected Phase 3S controlled dispense witness migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

@@ -5824,6 +5824,17 @@ async function dispensePrescriptionPrompt(prescription) {
   const quantity = window.prompt('Quantity to dispense', '1');
   if (!quantity) return;
   const scannedBarcode = window.prompt('Scanned barcode (optional)', matchedLot?.barcode ?? matched?.barcode ?? '');
+  const selectedItem = currentInventoryItems.find((item) => item.id === inventoryItemId);
+  const witnessUserId = selectedItem?.is_controlled_substance
+    ? window.prompt('Witness user ID for controlled dispense', '') ?? ''
+    : '';
+  if (selectedItem?.is_controlled_substance && !witnessUserId) {
+    setStatus('ยาควบคุมต้องมี witness user', 'error');
+    return;
+  }
+  const witnessNote = selectedItem?.is_controlled_substance
+    ? window.prompt('Witness note', 'Controlled dispense witnessed') ?? ''
+    : '';
   const selectedLot = currentInventoryLots.find((lot) => lot.id === inventoryLotId);
   const recommendedLot = findFefoRecommendedLot(inventoryItemId, inventoryLocationId, Number(quantity));
   const expiryOverrideReason = selectedLot?.expired
@@ -5853,6 +5864,8 @@ async function dispensePrescriptionPrompt(prescription) {
         expiryOverrideReason,
         fefoOverrideReason,
         dispensedByUserId: readValue('userId'),
+        witnessUserId,
+        witnessNote,
         notes: 'Dispensed from patient record',
       })),
     });

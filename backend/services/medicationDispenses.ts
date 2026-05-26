@@ -86,10 +86,11 @@ export function dispensePrescription(db: {
       clinic_id: string;
       barcode: string | null;
       barcode_required: boolean;
+      is_controlled_substance: boolean;
       quantity_on_hand: string;
     }>(
       `
-        SELECT id, clinic_id, barcode, barcode_required, quantity_on_hand
+        SELECT id, clinic_id, barcode, barcode_required, is_controlled_substance, quantity_on_hand
         FROM inventory_items
         WHERE id = $1
           AND is_active IS TRUE
@@ -99,6 +100,16 @@ export function dispensePrescription(db: {
     );
     const item = itemResult.rows[0];
     if (!item) return null;
+
+    if (item.is_controlled_substance) {
+      const witnessUserId = input.witnessUserId?.trim();
+      if (!witnessUserId) {
+        throw new Error('Controlled substance dispense requires witnessUserId');
+      }
+      if (input.dispensedByUserId && witnessUserId === input.dispensedByUserId) {
+        throw new Error('Controlled substance dispense witness must be different from dispenser');
+      }
+    }
 
     const quantity = Number(input.quantity);
     const scannedBarcode = input.scannedBarcode ?? null;
@@ -199,9 +210,18 @@ export function dispensePrescription(db: {
           fefo_override_reason,
           fefo_recommended_lot_id,
           dispensed_by_user_id,
+          witness_user_id,
+          witnessed_at,
+          witness_note,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN now() ELSE NULL END, $9, $10, $11, $12, $13)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8,
+          CASE WHEN $8 THEN now() ELSE NULL END,
+          $9, $10, $11, $12, $13,
+          CASE WHEN $13::uuid IS NOT NULL THEN now() ELSE NULL END,
+          $14, $15
+        )
         RETURNING id
       `,
       [
@@ -217,6 +237,8 @@ export function dispensePrescription(db: {
         input.fefoOverrideReason ?? null,
         fefoRecommendedLotId,
         input.dispensedByUserId ?? null,
+        input.witnessUserId ?? null,
+        input.witnessNote ?? null,
         input.notes ?? null,
       ]
     );
@@ -273,6 +295,8 @@ export function dispensePrescription(db: {
           d.*,
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
+          i.is_controlled_substance,
+          i.controlled_substance_schedule,
           l.lot_number AS inventory_lot_number,
           l.expires_on AS inventory_lot_expires_on,
           loc.location_code AS inventory_location_code,
