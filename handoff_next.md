@@ -157,6 +157,14 @@
     - `GET/POST/PATCH /api/inventory-locations`
     - Pharmacy inventory location create form, location list, and location-aware receiving/adjust/dispense prompts
     - Phase 3L plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3M per-location stock ledger and transfers:
+    - migration `0035_add_phase_3m_location_stock_ledger`
+    - `inventory_location_stocks` and `inventory_transfers` tables
+    - `GET /api/inventory-location-stocks`
+    - `GET/POST /api/inventory-transfers`
+    - receiving, adjustment, PO receiving, and dispensing update location stock when location is provided
+    - Pharmacy inventory location stock cards and transfer form/history
+    - Phase 3M plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -164,7 +172,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `143/143` passing
+  - current result: `145/145` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -191,7 +199,8 @@
     two-step approval, Phase 3H barcode scan lookup, verified receiving,
     verified PO receiving, verified dispensing, Phase 3J ZPL print job
     creation, Phase 3K printer profile routing, and Phase 3L inventory
-    location-aware receiving/dispensing
+    location-aware receiving/dispensing, plus Phase 3M location stock ledger
+    and transfer workflow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

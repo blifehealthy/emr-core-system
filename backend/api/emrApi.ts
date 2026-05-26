@@ -19,6 +19,7 @@ import {
   handleCreateInventoryItem,
   handleCreateInventoryBarcodePrintJob,
   handleCreateInventoryLocation,
+  handleCreateInventoryTransfer,
   handleCreateInventoryPrinterProfile,
   handleCreatePurchaseOrder,
   handleCreatePurchaseOrderApprovalPolicy,
@@ -77,8 +78,10 @@ import {
   handleListDrugCatalog,
   handleListDrugInteractionRules,
   handleListInventoryItems,
+  handleListInventoryLocationStocks,
   handleListInventoryLocations,
   handleListInventoryLots,
+  handleListInventoryTransfers,
   handleListInventoryPrinterProfiles,
   handleListPurchaseOrders,
   handleListPurchaseOrderApprovalPolicies,
@@ -309,6 +312,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListInventoryLocations(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/inventory-location-stocks') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListInventoryLocationStocks(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/inventory-transfers') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListInventoryTransfers(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/inventory-printer-profiles') {
@@ -699,6 +714,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
       return handleCreateInventoryLocation(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/inventory-transfers') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateInventoryTransfer(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/inventory-barcode-scans') {

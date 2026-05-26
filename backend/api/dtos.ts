@@ -349,6 +349,47 @@ const INVENTORY_LOCATION_KEYS = [
   'deleted_at',
 ] as const;
 
+const INVENTORY_LOCATION_STOCK_KEYS = [
+  'id',
+  'clinic_id',
+  'inventory_item_id',
+  'inventory_location_id',
+  'bin_label',
+  'quantity_on_hand',
+  'reorder_level',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'inventory_location_code',
+  'inventory_location_display_name',
+  'low_stock',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INVENTORY_TRANSFER_KEYS = [
+  'id',
+  'clinic_id',
+  'inventory_item_id',
+  'from_inventory_location_id',
+  'to_inventory_location_id',
+  'from_bin_label',
+  'to_bin_label',
+  'quantity',
+  'status',
+  'transferred_at',
+  'transferred_by_user_id',
+  'notes',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'from_inventory_location_display_name',
+  'from_inventory_location_code',
+  'to_inventory_location_display_name',
+  'to_inventory_location_code',
+  'created_at',
+  'deleted_at',
+] as const;
+
 const SUPPLIER_KEYS = [
   'id',
   'clinic_id',
@@ -916,6 +957,22 @@ export function toInventoryLocationDto(row: unknown): Record<string, unknown> {
 
 export function toInventoryLocationDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryLocationDto(row));
+}
+
+export function toInventoryLocationStockDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_LOCATION_STOCK_KEYS]);
+}
+
+export function toInventoryLocationStockDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryLocationStockDto(row));
+}
+
+export function toInventoryTransferDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_TRANSFER_KEYS]);
+}
+
+export function toInventoryTransferDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryTransferDto(row));
 }
 
 export function toInventoryLotDto(row: unknown): Record<string, unknown> {

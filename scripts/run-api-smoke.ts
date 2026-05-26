@@ -64,6 +64,7 @@ const migrations = [
   '0032_add_phase_3j_barcode_print_jobs.up.sql',
   '0033_add_phase_3k_printer_profiles.up.sql',
   '0034_add_phase_3l_inventory_locations.up.sql',
+  '0035_add_phase_3m_location_stock_ledger.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -963,6 +964,19 @@ async function main() {
     assert.equal(Number(inventoryLot.data.quantity_on_hand), 6);
     assert.equal(inventoryLot.data.barcode_verified, true);
 
+    const locationStocksAfterReceive = await requestJson<Array<{
+      inventory_item_id: string;
+      inventory_location_id: string;
+      quantity_on_hand: string;
+    }>>(
+      `/api/inventory-location-stocks?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&includeEmpty=true&limit=10`,
+      adminHeaders
+    );
+    assert.ok(locationStocksAfterReceive.data.some((stock) =>
+      stock.inventory_location_id === inventoryLocation.data.id &&
+      Number(stock.quantity_on_hand) === 6
+    ));
+
     const barcodeScan = await requestJson<{
       id: string;
       matched: boolean;
@@ -1271,6 +1285,49 @@ async function main() {
     );
     assert.ok(stockMovements.data.some((item) => item.movement_type === 'dispense' && item.inventory_lot_id === inventoryLot.data.id));
     assert.ok(stockMovements.data.some((item) => item.inventory_location_id === inventoryLocation.data.id));
+
+    const destinationLocation = await requestJson<{ id: string }>(
+      '/api/inventory-locations',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        locationCode: `DISP-${Date.now()}`,
+        displayName: 'Dispensing Counter',
+        locationType: 'dispensing',
+      }
+    );
+    const transfer = await requestJson<{
+      id: string;
+      inventory_item_id: string;
+      from_inventory_location_id: string;
+      to_inventory_location_id: string;
+      quantity: string;
+    }>(
+      '/api/inventory-transfers',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        inventoryItemId: inventoryItem.data.id,
+        fromInventoryLocationId: inventoryLocation.data.id,
+        toInventoryLocationId: destinationLocation.data.id,
+        fromBinLabel: 'A1',
+        toBinLabel: 'D1',
+        quantity: 1,
+      }
+    );
+    assert.equal(transfer.data.inventory_item_id, inventoryItem.data.id);
+    assert.equal(transfer.data.from_inventory_location_id, inventoryLocation.data.id);
+    assert.equal(transfer.data.to_inventory_location_id, destinationLocation.data.id);
+
+    const transfers = await requestJson<Array<{ id: string }>>(
+      `/api/inventory-transfers?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&limit=10`,
+      adminHeaders
+    );
+    assert.ok(transfers.data.some((item) => item.id === transfer.data.id));
 
     const chargeTemplate = await requestJson<{
       id: string;

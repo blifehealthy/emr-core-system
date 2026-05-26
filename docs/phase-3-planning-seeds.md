@@ -36,8 +36,10 @@ real UAT findings, but the likely product directions are below.
   connection type, endpoint, default profile, and print-job routing audit.
 - Phase 3L completed inventory locations/bins for lot receiving, dispensing,
   and stock movement audit.
+- Phase 3M completed the first per-location stock ledger and immediate transfer
+  workflow between inventory locations/bins.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
-  notification integration, per-location stock ledger, printer bridge delivery,
+  notification integration, transfer approval/in-transit workflow, printer bridge delivery,
   supplier payment handoff, or controlled substance workflow.
 
 ### Patient Communication

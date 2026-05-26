@@ -8,6 +8,7 @@ import type {
   UpdatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderInput,
 } from '../api/types.ts';
+import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 type Db = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -702,6 +703,14 @@ export function receivePurchaseOrder(db: Db) {
         input.receivedByUserId ?? null,
       ]
     );
+
+    await applyInventoryLocationStockChange(db, {
+      clinicId: line.clinic_id,
+      inventoryItemId: line.inventory_item_id,
+      inventoryLocationId: input.inventoryLocationId ?? null,
+      binLabel: input.binLabel ?? null,
+      quantityDelta: quantity,
+    });
 
     await db.query(
       `

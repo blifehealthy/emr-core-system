@@ -104,6 +104,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/inventory-locations` | List inventory locations/bins for a clinic. |
 | `POST` | `/api/inventory-locations` | Create an inventory location with default and active flags. |
 | `PATCH` | `/api/inventory-locations/:locationId` | Update an inventory location or default flag. |
+| `GET` | `/api/inventory-location-stocks` | List per-location/bin stock ledger rows. |
+| `GET` | `/api/inventory-transfers` | List inventory transfers between locations. |
+| `POST` | `/api/inventory-transfers` | Transfer item quantity between two inventory locations/bins. |
 | `GET` | `/api/inventory-lots` | List inventory lots by clinic and optional inventory item. |
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
 | `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |
@@ -304,6 +307,13 @@ All routes except `GET /health` can be protected by bearer token when
 - Inventory locations store pharmacy/bin/branch stock destinations per clinic.
 - Lots, medication dispenses, and stock movements can record `inventory_location_id`.
 - The Pharmacy inventory panel can create locations, assign received lots to a location/bin, and include location when adjusting or dispensing stock.
+
+## Phase 3M Additions
+
+- Inventory location stock ledger rows track item quantity by location and optional bin.
+- Receiving, manual adjustment, purchase order receiving, and dispensing update the location ledger when a location is provided.
+- Inventory transfers move quantity between two locations/bins and create stock movement audit rows.
+- The Pharmacy inventory panel can view location stock rows and create transfer records.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

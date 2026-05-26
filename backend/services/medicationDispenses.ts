@@ -1,4 +1,5 @@
 import type { DispensePrescriptionInput } from '../api/types.ts';
+import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 export function listMedicationDispenses(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -102,6 +103,7 @@ export function dispensePrescription(db: {
     const scannedBarcode = input.scannedBarcode ?? null;
     let barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
     let inventoryLocationId = input.inventoryLocationId ?? null;
+    let binLabel: string | null = null;
     const quantityBefore = Number(item.quantity_on_hand);
     const quantityAfter = Number((quantityBefore - quantity).toFixed(2));
     if (quantityAfter < 0) {
@@ -113,10 +115,11 @@ export function dispensePrescription(db: {
         id: string;
         barcode: string | null;
         inventory_location_id: string | null;
+        bin_label: string | null;
         quantity_on_hand: string;
       }>(
         `
-          SELECT id, barcode, inventory_location_id, quantity_on_hand
+          SELECT id, barcode, inventory_location_id, bin_label, quantity_on_hand
           FROM inventory_lots
           WHERE id = $1
             AND inventory_item_id = $2
@@ -127,6 +130,7 @@ export function dispensePrescription(db: {
       const lot = lotResult.rows[0];
       if (!lot) return null;
       inventoryLocationId = inventoryLocationId ?? lot.inventory_location_id;
+      binLabel = lot.bin_label;
       barcodeVerified = Boolean(
         scannedBarcode &&
           ((lot.barcode && scannedBarcode === lot.barcode) ||
@@ -235,6 +239,14 @@ export function dispensePrescription(db: {
         input.dispensedByUserId ?? null,
       ]
     );
+
+    await applyInventoryLocationStockChange(db, {
+      clinicId: item.clinic_id,
+      inventoryItemId: input.inventoryItemId,
+      inventoryLocationId,
+      binLabel,
+      quantityDelta: -quantity,
+    });
 
     const dispense = await db.query(
       `

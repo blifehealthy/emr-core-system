@@ -694,6 +694,18 @@ export type UpdateInventoryLocationInput = {
   notes?: string | null;
 };
 
+export type CreateInventoryTransferInput = {
+  clinicId: string;
+  inventoryItemId: string;
+  fromInventoryLocationId: string;
+  toInventoryLocationId: string;
+  fromBinLabel?: string | null;
+  toBinLabel?: string | null;
+  quantity: number | string;
+  transferredByUserId?: string | null;
+  notes?: string | null;
+};
+
 export type CreateSupplierInput = {
   clinicId: string;
   supplierCode: string;
@@ -1270,6 +1282,21 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createInventoryLocation?: (input: CreateInventoryLocationInput) => Promise<unknown>;
   updateInventoryLocation?: (input: UpdateInventoryLocationInput) => Promise<unknown | null>;
+  listInventoryLocationStocks?: (input: {
+    clinicId: string;
+    inventoryItemId?: string;
+    inventoryLocationId?: string;
+    includeEmpty?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  listInventoryTransfers?: (input: {
+    clinicId: string;
+    inventoryItemId?: string;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInventoryTransfer?: (input: CreateInventoryTransferInput) => Promise<unknown | null>;
   listInventoryLots?: (input: {
     clinicId: string;
     inventoryItemId?: string;

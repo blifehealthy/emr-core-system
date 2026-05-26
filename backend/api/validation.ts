@@ -21,6 +21,7 @@ import type {
   CreateInventoryItemInput,
   ReceiveInventoryLotInput,
   CreateInventoryLocationInput,
+  CreateInventoryTransferInput,
   UpdateInventoryLocationInput,
   CreateSupplierInput,
   UpdateSupplierInput,
@@ -2810,6 +2811,55 @@ export function validateUpdateInventoryLocationBody(
       locationType: locationType.value,
       isDefault: isDefault.value,
       isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateInventoryTransferBody(body: unknown):
+  | { ok: true; value: CreateInventoryTransferInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const inventoryItemId = readRequiredString(candidate.inventoryItemId, 'inventoryItemId');
+  if (!inventoryItemId.ok) return inventoryItemId;
+  const fromInventoryLocationId = readRequiredString(
+    candidate.fromInventoryLocationId,
+    'fromInventoryLocationId'
+  );
+  if (!fromInventoryLocationId.ok) return fromInventoryLocationId;
+  const toInventoryLocationId = readRequiredString(
+    candidate.toInventoryLocationId,
+    'toInventoryLocationId'
+  );
+  if (!toInventoryLocationId.ok) return toInventoryLocationId;
+  const fromBinLabel = readOptionalNullableStringField(candidate, 'fromBinLabel');
+  if (!fromBinLabel.ok) return fromBinLabel;
+  const toBinLabel = readOptionalNullableStringField(candidate, 'toBinLabel');
+  if (!toBinLabel.ok) return toBinLabel;
+  const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
+  if (!quantity.ok) return quantity;
+  const transferredByUserId = readOptionalNullableStringField(candidate, 'transferredByUserId');
+  if (!transferredByUserId.ok) return transferredByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      inventoryItemId: inventoryItemId.value,
+      fromInventoryLocationId: fromInventoryLocationId.value,
+      toInventoryLocationId: toInventoryLocationId.value,
+      fromBinLabel: fromBinLabel.value,
+      toBinLabel: toBinLabel.value,
+      quantity: quantity.value,
+      transferredByUserId: transferredByUserId.value,
       notes: notes.value,
     },
   };

@@ -46,6 +46,8 @@ let currentFileAssetStoragePolicy = null;
 let currentDrugCatalog = [];
 let currentInventoryItems = [];
 let currentInventoryLocations = [];
+let currentInventoryLocationStocks = [];
+let currentInventoryTransfers = [];
 let currentInventoryLots = [];
 let currentSuppliers = [];
 let currentPurchaseOrders = [];
@@ -355,6 +357,8 @@ searchForm.addEventListener('submit', async (event) => {
     currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryLocations = await fetchInventoryLocations(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryLocationStocks = await fetchInventoryLocationStocks(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryTransfers = await fetchInventoryTransfers(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
     currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
@@ -833,6 +837,45 @@ async function fetchInventoryLocations(clinicId, apiToken) {
   });
 
   const response = await fetch(`/api/inventory-locations?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryLocationStocks(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    includeEmpty: 'true',
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-location-stocks?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryTransfers(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-transfers?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2420,6 +2463,8 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryLocations = await fetchInventoryLocations(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryLocationStocks = await fetchInventoryLocationStocks(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryTransfers = await fetchInventoryTransfers(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
@@ -3783,6 +3828,8 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryLocations = await fetchInventoryLocations(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryLocationStocks = await fetchInventoryLocationStocks(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryTransfers = await fetchInventoryTransfers(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(refreshed.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
@@ -3990,6 +4037,7 @@ function createPharmacyInventoryPanel(patient) {
   section.append(createMetricGrid([
     ['Inventory items', currentInventoryItems.length],
     ['Locations', currentInventoryLocations.length],
+    ['Location stocks', currentInventoryLocationStocks.length],
     ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
     ['Lots', currentInventoryLots.length],
     ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
@@ -4077,6 +4125,27 @@ function createPharmacyInventoryPanel(patient) {
     await createInventoryLocationFromForm(patient, locationForm, locationSubmit);
   });
   section.append(locationForm);
+
+  const transferForm = document.createElement('form');
+  transferForm.className = 'nested-inline-form';
+  transferForm.append(
+    createInventoryItemSelectField('inventoryItemId', 'Inventory item', true),
+    createInventoryLocationSelectField('fromInventoryLocationId', 'From location', true),
+    createFormField('fromBinLabel', 'From bin', 'input'),
+    createInventoryLocationSelectField('toInventoryLocationId', 'To location', true),
+    createFormField('toBinLabel', 'To bin', 'input'),
+    createFormField('quantity', 'Transfer quantity', 'input', true)
+  );
+  const transferSubmit = document.createElement('button');
+  transferSubmit.type = 'submit';
+  transferSubmit.className = 'secondary-button compact-button';
+  transferSubmit.textContent = 'ย้าย stock';
+  transferForm.append(transferSubmit);
+  transferForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInventoryTransferFromForm(patient, transferForm, transferSubmit);
+  });
+  section.append(transferForm);
 
   const supplierForm = document.createElement('form');
   supplierForm.className = 'nested-inline-form';
@@ -4188,6 +4257,35 @@ function createPharmacyInventoryPanel(patient) {
   }
   if (currentInventoryLots.length > 0) {
     section.append(lotList);
+  }
+
+  const stockList = document.createElement('div');
+  stockList.className = 'record-list';
+  for (const stock of currentInventoryLocationStocks.slice(0, 6)) {
+    stockList.append(createRecordCard(stock, inventoryLocationStockSummary, [
+      'inventory_item_display_name',
+      'inventory_location_display_name',
+      'bin_label',
+      'quantity_on_hand',
+      'low_stock',
+    ]));
+  }
+  if (currentInventoryLocationStocks.length > 0) {
+    section.append(stockList);
+  }
+
+  const transferList = document.createElement('div');
+  transferList.className = 'record-list';
+  for (const transfer of currentInventoryTransfers.slice(0, 4)) {
+    transferList.append(createRecordCard(transfer, inventoryTransferSummary, [
+      'from_inventory_location_display_name',
+      'to_inventory_location_display_name',
+      'quantity',
+      'status',
+    ]));
+  }
+  if (currentInventoryTransfers.length > 0) {
+    section.append(transferList);
   }
 
   const locationList = document.createElement('div');
@@ -4684,6 +4782,40 @@ async function createInventoryLocationFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'เพิ่ม location';
+  }
+}
+
+async function createInventoryTransferFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังย้าย';
+  try {
+    const response = await fetch('/api/inventory-transfers', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        inventoryItemId: values.inventoryItemId,
+        fromInventoryLocationId: values.fromInventoryLocationId,
+        toInventoryLocationId: values.toInventoryLocationId,
+        fromBinLabel: values.fromBinLabel,
+        toBinLabel: values.toBinLabel,
+        quantity: values.quantity,
+        transferredByUserId: readValue('userId'),
+        notes: 'Inventory transfer from pharmacy panel',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('ย้าย stock แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'ย้าย stock ไม่สำเร็จ');
+    setStatus('ย้าย stock ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'ย้าย stock';
   }
 }
 
@@ -6401,6 +6533,14 @@ function inventoryItemSummary(item) {
 
 function inventoryLocationSummary(item) {
   return `${item.display_name ?? item.location_code ?? item.id}${item.is_default ? ' · default' : ''}`;
+}
+
+function inventoryLocationStockSummary(item) {
+  return `${item.inventory_item_display_name ?? item.inventory_item_code ?? item.id} · ${item.quantity_on_hand ?? 0}`;
+}
+
+function inventoryTransferSummary(item) {
+  return `${item.inventory_item_display_name ?? item.inventory_item_code ?? item.id} · ${item.quantity ?? 0}`;
 }
 
 function inventoryLotSummary(item) {

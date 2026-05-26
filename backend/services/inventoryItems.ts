@@ -3,6 +3,7 @@ import type {
   CreateInventoryItemInput,
   UpdateInventoryItemInput,
 } from '../api/types.ts';
+import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 export function listInventoryItems(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -233,6 +234,14 @@ export function adjustInventoryStock(db: {
         input.performedByUserId ?? null,
       ]
     );
+
+    await applyInventoryLocationStockChange(db, {
+      clinicId: item.clinic_id,
+      inventoryItemId: input.inventoryItemId,
+      inventoryLocationId: input.inventoryLocationId ?? null,
+      binLabel: input.binLabel ?? null,
+      quantityDelta: signedQuantity,
+    });
 
     return updated.rows[0] ?? null;
   };

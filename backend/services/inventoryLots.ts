@@ -1,4 +1,5 @@
 import type { ReceiveInventoryLotInput } from '../api/types.ts';
+import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 type Db = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -197,6 +198,14 @@ export function receiveInventoryLot(db: Db) {
         input.receivedByUserId ?? null,
       ]
     );
+
+    await applyInventoryLocationStockChange(db, {
+      clinicId: item.clinic_id,
+      inventoryItemId: input.inventoryItemId,
+      inventoryLocationId: input.inventoryLocationId ?? null,
+      binLabel: input.binLabel ?? null,
+      quantityDelta: quantity,
+    });
 
     const lot = await db.query(
       `

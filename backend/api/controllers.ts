@@ -21,6 +21,9 @@ import {
   toInventoryItemDtos,
   toInventoryLocationDto,
   toInventoryLocationDtos,
+  toInventoryLocationStockDtos,
+  toInventoryTransferDto,
+  toInventoryTransferDtos,
   toInventoryBarcodeScanDto,
   toInventoryBarcodePrintJobDto,
   toInventoryPrinterProfileDto,
@@ -82,6 +85,7 @@ import {
   validateUpdateInventoryItemBody,
   validateAdjustInventoryStockBody,
   validateCreateInventoryLocationBody,
+  validateCreateInventoryTransferBody,
   validateUpdateInventoryLocationBody,
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
@@ -2280,6 +2284,109 @@ export async function handleUpdateInventoryLocation(
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryLocationDto(location) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListInventoryLocationStocks(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryLocationStocks) {
+    return mapError(new Error('Inventory location stock list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
+  if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const inventoryLocationId = readOptionalQueryString(request, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return validationError(inventoryLocationId.error);
+  const includeEmpty = readOptionalBooleanQuery(request, 'includeEmpty');
+  if (!includeEmpty.ok) return validationError(includeEmpty.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const stocks = await dependencies.listInventoryLocationStocks({
+    clinicId,
+    inventoryItemId: inventoryItemId.value,
+    inventoryLocationId: inventoryLocationId.value,
+    includeEmpty: includeEmpty.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryLocationStockDtos(stocks.rows), meta: stocks.meta },
+  };
+}
+
+export async function handleListInventoryTransfers(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryTransfers) {
+    return mapError(new Error('Inventory transfer list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
+  if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const transfers = await dependencies.listInventoryTransfers({
+    clinicId,
+    inventoryItemId: inventoryItemId.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryTransferDtos(transfers.rows), meta: transfers.meta },
+  };
+}
+
+export async function handleCreateInventoryTransfer(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryTransfer) {
+    return mapError(new Error('Inventory transfer create dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryTransferBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const transfer = await dependencies.createInventoryTransfer(validation.value);
+    if (!transfer) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory item not found' } };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_transfer',
+      entityId: (transfer as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        inventoryItemId: validation.value.inventoryItemId,
+        quantity: validation.value.quantity,
+      },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryTransferDto(transfer) } };
   } catch (error) {
     return mapError(error);
   }
