@@ -19,6 +19,8 @@ import {
   toDrugInteractionRuleDtos,
   toInventoryItemDto,
   toInventoryItemDtos,
+  toInventoryLocationDto,
+  toInventoryLocationDtos,
   toInventoryBarcodeScanDto,
   toInventoryBarcodePrintJobDto,
   toInventoryPrinterProfileDto,
@@ -79,6 +81,8 @@ import {
   validateCreateInventoryItemBody,
   validateUpdateInventoryItemBody,
   validateAdjustInventoryStockBody,
+  validateCreateInventoryLocationBody,
+  validateUpdateInventoryLocationBody,
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
   validateCreateInventoryBarcodePrintJobBody,
@@ -2187,6 +2191,100 @@ export async function handleAdjustInventoryStock(
   }
 }
 
+export async function handleListInventoryLocations(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryLocations) {
+    return mapError(new Error('Inventory location list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const locations = await dependencies.listInventoryLocations({
+    clinicId,
+    active: active.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryLocationDtos(locations.rows), meta: locations.meta },
+  };
+}
+
+export async function handleCreateInventoryLocation(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryLocation) {
+    return mapError(new Error('Inventory location create dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryLocationBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const location = await dependencies.createInventoryLocation(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_location',
+      entityId: (location as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { locationCode: validation.value.locationCode },
+    });
+
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryLocationDto(location) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateInventoryLocation(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  locationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInventoryLocation) {
+    return mapError(new Error('Inventory location update dependency is not configured'));
+  }
+
+  const validation = validateUpdateInventoryLocationBody(request.body, locationId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const location = await dependencies.updateInventoryLocation(validation.value);
+    if (!location) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory location not found' } };
+    }
+
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_location',
+      entityId: locationId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { fields: Object.keys(request.body as Record<string, unknown>) },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryLocationDto(location) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
 export async function handleListInventoryLots(
   request: HttpRequest,
   dependencies: Dependencies
@@ -2199,6 +2297,8 @@ export async function handleListInventoryLots(
   if (!clinicId) return validationError('clinicId is required query parameter');
   const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
   if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const inventoryLocationId = readOptionalQueryString(request, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return validationError(inventoryLocationId.error);
   const expiringBefore = readOptionalQueryString(request, 'expiringBefore');
   if (!expiringBefore.ok) return validationError(expiringBefore.error);
   const includeEmpty = readOptionalBooleanQuery(request, 'includeEmpty');
@@ -2211,6 +2311,7 @@ export async function handleListInventoryLots(
   const lots = await dependencies.listInventoryLots({
     clinicId,
     inventoryItemId: inventoryItemId.value,
+    inventoryLocationId: inventoryLocationId.value,
     expiringBefore: expiringBefore.value,
     includeEmpty: includeEmpty.value,
     limit: limit.value,
@@ -2899,6 +3000,8 @@ export async function handleListStockMovements(
   if (!clinicId) return validationError('clinicId is required query parameter');
   const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
   if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const inventoryLocationId = readOptionalQueryString(request, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return validationError(inventoryLocationId.error);
   const limit = readOptionalLimitQuery(request);
   if (!limit.ok) return validationError(limit.error);
   const offset = readOptionalOffsetQuery(request);
@@ -2907,6 +3010,7 @@ export async function handleListStockMovements(
   const movements = await dependencies.listStockMovements({
     clinicId,
     inventoryItemId: inventoryItemId.value,
+    inventoryLocationId: inventoryLocationId.value,
     limit: limit.value,
     offset: offset.value,
   });

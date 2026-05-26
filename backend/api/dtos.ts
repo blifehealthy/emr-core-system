@@ -305,10 +305,12 @@ const INVENTORY_LOT_KEYS = [
   'id',
   'clinic_id',
   'inventory_item_id',
+  'inventory_location_id',
   'supplier_id',
   'purchase_order_id',
   'purchase_order_line_id',
   'lot_number',
+  'bin_label',
   'barcode',
   'received_barcode',
   'barcode_verified',
@@ -324,8 +326,24 @@ const INVENTORY_LOT_KEYS = [
   'notes',
   'inventory_item_display_name',
   'inventory_item_code',
+  'inventory_location_code',
+  'inventory_location_display_name',
   'expired',
   'expiring_soon',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
+const INVENTORY_LOCATION_KEYS = [
+  'id',
+  'clinic_id',
+  'location_code',
+  'display_name',
+  'location_type',
+  'is_default',
+  'is_active',
+  'notes',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -427,6 +445,7 @@ const STOCK_MOVEMENT_KEYS = [
   'clinic_id',
   'inventory_item_id',
   'inventory_lot_id',
+  'inventory_location_id',
   'prescription_id',
   'medication_dispense_id',
   'movement_type',
@@ -434,6 +453,7 @@ const STOCK_MOVEMENT_KEYS = [
   'quantity_before',
   'quantity_after',
   'reason',
+  'bin_label',
   'scanned_barcode',
   'barcode_verified',
   'performed_by_user_id',
@@ -442,6 +462,8 @@ const STOCK_MOVEMENT_KEYS = [
   'inventory_item_code',
   'inventory_lot_number',
   'inventory_lot_expires_on',
+  'inventory_location_code',
+  'inventory_location_display_name',
   'created_at',
   'deleted_at',
 ] as const;
@@ -452,6 +474,7 @@ const MEDICATION_DISPENSE_KEYS = [
   'prescription_id',
   'inventory_item_id',
   'inventory_lot_id',
+  'inventory_location_id',
   'status',
   'quantity',
   'scanned_barcode',
@@ -464,6 +487,8 @@ const MEDICATION_DISPENSE_KEYS = [
   'inventory_item_code',
   'inventory_lot_number',
   'inventory_lot_expires_on',
+  'inventory_location_code',
+  'inventory_location_display_name',
   'created_at',
   'updated_at',
   'deleted_at',
@@ -883,6 +908,14 @@ export function toInventoryItemDto(row: unknown): Record<string, unknown> {
 
 export function toInventoryItemDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryItemDto(row));
+}
+
+export function toInventoryLocationDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_LOCATION_KEYS]);
+}
+
+export function toInventoryLocationDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryLocationDto(row));
 }
 
 export function toInventoryLotDto(row: unknown): Record<string, unknown> {

@@ -101,6 +101,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/inventory-items` | Create inventory item linked optionally to drug catalog. |
 | `PATCH` | `/api/inventory-items/:inventoryItemId` | Update inventory metadata and reorder level. |
 | `PATCH` | `/api/inventory-items/:inventoryItemId/stock` | Record manual stock adjustment and update quantity on hand. |
+| `GET` | `/api/inventory-locations` | List inventory locations/bins for a clinic. |
+| `POST` | `/api/inventory-locations` | Create an inventory location with default and active flags. |
+| `PATCH` | `/api/inventory-locations/:locationId` | Update an inventory location or default flag. |
 | `GET` | `/api/inventory-lots` | List inventory lots by clinic and optional inventory item. |
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
 | `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |
@@ -295,6 +298,12 @@ All routes except `GET /health` can be protected by bearer token when
 - Printer profiles store clinic label printer language, connection type, endpoint, location, and default profile.
 - Barcode print jobs can reference a printer profile and record connection type, target endpoint, and delivery status.
 - The Pharmacy inventory panel can create printer profiles and select one when exporting ZPL or ESC/POS labels.
+
+## Phase 3L Additions
+
+- Inventory locations store pharmacy/bin/branch stock destinations per clinic.
+- Lots, medication dispenses, and stock movements can record `inventory_location_id`.
+- The Pharmacy inventory panel can create locations, assign received lots to a location/bin, and include location when adjusting or dispensing stock.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

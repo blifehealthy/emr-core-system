@@ -63,6 +63,7 @@ const migrations = [
   '0031_add_phase_3h_barcode_verification.up.sql',
   '0032_add_phase_3j_barcode_print_jobs.up.sql',
   '0033_add_phase_3k_printer_profiles.up.sql',
+  '0034_add_phase_3l_inventory_locations.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -897,6 +898,32 @@ async function main() {
     );
     assert.equal(Number(adjustedInventoryItem.data.quantity_on_hand), 15);
 
+    const inventoryLocation = await requestJson<{
+      id: string;
+      location_code: string;
+      display_name: string;
+      is_default: boolean;
+    }>(
+      '/api/inventory-locations',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        locationCode: `PHARM-${Date.now()}`,
+        displayName: 'Main Pharmacy',
+        locationType: 'pharmacy',
+        isDefault: true,
+      }
+    );
+    assert.equal(inventoryLocation.data.is_default, true);
+
+    const inventoryLocations = await requestJson<Array<{ id: string }>>(
+      '/api/inventory-locations?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=20',
+      adminHeaders
+    );
+    assert.ok(inventoryLocations.data.some((location) => location.id === inventoryLocation.data.id));
+
     const inventoryItems = await requestJson<Array<{ id: string; low_stock: boolean }>>(
       '/api/inventory-items?clinicId=10000000-0000-0000-0000-000000000101&active=active&limit=20',
       adminHeaders
@@ -908,6 +935,8 @@ async function main() {
       lot_number: string;
       quantity_on_hand: string;
       inventory_item_id: string;
+      inventory_location_id: string;
+      inventory_location_display_name: string;
       barcode_verified: boolean;
     }>(
       '/api/inventory-lots/receive',
@@ -916,6 +945,8 @@ async function main() {
       201,
       {
         inventoryItemId: inventoryItem.data.id,
+        inventoryLocationId: inventoryLocation.data.id,
+        binLabel: 'A1',
         lotNumber: `AMOX-LOT-${Date.now()}`,
         lotBarcode: `BC-LOT-${Date.now()}`,
         scannedBarcode: inventoryItem.data.barcode,
@@ -927,6 +958,8 @@ async function main() {
       }
     );
     assert.equal(inventoryLot.data.inventory_item_id, inventoryItem.data.id);
+    assert.equal(inventoryLot.data.inventory_location_id, inventoryLocation.data.id);
+    assert.equal(inventoryLot.data.inventory_location_display_name, 'Main Pharmacy');
     assert.equal(Number(inventoryLot.data.quantity_on_hand), 6);
     assert.equal(inventoryLot.data.barcode_verified, true);
 
@@ -1198,6 +1231,7 @@ async function main() {
       quantity: string;
       inventory_item_id: string;
       inventory_lot_id: string;
+      inventory_location_id: string;
       barcode_verified: boolean;
     }>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
@@ -1207,6 +1241,7 @@ async function main() {
       {
         inventoryItemId: inventoryItem.data.id,
         inventoryLotId: inventoryLot.data.id,
+        inventoryLocationId: inventoryLocation.data.id,
         scannedBarcode: inventoryItem.data.barcode,
         requireBarcodeVerification: true,
         quantity: 2,
@@ -1215,6 +1250,7 @@ async function main() {
     );
     assert.equal(dispense.data.inventory_item_id, inventoryItem.data.id);
     assert.equal(dispense.data.inventory_lot_id, inventoryLot.data.id);
+    assert.equal(dispense.data.inventory_location_id, inventoryLocation.data.id);
     assert.equal(Number(dispense.data.quantity), 2);
     assert.equal(dispense.data.barcode_verified, true);
 
@@ -1227,12 +1263,14 @@ async function main() {
     const stockMovements = await requestJson<Array<{
       inventory_item_id: string;
       inventory_lot_id: string | null;
+      inventory_location_id: string | null;
       movement_type: string;
     }>>(
       `/api/stock-movements?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&limit=10`,
       adminHeaders
     );
     assert.ok(stockMovements.data.some((item) => item.movement_type === 'dispense' && item.inventory_lot_id === inventoryLot.data.id));
+    assert.ok(stockMovements.data.some((item) => item.inventory_location_id === inventoryLocation.data.id));
 
     const chargeTemplate = await requestJson<{
       id: string;

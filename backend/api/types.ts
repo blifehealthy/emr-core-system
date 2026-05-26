@@ -649,6 +649,8 @@ export type UpdateInventoryItemInput = {
 
 export type AdjustInventoryStockInput = {
   inventoryItemId: string;
+  inventoryLocationId?: string | null;
+  binLabel?: string | null;
   movementType: Exclude<StockMovementType, 'dispense'>;
   quantity: number | string;
   reason?: string | null;
@@ -657,6 +659,8 @@ export type AdjustInventoryStockInput = {
 
 export type ReceiveInventoryLotInput = {
   inventoryItemId: string;
+  inventoryLocationId?: string | null;
+  binLabel?: string | null;
   lotNumber: string;
   lotBarcode?: string | null;
   scannedBarcode?: string | null;
@@ -667,6 +671,26 @@ export type ReceiveInventoryLotInput = {
   supplierName?: string | null;
   referenceNumber?: string | null;
   receivedByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type CreateInventoryLocationInput = {
+  clinicId: string;
+  locationCode: string;
+  displayName: string;
+  locationType?: string;
+  isDefault?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdateInventoryLocationInput = {
+  locationId: string;
+  locationCode?: string;
+  displayName?: string;
+  locationType?: string;
+  isDefault?: boolean;
+  isActive?: boolean;
   notes?: string | null;
 };
 
@@ -724,6 +748,8 @@ export type UpdatePurchaseOrderInput = {
 export type ReceivePurchaseOrderInput = {
   purchaseOrderId: string;
   purchaseOrderLineId: string;
+  inventoryLocationId?: string | null;
+  binLabel?: string | null;
   lotNumber: string;
   lotBarcode?: string | null;
   scannedBarcode?: string | null;
@@ -888,6 +914,7 @@ export type DispensePrescriptionInput = {
   prescriptionId: string;
   inventoryItemId: string;
   inventoryLotId?: string | null;
+  inventoryLocationId?: string | null;
   scannedBarcode?: string | null;
   requireBarcodeVerification?: boolean;
   quantity: number | string;
@@ -1235,9 +1262,18 @@ export type Dependencies = {
   createInventoryItem?: (input: CreateInventoryItemInput) => Promise<unknown>;
   updateInventoryItem?: (input: UpdateInventoryItemInput) => Promise<unknown | null>;
   adjustInventoryStock?: (input: AdjustInventoryStockInput) => Promise<unknown | null>;
+  listInventoryLocations?: (input: {
+    clinicId: string;
+    active?: DrugCatalogActiveFilter;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInventoryLocation?: (input: CreateInventoryLocationInput) => Promise<unknown>;
+  updateInventoryLocation?: (input: UpdateInventoryLocationInput) => Promise<unknown | null>;
   listInventoryLots?: (input: {
     clinicId: string;
     inventoryItemId?: string;
+    inventoryLocationId?: string;
     expiringBefore?: string;
     includeEmpty?: boolean;
     limit?: number;
@@ -1298,6 +1334,7 @@ export type Dependencies = {
   listStockMovements?: (input: {
     clinicId: string;
     inventoryItemId?: string;
+    inventoryLocationId?: string;
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;

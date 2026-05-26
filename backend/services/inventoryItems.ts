@@ -209,23 +209,27 @@ export function adjustInventoryStock(db: {
         INSERT INTO stock_movements (
           clinic_id,
           inventory_item_id,
+          inventory_location_id,
           movement_type,
           quantity,
           quantity_before,
           quantity_after,
           reason,
+          bin_label,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
+        input.inventoryLocationId ?? null,
         input.movementType,
         quantity,
         quantityBefore,
         quantityAfter,
         input.reason ?? null,
+        input.binLabel ?? null,
         input.performedByUserId ?? null,
       ]
     );

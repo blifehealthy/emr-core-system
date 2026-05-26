@@ -18,6 +18,7 @@ import {
   handleCreateDrugInteractionRule,
   handleCreateInventoryItem,
   handleCreateInventoryBarcodePrintJob,
+  handleCreateInventoryLocation,
   handleCreateInventoryPrinterProfile,
   handleCreatePurchaseOrder,
   handleCreatePurchaseOrderApprovalPolicy,
@@ -76,6 +77,7 @@ import {
   handleListDrugCatalog,
   handleListDrugInteractionRules,
   handleListInventoryItems,
+  handleListInventoryLocations,
   handleListInventoryLots,
   handleListInventoryPrinterProfiles,
   handleListPurchaseOrders,
@@ -104,6 +106,7 @@ import {
   handleUpdateDrugCatalogItem,
   handleUpdateDrugInteractionRule,
   handleUpdateInventoryItem,
+  handleUpdateInventoryLocation,
   handleUpdateInventoryPrinterProfile,
   handleUpdatePurchaseOrder,
   handleUpdatePurchaseOrderApprovalPolicy,
@@ -300,6 +303,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListInventoryLots(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/inventory-locations') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListInventoryLocations(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/inventory-printer-profiles') {
@@ -686,6 +695,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleReceiveInventoryLot(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/inventory-locations') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateInventoryLocation(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/inventory-barcode-scans') {
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
@@ -1010,6 +1025,17 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
         if (roleError) return roleError;
         return handleUpdateInventoryItem(actorAwareRequest, dependencies, inventoryItemMatch[1]);
+      }
+
+      const inventoryLocationMatch = request.path.match(/^\/api\/inventory-locations\/([^/]+)$/);
+      if (inventoryLocationMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdateInventoryLocation(
+          actorAwareRequest,
+          dependencies,
+          inventoryLocationMatch[1]
+        );
       }
 
       const supplierMatch = request.path.match(/^\/api\/suppliers\/([^/]+)$/);

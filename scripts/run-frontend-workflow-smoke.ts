@@ -29,9 +29,13 @@ assertContains(app, 'function createPrescriptionEntryForm(', 'prescription entry
 assertContains(app, '/api/prescription-safety-checks', 'prescription safety check endpoint');
 assertContains(app, 'function fetchDrugCatalog(', 'drug catalog loader');
 assertContains(app, 'function fetchInventoryLots(', 'inventory lot loader');
+assertContains(app, 'function fetchInventoryLocations(', 'inventory location loader');
+assertContains(app, '/api/inventory-locations', 'inventory location endpoint');
 assertContains(app, '/api/inventory-lots/receive', 'inventory lot receiving endpoint');
 assertContains(app, '/api/inventory-barcode-scans', 'barcode scan endpoint');
 assertContains(app, 'function receiveInventoryLotFromForm(', 'inventory lot receiving form handler');
+assertContains(app, 'function createInventoryLocationFromForm(', 'inventory location form handler');
+assertContains(app, 'inventoryLocationId', 'location-aware stock payload');
 assertContains(app, 'function createBarcodeScannerPanel(', 'barcode scanner panel');
 assertContains(app, 'function buildBarcodeLabelPrintHtml(', 'barcode label print HTML builder');
 assertContains(app, 'พิมพ์ labels ทั้งหมด', 'barcode label print action');

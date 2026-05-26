@@ -45,6 +45,7 @@ let currentLogoAssets = [];
 let currentFileAssetStoragePolicy = null;
 let currentDrugCatalog = [];
 let currentInventoryItems = [];
+let currentInventoryLocations = [];
 let currentInventoryLots = [];
 let currentSuppliers = [];
 let currentPurchaseOrders = [];
@@ -353,6 +354,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
     currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryLocations = await fetchInventoryLocations(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
     currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
@@ -811,6 +813,26 @@ async function fetchInventoryLots(clinicId, apiToken, inventoryItemId = '') {
   if (inventoryItemId) params.set('inventoryItemId', inventoryItemId);
 
   const response = await fetch(`/api/inventory-lots?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryLocations(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-locations?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2397,6 +2419,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(patient.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryLocations = await fetchInventoryLocations(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(patient.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
@@ -3759,6 +3782,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentClinicalNoteTemplates = await fetchClinicalNoteTemplates(refreshed.clinic_id, apiToken);
   currentDrugCatalog = await fetchDrugCatalog(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryItems = await fetchInventoryItems(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryLocations = await fetchInventoryLocations(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryLots = await fetchInventoryLots(refreshed.clinic_id, apiToken).catch(() => []);
   currentSuppliers = await fetchSuppliers(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
@@ -3965,6 +3989,7 @@ function createPharmacyInventoryPanel(patient) {
 
   section.append(createMetricGrid([
     ['Inventory items', currentInventoryItems.length],
+    ['Locations', currentInventoryLocations.length],
     ['Low stock', currentInventoryItems.filter((item) => item.low_stock).length],
     ['Lots', currentInventoryLots.length],
     ['Expiring', currentInventoryLots.filter((lot) => lot.expiring_soon).length],
@@ -4009,6 +4034,8 @@ function createPharmacyInventoryPanel(patient) {
     createFormField('lotNumber', 'Lot number', 'input', true),
     createFormField('lotBarcode', 'Lot barcode', 'input'),
     createFormField('scannedBarcode', 'Scanned barcode', 'input'),
+    createInventoryLocationSelectField('inventoryLocationId', 'Location'),
+    createFormField('binLabel', 'Bin', 'input'),
     expiresOnField,
     createFormField('quantity', 'Receive quantity', 'input', true),
     createSupplierSelectField('supplierId', 'Supplier master'),
@@ -4025,6 +4052,31 @@ function createPharmacyInventoryPanel(patient) {
     await receiveInventoryLotFromForm(patient, receiveForm, receiveSubmit);
   });
   section.append(receiveForm);
+
+  const locationForm = document.createElement('form');
+  locationForm.className = 'nested-inline-form';
+  locationForm.append(
+    createFormField('locationCode', 'Location code', 'input', true),
+    createFormField('displayName', 'Location name', 'input', true),
+    createFormField('locationType', 'Type', 'input')
+  );
+  const locationDefaultLabel = document.createElement('label');
+  locationDefaultLabel.textContent = 'Default';
+  const locationDefault = document.createElement('input');
+  locationDefault.type = 'checkbox';
+  locationDefault.name = 'isDefault';
+  locationDefault.value = 'true';
+  locationDefaultLabel.append(locationDefault);
+  const locationSubmit = document.createElement('button');
+  locationSubmit.type = 'submit';
+  locationSubmit.className = 'secondary-button compact-button';
+  locationSubmit.textContent = 'เพิ่ม location';
+  locationForm.append(locationDefaultLabel, locationSubmit);
+  locationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInventoryLocationFromForm(patient, locationForm, locationSubmit);
+  });
+  section.append(locationForm);
 
   const supplierForm = document.createElement('form');
   supplierForm.className = 'nested-inline-form';
@@ -4136,6 +4188,20 @@ function createPharmacyInventoryPanel(patient) {
   }
   if (currentInventoryLots.length > 0) {
     section.append(lotList);
+  }
+
+  const locationList = document.createElement('div');
+  locationList.className = 'record-list';
+  for (const location of currentInventoryLocations.slice(0, 4)) {
+    locationList.append(createRecordCard(location, inventoryLocationSummary, [
+      'location_code',
+      'location_type',
+      'is_default',
+      'is_active',
+    ]));
+  }
+  if (currentInventoryLocations.length > 0) {
+    section.append(locationList);
   }
 
   const poList = document.createElement('div');
@@ -4367,6 +4433,27 @@ function createInventoryItemSelectField(name, labelText, required = false) {
   return label;
 }
 
+function createInventoryLocationSelectField(name, labelText, required = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  select.required = required;
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = 'Unassigned';
+  select.append(emptyOption);
+  for (const location of currentInventoryLocations) {
+    const option = document.createElement('option');
+    option.value = location.id;
+    option.textContent = `${location.display_name ?? location.location_code ?? location.id}${location.is_default ? ' (default)' : ''}`;
+    if (location.is_default) option.selected = true;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
+}
+
 function applyDrugCatalogInventorySelection(form) {
   const selected = currentDrugCatalog.find((item) => item.id === form.elements.drugCatalogId.value);
   if (!selected) return;
@@ -4410,7 +4497,9 @@ function createInventoryItemCard(item) {
 function createInventoryLotCard(lot) {
   const card = createRecordCard(lot, inventoryLotSummary, [
     'inventory_item_display_name',
+    'inventory_location_display_name',
     'lot_number',
+    'bin_label',
     'barcode',
     'barcode_verified',
     'expires_on',
@@ -4540,6 +4629,8 @@ async function receiveInventoryLotFromForm(patient, form, submit) {
       headers: buildHeaders(currentApiToken || readValue('apiToken')),
       body: JSON.stringify(compactPayload({
         inventoryItemId: values.inventoryItemId,
+        inventoryLocationId: values.inventoryLocationId,
+        binLabel: values.binLabel,
         lotNumber: values.lotNumber,
         lotBarcode: values.lotBarcode,
         scannedBarcode: values.scannedBarcode,
@@ -4563,6 +4654,36 @@ async function receiveInventoryLotFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'รับเข้า lot';
+  }
+}
+
+async function createInventoryLocationFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/inventory-locations', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        locationCode: values.locationCode,
+        displayName: values.displayName,
+        locationType: values.locationType || 'pharmacy',
+        isDefault: values.isDefault === 'true',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม inventory location แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม location ไม่สำเร็จ');
+    setStatus('เพิ่ม location ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม location';
   }
 }
 
@@ -4760,6 +4881,9 @@ async function receivePurchaseOrderPrompt(order) {
   const quantity = window.prompt('Receive quantity', String(remaining || 1));
   if (!quantity) return;
   const expiresOn = window.prompt('Expires on YYYY-MM-DD (optional)', '');
+  const defaultLocation = currentInventoryLocations.find((location) => location.is_default) ?? currentInventoryLocations[0];
+  const inventoryLocationId = window.prompt('Inventory location ID (optional)', defaultLocation?.id ?? '');
+  const binLabel = window.prompt('Bin (optional)', '');
 
   setStatus('กำลังรับของจาก PO', '');
   try {
@@ -4768,6 +4892,8 @@ async function receivePurchaseOrderPrompt(order) {
       headers: buildHeaders(currentApiToken || readValue('apiToken')),
       body: JSON.stringify(compactPayload({
         purchaseOrderLineId: line.id,
+        inventoryLocationId,
+        binLabel,
         lotNumber,
         lotBarcode,
         scannedBarcode,
@@ -4790,6 +4916,9 @@ async function receivePurchaseOrderPrompt(order) {
 async function adjustInventoryStockPrompt(item, movementType) {
   const quantity = window.prompt('Quantity', '1');
   if (!quantity) return;
+  const defaultLocation = currentInventoryLocations.find((location) => location.is_default) ?? currentInventoryLocations[0];
+  const inventoryLocationId = window.prompt('Inventory location ID (optional)', defaultLocation?.id ?? '');
+  const binLabel = window.prompt('Bin (optional)', '');
   const reason = window.prompt('Reason', movementType === 'adjustment_in' ? 'Stock received' : 'Manual adjustment');
   setStatus('กำลังปรับ stock', '');
   try {
@@ -4798,6 +4927,8 @@ async function adjustInventoryStockPrompt(item, movementType) {
       headers: buildHeaders(currentApiToken || readValue('apiToken')),
       body: JSON.stringify(compactPayload({
         movementType,
+        inventoryLocationId,
+        binLabel,
         quantity,
         reason,
         performedByUserId: readValue('userId'),
@@ -5332,6 +5463,11 @@ async function dispensePrescriptionPrompt(prescription) {
     ) ??
     currentInventoryLots.find((lot) => lot.inventory_item_id === inventoryItemId && Number(lot.quantity_on_hand ?? 0) > 0);
   const inventoryLotId = window.prompt('Inventory lot ID (optional)', matchedLot?.id ?? '');
+  const matchedLocation =
+    currentInventoryLocations.find((location) => location.id === matchedLot?.inventory_location_id) ??
+    currentInventoryLocations.find((location) => location.is_default) ??
+    currentInventoryLocations[0];
+  const inventoryLocationId = window.prompt('Inventory location ID (optional)', matchedLocation?.id ?? '');
   const quantity = window.prompt('Quantity to dispense', '1');
   if (!quantity) return;
   const scannedBarcode = window.prompt('Scanned barcode (optional)', matchedLot?.barcode ?? matched?.barcode ?? '');
@@ -5344,6 +5480,7 @@ async function dispensePrescriptionPrompt(prescription) {
       body: JSON.stringify(compactPayload({
         inventoryItemId,
         inventoryLotId,
+        inventoryLocationId,
         scannedBarcode,
         requireBarcodeVerification: Boolean(scannedBarcode),
         quantity,
@@ -6262,10 +6399,15 @@ function inventoryItemSummary(item) {
   return `${item.display_name ?? item.item_code ?? item.id}${item.low_stock ? ' · low stock' : ''}`;
 }
 
+function inventoryLocationSummary(item) {
+  return `${item.display_name ?? item.location_code ?? item.id}${item.is_default ? ' · default' : ''}`;
+}
+
 function inventoryLotSummary(item) {
   const expiry = item.expires_on ? ` · exp ${formatValue(item.expires_on)}` : '';
   const alert = item.expired ? ' · expired' : item.expiring_soon ? ' · expiring' : '';
-  return `${item.lot_number ?? item.id}${expiry}${alert}`;
+  const location = item.inventory_location_display_name ? ` · ${item.inventory_location_display_name}` : '';
+  return `${item.lot_number ?? item.id}${location}${expiry}${alert}`;
 }
 
 function purchaseOrderSummary(item) {

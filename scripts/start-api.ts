@@ -78,6 +78,11 @@ import {
   updateInventoryItem,
 } from '../backend/services/inventoryItems.ts';
 import {
+  createInventoryLocation,
+  listInventoryLocations,
+  updateInventoryLocation,
+} from '../backend/services/inventoryLocations.ts';
+import {
   listInventoryLots,
   receiveInventoryLot,
 } from '../backend/services/inventoryLots.ts';
@@ -249,6 +254,9 @@ const server = createNodeServer({
   createInventoryItem: createInventoryItem(db),
   updateInventoryItem: updateInventoryItem(db),
   adjustInventoryStock: adjustInventoryStock(db),
+  listInventoryLocations: listInventoryLocations(db),
+  createInventoryLocation: createInventoryLocation(db),
+  updateInventoryLocation: updateInventoryLocation(db),
   listInventoryLots: listInventoryLots(db),
   receiveInventoryLot: receiveInventoryLot(db),
   scanInventoryBarcode: scanInventoryBarcode(db),

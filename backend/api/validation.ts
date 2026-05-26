@@ -20,6 +20,8 @@ import type {
   CreateDrugInteractionRuleInput,
   CreateInventoryItemInput,
   ReceiveInventoryLotInput,
+  CreateInventoryLocationInput,
+  UpdateInventoryLocationInput,
   CreateSupplierInput,
   UpdateSupplierInput,
   CreatePurchaseOrderInput,
@@ -2616,6 +2618,10 @@ export function validateAdjustInventoryStockBody(
   if (!movementType.ok) return movementType;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
+  const inventoryLocationId = readOptionalNullableStringField(candidate, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return inventoryLocationId;
+  const binLabel = readOptionalNullableStringField(candidate, 'binLabel');
+  if (!binLabel.ok) return binLabel;
   const reason = readOptionalNullableStringField(candidate, 'reason');
   if (!reason.ok) return reason;
   const performedByUserId = readOptionalNullableStringField(candidate, 'performedByUserId');
@@ -2625,6 +2631,8 @@ export function validateAdjustInventoryStockBody(
     ok: true,
     value: {
       inventoryItemId,
+      inventoryLocationId: inventoryLocationId.value,
+      binLabel: binLabel.value,
       movementType: movementType.value,
       quantity: quantity.value,
       reason: reason.value,
@@ -2643,6 +2651,10 @@ export function validateReceiveInventoryLotBody(body: unknown):
 
   const inventoryItemId = readRequiredString(candidate.inventoryItemId, 'inventoryItemId');
   if (!inventoryItemId.ok) return inventoryItemId;
+  const inventoryLocationId = readOptionalNullableStringField(candidate, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return inventoryLocationId;
+  const binLabel = readOptionalNullableStringField(candidate, 'binLabel');
+  if (!binLabel.ok) return binLabel;
   const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
   if (!lotNumber.ok) return lotNumber;
   const lotBarcode = readOptionalNullableStringField(candidate, 'lotBarcode');
@@ -2670,6 +2682,8 @@ export function validateReceiveInventoryLotBody(body: unknown):
     ok: true,
     value: {
       inventoryItemId: inventoryItemId.value,
+      inventoryLocationId: inventoryLocationId.value,
+      binLabel: binLabel.value,
       lotNumber: lotNumber.value,
       lotBarcode: lotBarcode.value,
       scannedBarcode: scannedBarcode.value,
@@ -2723,6 +2737,79 @@ export function validateCreateSupplierBody(body: unknown):
       email: email.value,
       address: address.value,
       status: status.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateInventoryLocationBody(body: unknown):
+  | { ok: true; value: CreateInventoryLocationInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const locationCode = readRequiredString(candidate.locationCode, 'locationCode');
+  if (!locationCode.ok) return locationCode;
+  const displayName = readRequiredString(candidate.displayName, 'displayName');
+  if (!displayName.ok) return displayName;
+  const locationType = readOptionalTrimmedStringField(candidate, 'locationType');
+  if (!locationType.ok) return locationType;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      locationCode: locationCode.value,
+      displayName: displayName.value,
+      locationType: locationType.value,
+      isDefault: isDefault.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateInventoryLocationBody(
+  body: unknown,
+  locationId: string
+): { ok: true; value: UpdateInventoryLocationInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const locationCode = readOptionalTrimmedStringField(candidate, 'locationCode');
+  if (!locationCode.ok) return locationCode;
+  const displayName = readOptionalTrimmedStringField(candidate, 'displayName');
+  if (!displayName.ok) return displayName;
+  const locationType = readOptionalTrimmedStringField(candidate, 'locationType');
+  if (!locationType.ok) return locationType;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      locationId,
+      locationCode: locationCode.value,
+      displayName: displayName.value,
+      locationType: locationType.value,
+      isDefault: isDefault.value,
+      isActive: isActive.value,
       notes: notes.value,
     },
   };
@@ -2917,6 +3004,10 @@ export function validateReceivePurchaseOrderBody(
 
   const purchaseOrderLineId = readRequiredString(candidate.purchaseOrderLineId, 'purchaseOrderLineId');
   if (!purchaseOrderLineId.ok) return purchaseOrderLineId;
+  const inventoryLocationId = readOptionalNullableStringField(candidate, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return inventoryLocationId;
+  const binLabel = readOptionalNullableStringField(candidate, 'binLabel');
+  if (!binLabel.ok) return binLabel;
   const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
   if (!lotNumber.ok) return lotNumber;
   const lotBarcode = readOptionalNullableStringField(candidate, 'lotBarcode');
@@ -2939,6 +3030,8 @@ export function validateReceivePurchaseOrderBody(
     value: {
       purchaseOrderId,
       purchaseOrderLineId: purchaseOrderLineId.value,
+      inventoryLocationId: inventoryLocationId.value,
+      binLabel: binLabel.value,
       lotNumber: lotNumber.value,
       lotBarcode: lotBarcode.value,
       scannedBarcode: scannedBarcode.value,
@@ -3140,6 +3233,8 @@ export function validateDispensePrescriptionBody(
   if (!inventoryItemId.ok) return inventoryItemId;
   const inventoryLotId = readOptionalNullableStringField(candidate, 'inventoryLotId');
   if (!inventoryLotId.ok) return inventoryLotId;
+  const inventoryLocationId = readOptionalNullableStringField(candidate, 'inventoryLocationId');
+  if (!inventoryLocationId.ok) return inventoryLocationId;
   const scannedBarcode = readOptionalNullableStringField(candidate, 'scannedBarcode');
   if (!scannedBarcode.ok) return scannedBarcode;
   const requireBarcodeVerification = readOptionalBooleanField(candidate, 'requireBarcodeVerification');
@@ -3157,6 +3252,7 @@ export function validateDispensePrescriptionBody(
       prescriptionId,
       inventoryItemId: inventoryItemId.value,
       inventoryLotId: inventoryLotId.value,
+      inventoryLocationId: inventoryLocationId.value,
       scannedBarcode: scannedBarcode.value,
       requireBarcodeVerification: requireBarcodeVerification.value,
       quantity: quantity.value,

@@ -32,10 +32,13 @@ export function listMedicationDispenses(db: {
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
           l.lot_number AS inventory_lot_number,
-          l.expires_on AS inventory_lot_expires_on
+          l.expires_on AS inventory_lot_expires_on,
+          loc.location_code AS inventory_location_code,
+          loc.display_name AS inventory_location_display_name
         FROM medication_dispenses d
         JOIN inventory_items i ON i.id = d.inventory_item_id
         LEFT JOIN inventory_lots l ON l.id = d.inventory_lot_id
+        LEFT JOIN inventory_locations loc ON loc.id = d.inventory_location_id
         WHERE ${conditions.join('\n          AND ')}
         ORDER BY d.dispensed_at DESC, d.created_at DESC
         LIMIT $${params.length - 1}
@@ -98,6 +101,7 @@ export function dispensePrescription(db: {
     const quantity = Number(input.quantity);
     const scannedBarcode = input.scannedBarcode ?? null;
     let barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
+    let inventoryLocationId = input.inventoryLocationId ?? null;
     const quantityBefore = Number(item.quantity_on_hand);
     const quantityAfter = Number((quantityBefore - quantity).toFixed(2));
     if (quantityAfter < 0) {
@@ -108,10 +112,11 @@ export function dispensePrescription(db: {
       const lotResult = await db.query<{
         id: string;
         barcode: string | null;
+        inventory_location_id: string | null;
         quantity_on_hand: string;
       }>(
         `
-          SELECT id, barcode, quantity_on_hand
+          SELECT id, barcode, inventory_location_id, quantity_on_hand
           FROM inventory_lots
           WHERE id = $1
             AND inventory_item_id = $2
@@ -121,6 +126,7 @@ export function dispensePrescription(db: {
       );
       const lot = lotResult.rows[0];
       if (!lot) return null;
+      inventoryLocationId = inventoryLocationId ?? lot.inventory_location_id;
       barcodeVerified = Boolean(
         scannedBarcode &&
           ((lot.barcode && scannedBarcode === lot.barcode) ||
@@ -167,6 +173,7 @@ export function dispensePrescription(db: {
           prescription_id,
           inventory_item_id,
           inventory_lot_id,
+          inventory_location_id,
           quantity,
           scanned_barcode,
           barcode_verified,
@@ -174,7 +181,7 @@ export function dispensePrescription(db: {
           dispensed_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 THEN now() ELSE NULL END, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN now() ELSE NULL END, $9, $10)
         RETURNING id
       `,
       [
@@ -182,6 +189,7 @@ export function dispensePrescription(db: {
         input.prescriptionId,
         input.inventoryItemId,
         input.inventoryLotId ?? null,
+        inventoryLocationId,
         quantity,
         scannedBarcode,
         barcodeVerified,
@@ -197,6 +205,7 @@ export function dispensePrescription(db: {
           clinic_id,
           inventory_item_id,
           inventory_lot_id,
+          inventory_location_id,
           prescription_id,
           medication_dispense_id,
           movement_type,
@@ -208,12 +217,13 @@ export function dispensePrescription(db: {
           barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, $4, $5, 'dispense', $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, 'dispense', $7, $8, $9, $10, $11, $12, $13)
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
         input.inventoryLotId ?? null,
+        inventoryLocationId,
         input.prescriptionId,
         dispenseId,
         quantity,
@@ -233,10 +243,13 @@ export function dispensePrescription(db: {
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
           l.lot_number AS inventory_lot_number,
-          l.expires_on AS inventory_lot_expires_on
+          l.expires_on AS inventory_lot_expires_on,
+          loc.location_code AS inventory_location_code,
+          loc.display_name AS inventory_location_display_name
         FROM medication_dispenses d
         JOIN inventory_items i ON i.id = d.inventory_item_id
         LEFT JOIN inventory_lots l ON l.id = d.inventory_lot_id
+        LEFT JOIN inventory_locations loc ON loc.id = d.inventory_location_id
         WHERE d.id = $1
       `,
       [dispenseId]

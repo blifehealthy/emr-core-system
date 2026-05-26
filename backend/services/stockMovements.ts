@@ -4,6 +4,7 @@ export function listStockMovements(db: {
   return async function run(input: {
     clinicId: string;
     inventoryItemId?: string;
+    inventoryLocationId?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -17,6 +18,11 @@ export function listStockMovements(db: {
       conditions.push(`m.inventory_item_id = $${params.length}`);
     }
 
+    if (input.inventoryLocationId) {
+      params.push(input.inventoryLocationId);
+      conditions.push(`m.inventory_location_id = $${params.length}`);
+    }
+
     params.push(limit + 1, offset);
     const result = await db.query(
       `
@@ -25,10 +31,13 @@ export function listStockMovements(db: {
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
           l.lot_number AS inventory_lot_number,
-          l.expires_on AS inventory_lot_expires_on
+          l.expires_on AS inventory_lot_expires_on,
+          loc.location_code AS inventory_location_code,
+          loc.display_name AS inventory_location_display_name
         FROM stock_movements m
         JOIN inventory_items i ON i.id = m.inventory_item_id
         LEFT JOIN inventory_lots l ON l.id = m.inventory_lot_id
+        LEFT JOIN inventory_locations loc ON loc.id = m.inventory_location_id
         WHERE ${conditions.join('\n          AND ')}
         ORDER BY m.moved_at DESC, m.created_at DESC
         LIMIT $${params.length - 1}

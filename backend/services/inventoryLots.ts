@@ -8,6 +8,7 @@ export function listInventoryLots(db: Db) {
   return async function run(input: {
     clinicId: string;
     inventoryItemId?: string;
+    inventoryLocationId?: string;
     expiringBefore?: string;
     includeEmpty?: boolean;
     limit?: number;
@@ -21,6 +22,11 @@ export function listInventoryLots(db: Db) {
     if (input.inventoryItemId) {
       params.push(input.inventoryItemId);
       conditions.push(`l.inventory_item_id = $${params.length}`);
+    }
+
+    if (input.inventoryLocationId) {
+      params.push(input.inventoryLocationId);
+      conditions.push(`l.inventory_location_id = $${params.length}`);
     }
 
     if (input.expiringBefore) {
@@ -39,6 +45,8 @@ export function listInventoryLots(db: Db) {
           l.*,
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
+          loc.location_code AS inventory_location_code,
+          loc.display_name AS inventory_location_display_name,
           (l.expires_on IS NOT NULL AND l.expires_on < CURRENT_DATE) AS expired,
           (
             l.expires_on IS NOT NULL
@@ -46,6 +54,7 @@ export function listInventoryLots(db: Db) {
           ) AS expiring_soon
         FROM inventory_lots l
         JOIN inventory_items i ON i.id = l.inventory_item_id
+        LEFT JOIN inventory_locations loc ON loc.id = l.inventory_location_id
         WHERE ${conditions.join('\n          AND ')}
         ORDER BY l.expires_on NULLS LAST, l.received_at DESC, l.created_at DESC
         LIMIT $${params.length - 1}
@@ -104,8 +113,10 @@ export function receiveInventoryLot(db: Db) {
         INSERT INTO inventory_lots (
           clinic_id,
           inventory_item_id,
+          inventory_location_id,
           supplier_id,
           lot_number,
+          bin_label,
           barcode,
           received_barcode,
           barcode_verified,
@@ -119,14 +130,16 @@ export function receiveInventoryLot(db: Db) {
           received_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 THEN now() ELSE NULL END, $8, $9, $10, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $9 THEN now() ELSE NULL END, $10, $11, $12, $12, $13, $14, $15, $16)
         RETURNING id
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
+        input.inventoryLocationId ?? null,
         input.supplierId ?? null,
         input.lotNumber,
+        input.binLabel ?? null,
         lotBarcode ?? scannedBarcode,
         scannedBarcode,
         barcodeVerified,
@@ -156,25 +169,29 @@ export function receiveInventoryLot(db: Db) {
           clinic_id,
           inventory_item_id,
           inventory_lot_id,
+          inventory_location_id,
           movement_type,
           quantity,
           quantity_before,
           quantity_after,
           reason,
+          bin_label,
           scanned_barcode,
           barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, 'adjustment_in', $5, $6, $7, $8, $9, $10, $11, $12)
       `,
       [
         item.clinic_id,
         input.inventoryItemId,
         lotId,
+        input.inventoryLocationId ?? null,
         quantity,
         quantityBefore,
         quantityAfter,
         input.notes ?? `Inventory receiving ${input.lotNumber}`,
+        input.binLabel ?? null,
         scannedBarcode,
         barcodeVerified,
         input.receivedByUserId ?? null,
@@ -187,6 +204,8 @@ export function receiveInventoryLot(db: Db) {
           l.*,
           i.display_name AS inventory_item_display_name,
           i.item_code AS inventory_item_code,
+          loc.location_code AS inventory_location_code,
+          loc.display_name AS inventory_location_display_name,
           (l.expires_on IS NOT NULL AND l.expires_on < CURRENT_DATE) AS expired,
           (
             l.expires_on IS NOT NULL
@@ -194,6 +213,7 @@ export function receiveInventoryLot(db: Db) {
           ) AS expiring_soon
         FROM inventory_lots l
         JOIN inventory_items i ON i.id = l.inventory_item_id
+        LEFT JOIN inventory_locations loc ON loc.id = l.inventory_location_id
         WHERE l.id = $1
       `,
       [lotId]

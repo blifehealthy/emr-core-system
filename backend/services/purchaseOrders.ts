@@ -605,10 +605,12 @@ export function receivePurchaseOrder(db: Db) {
         INSERT INTO inventory_lots (
           clinic_id,
           inventory_item_id,
+          inventory_location_id,
           supplier_id,
           purchase_order_id,
           purchase_order_line_id,
           lot_number,
+          bin_label,
           barcode,
           received_barcode,
           barcode_verified,
@@ -622,16 +624,18 @@ export function receivePurchaseOrder(db: Db) {
           received_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $9 THEN now() ELSE NULL END, $10, $11, $12, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 THEN now() ELSE NULL END, $12, $13, $14, $14, $15, $16, $17, $18)
         RETURNING id
       `,
       [
         line.clinic_id,
         line.inventory_item_id,
+        input.inventoryLocationId ?? null,
         line.supplier_id,
         input.purchaseOrderId,
         input.purchaseOrderLineId,
         input.lotNumber,
+        input.binLabel ?? null,
         lotBarcode ?? scannedBarcode,
         scannedBarcode,
         barcodeVerified,
@@ -670,25 +674,29 @@ export function receivePurchaseOrder(db: Db) {
           clinic_id,
           inventory_item_id,
           inventory_lot_id,
+          inventory_location_id,
           movement_type,
           quantity,
           quantity_before,
           quantity_after,
           reason,
+          bin_label,
           scanned_barcode,
           barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, 'adjustment_in', $5, $6, $7, $8, $9, $10, $11, $12)
       `,
       [
         line.clinic_id,
         line.inventory_item_id,
         lotId,
+        input.inventoryLocationId ?? null,
         quantity,
         quantityBefore,
         quantityAfter,
         input.notes ?? `Purchase order receiving ${line.purchase_order_number}`,
+        input.binLabel ?? null,
         scannedBarcode,
         barcodeVerified,
         input.receivedByUserId ?? null,
