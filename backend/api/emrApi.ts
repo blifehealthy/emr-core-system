@@ -106,6 +106,7 @@ import {
   handleListPatientMedications,
   handleListPractitioners,
   handleListPrescriptionsByEncounter,
+  handleListRolePermissions,
   handleListUsers,
   handleListVitalSignsByEncounter,
   handleSignClinicalNote,
@@ -149,6 +150,7 @@ import {
   handleUpdateChargeTemplate,
   handleUpdateInsuranceClaim,
   handleUpdateInvoice,
+  handleUpsertRolePermission,
   handleVoidInvoice,
   notFound,
 } from './controllers.ts';
@@ -204,6 +206,7 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         userId: resolvedActor.user_id,
         practitionerId: resolvedActor.practitioner_id,
         role: resolvedActor.role,
+        permissionOverrides: resolvedActor.permission_overrides,
       });
     } else if (dependencies.resolveActor) {
       if (!actor.userId) {
@@ -228,6 +231,7 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         userId: resolvedActor.user_id,
         practitionerId: resolvedActor.practitioner_id,
         role: resolvedActor.role,
+        permissionOverrides: resolvedActor.permission_overrides,
       });
     }
 
@@ -373,6 +377,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'user_read');
       if (roleError) return roleError;
       return handleListUsers(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/role-permissions') {
+      const roleError = requireRole(actorAwareRequest, 'user_read');
+      if (roleError) return roleError;
+      return handleListRolePermissions(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/practitioners') {
@@ -709,6 +719,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'user_write');
       if (roleError) return roleError;
       return handleCreateUser(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'PATCH' && request.path === '/api/role-permissions') {
+      const roleError = requireRole(actorAwareRequest, 'user_write');
+      if (roleError) return roleError;
+      return handleUpsertRolePermission(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/practitioners') {

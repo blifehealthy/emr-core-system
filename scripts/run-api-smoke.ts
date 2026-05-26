@@ -70,6 +70,7 @@ const migrations = [
   '0038_add_phase_3r_controlled_substance_register.up.sql',
   '0039_add_phase_3s_controlled_dispense_witness.up.sql',
   '0040_add_phase_3t_controlled_witness_reauth.up.sql',
+  '0041_add_phase_3u_role_permission_overrides.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -518,6 +519,42 @@ async function main() {
       nextOffset: null,
     });
     assert.ok(users.data.some((user) => user.id === createdUser.data.id));
+
+    const rolePermissions = await requestJson<
+      Array<{
+        role: string;
+        permission_key: string;
+        default_allowed: boolean;
+        is_allowed: boolean;
+        is_overridden: boolean;
+      }>
+    >('/api/role-permissions?clinicId=10000000-0000-0000-0000-000000000101', adminHeaders);
+    assert.ok(
+      rolePermissions.data.some(
+        (row) => row.role === 'nurse' && row.permission_key === 'prescription_write'
+      )
+    );
+
+    const permissionOverride = await requestJson<{
+      role: string;
+      permission_key: string;
+      is_allowed: boolean;
+    }>(
+      '/api/role-permissions',
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        role: 'nurse',
+        permissionKey: 'prescription_write',
+        isAllowed: true,
+        notes: 'Smoke UAT grant',
+      }
+    );
+    assert.equal(permissionOverride.data.role, 'nurse');
+    assert.equal(permissionOverride.data.permission_key, 'prescription_write');
+    assert.equal(permissionOverride.data.is_allowed, true);
 
     const practitioners = await requestJson<Array<{ id: string; practitioner_code: string }>>(
       '/api/practitioners?clinicId=10000000-0000-0000-0000-000000000101&search=primary&active=inactive&limit=1&offset=0',

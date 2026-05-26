@@ -61,7 +61,7 @@ export function authenticateBearerRequest(
   return unauthorized('Invalid bearer token');
 }
 
-const permissions: Record<string, UserRole[]> = {
+export const DEFAULT_ROLE_PERMISSIONS = {
   patient_read: ['doctor', 'nurse', 'admin'],
   patient_write: ['doctor', 'nurse', 'admin'],
   audit_read: ['doctor', 'nurse', 'admin'],
@@ -102,11 +102,13 @@ const permissions: Record<string, UserRole[]> = {
   vital_sign_update: ['doctor', 'nurse', 'admin'],
   clinical_note_finalize: ['doctor', 'admin'],
   clinical_note_sign: ['doctor', 'admin'],
-};
+} as const satisfies Record<string, readonly UserRole[]>;
+
+export type PermissionKey = keyof typeof DEFAULT_ROLE_PERMISSIONS;
 
 export function requireRole(
   request: HttpRequest,
-  permission: keyof typeof permissions
+  permission: PermissionKey
 ): HttpResponse | null {
   const role = request.headers?.['x-user-role'];
 
@@ -118,7 +120,11 @@ export function requireRole(
     };
   }
 
-  if (!permissions[permission].includes(role as UserRole)) {
+  const override = readPermissionOverride(request, permission);
+  const allowed =
+    override ?? (DEFAULT_ROLE_PERMISSIONS[permission] as readonly UserRole[]).includes(role as UserRole);
+
+  if (!allowed) {
     return {
       status: 403,
       headers: JSON_HEADERS,
@@ -135,6 +141,7 @@ export function getActorContext(request: HttpRequest) {
     practitionerId: request.headers?.['x-practitioner-id']?.trim() || null,
     oidcSubject: request.headers?.['x-oidc-subject']?.trim() || null,
     role: request.headers?.['x-user-role']?.trim() || undefined,
+    permissionOverrides: parsePermissionOverrides(request.headers?.['x-permission-overrides']),
   };
 }
 
@@ -148,8 +155,33 @@ export function withResolvedActor(request: HttpRequest, actor: AuthActor): HttpR
         actor.practitionerId ?? request.headers?.['x-practitioner-id'],
       'x-user-role': actor.role ?? request.headers?.['x-user-role'],
       'x-oidc-subject': actor.oidcSubject ?? request.headers?.['x-oidc-subject'],
+      'x-permission-overrides':
+        actor.permissionOverrides
+          ? JSON.stringify(actor.permissionOverrides)
+          : request.headers?.['x-permission-overrides'],
     },
   };
+}
+
+function readPermissionOverride(request: HttpRequest, permission: PermissionKey) {
+  const overrides = parsePermissionOverrides(request.headers?.['x-permission-overrides']);
+  const override = overrides[permission];
+  return typeof override === 'boolean' ? override : null;
+}
+
+function parsePermissionOverrides(value?: string) {
+  if (!value) return {} as Record<string, boolean>;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {} as Record<string, boolean>;
+    }
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean')
+    );
+  } catch {
+    return {} as Record<string, boolean>;
+  }
 }
 
 function readBearerToken(authorization: string) {

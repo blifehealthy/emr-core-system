@@ -16,6 +16,7 @@ test('resolveOidcActor returns active user by OIDC subject', async () => {
             practitioner_id: 'practitioner-1',
             clinic_id: 'clinic-1',
             display_name: 'Dr OIDC',
+            permission_overrides: [{ permission_key: 'prescription_write', is_allowed: false }],
           },
         ] as T[],
       };
@@ -30,5 +31,6 @@ test('resolveOidcActor returns active user by OIDC subject', async () => {
     practitioner_id: 'practitioner-1',
     clinic_id: 'clinic-1',
     display_name: 'Dr OIDC',
+    permission_overrides: { prescription_write: false },
   });
 });

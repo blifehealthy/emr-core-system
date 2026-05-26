@@ -33,6 +33,7 @@
 - Phase 3R controlled substance register adds controlled item flags plus JSON/CSV review for receiving, dispensing, and transfer activity
 - Phase 3S controlled dispense witness adds two-person witness metadata for controlled-substance dispensing
 - Phase 3T controlled witness re-authentication adds login-code confirmation and signature hash metadata for controlled-substance dispensing
+- Phase 3U role permission overrides add clinic-level DB-backed grant/deny controls for existing route permissions
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -77,6 +78,7 @@
 - Review `docs/phase-3r-plan.md`, `docs/phase-3r-clinician-summary-th.md`, `docs/phase-3r-uat-checklist-th.md`, and `docs/phase-3r-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 - Review `docs/phase-3s-plan.md`, `docs/phase-3s-clinician-summary-th.md`, `docs/phase-3s-uat-checklist-th.md`, and `docs/phase-3s-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 - Review `docs/phase-3t-plan.md`, `docs/phase-3t-clinician-summary-th.md`, `docs/phase-3t-uat-checklist-th.md`, and `docs/phase-3t-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
+- Review `docs/phase-3u-plan.md`, `docs/phase-3u-clinician-summary-th.md`, `docs/phase-3u-uat-checklist-th.md`, and `docs/phase-3u-closure-summary-th.md` with admins, clinic owners, and compliance leads
 
 ## Verified
 
@@ -117,4 +119,5 @@
 - Phase 3R targeted controlled substance register service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `151/151`, and API smoke pass
 - Phase 3S targeted controlled dispense witness service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `152/152`, and API smoke pass
 - Phase 3T targeted controlled witness re-auth service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `153/153`, and API smoke pass
+- Phase 3U targeted role permission override service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `155/155`, and API smoke pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

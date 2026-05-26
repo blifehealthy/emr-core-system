@@ -215,6 +215,14 @@
     - `medication_dispenses` stores `witness_reauth_method`, `witness_reauthenticated_at`, and `witness_signature_hash`
     - controlled substance register includes witness re-auth metadata for dispense events
     - Phase 3T plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3U database-backed role permission overrides:
+    - migration `0041_add_phase_3u_role_permission_overrides`
+    - `GET /api/role-permissions`
+    - `PATCH /api/role-permissions`
+    - `resolveActor` and `resolveOidcActor` load active clinic role overrides
+    - `requireRole` applies overrides before default role matrix
+    - Admin workspace includes Role Permissions editor
+    - Phase 3U plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -222,7 +230,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `153/153` passing
+  - current result: `155/155` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -254,8 +262,8 @@
     Phase 3O FEFO/expiry override fields, Phase 3P pharmacy override
     JSON/CSV report, Phase 3Q separated transfer/override permissions,
     Phase 3R controlled substance register JSON/CSV report, Phase 3S
-    controlled dispense witness metadata, and Phase 3T controlled witness
-    re-auth metadata
+    controlled dispense witness metadata, Phase 3T controlled witness
+    re-auth metadata, and Phase 3U role permission override API flow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

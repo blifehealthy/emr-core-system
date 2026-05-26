@@ -28,7 +28,7 @@ let currentPatient = null;
 let currentProfile = null;
 let currentApiToken = '';
 let currentProfileSection = 'Flags';
-let currentAdmin = { users: [], practitioners: [] };
+let currentAdmin = { users: [], practitioners: [], rolePermissions: [] };
 let currentAuditLogs = [];
 let currentQueue = [];
 let currentBilling = {
@@ -729,7 +729,7 @@ function buildAdminSearchParams(clinicId, filters = {}) {
 }
 
 async function fetchAdminBundle(clinicId, apiToken) {
-  const [usersPage, practitionersPage, templates] = await Promise.all([
+  const [usersPage, practitionersPage, templates, rolePermissions] = await Promise.all([
     fetchUsers(clinicId, apiToken, {
       search: currentAdminFilters.usersSearch.trim(),
       active: currentAdminFilters.usersActive,
@@ -743,6 +743,7 @@ async function fetchAdminBundle(clinicId, apiToken) {
       offset: currentAdminPagination.practitionersOffset,
     }),
     fetchClinicalNoteTemplates(clinicId, apiToken, false),
+    fetchRolePermissions(clinicId, apiToken),
   ]);
   currentAdminMeta = {
     users: usersPage.meta,
@@ -750,7 +751,17 @@ async function fetchAdminBundle(clinicId, apiToken) {
   };
 
   currentClinicalNoteTemplates = templates;
-  return { users: usersPage.items, practitioners: practitionersPage.items, templates };
+  return { users: usersPage.items, practitioners: practitionersPage.items, templates, rolePermissions };
+}
+
+async function fetchRolePermissions(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId });
+  const response = await fetch(`/api/role-permissions?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+  if (!response.ok) throw createApiError(response, result);
+  return result.data ?? [];
 }
 
 async function fetchClinicalNoteTemplates(clinicId, apiToken, activeOnly = true) {
@@ -2592,9 +2603,74 @@ function renderAdminWorkspace(clinicId) {
       createPractitionerActions
     ),
     createTemplateAdminSection(clinicId),
+    createRolePermissionSection(clinicId),
     createClinicSettingsSection(clinicId),
     createAuditSection()
   );
+}
+
+function createRolePermissionSection(clinicId) {
+  const section = document.createElement('div');
+  section.className = 'admin-section';
+  const title = document.createElement('h3');
+  title.textContent = 'Role Permissions';
+  section.append(title, createRolePermissionForm(clinicId));
+
+  const list = document.createElement('div');
+  list.className = 'record-list compact-list';
+  const rows = (currentAdmin.rolePermissions ?? []).filter((row) => row.is_overridden).slice(0, 12);
+  if (rows.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state';
+    empty.textContent = 'ยังไม่มี permission override';
+    list.append(empty);
+  }
+  for (const row of rows) {
+    list.append(createRecordCard(row, rolePermissionSummary, [
+      'role',
+      'permission_key',
+      'default_allowed',
+      'is_allowed',
+      'notes',
+    ]));
+  }
+  section.append(list);
+  return section;
+}
+
+function createRolePermissionForm(clinicId) {
+  const form = document.createElement('form');
+  form.className = 'inline-profile-form';
+  form.append(
+    createAdminInput('clinicId', 'Clinic ID', clinicId, true),
+    createAdminSelect('role', 'Role', ['doctor', 'nurse', 'admin'], 'nurse'),
+    createAdminInput('permissionKey', 'Permission key', 'prescription_write', true),
+    createAdminSelect('isAllowed', 'Allowed', ['true', 'false'], 'true'),
+    createAdminInput('notes', 'Notes', '')
+  );
+  const submit = createAdminSubmit('บันทึก permission');
+  form.append(submit);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(form).entries());
+    await saveAdminRecord({
+      form,
+      submit,
+      payload: {
+        clinicId: values.clinicId,
+        role: values.role,
+        permissionKey: values.permissionKey,
+        isAllowed: values.isAllowed === 'true',
+        notes: values.notes || null,
+      },
+      url: '/api/role-permissions',
+      method: 'PATCH',
+      busyText: 'กำลังบันทึก permission',
+      successText: 'บันทึก permission แล้ว',
+      resetAfterSave: false,
+    });
+  });
+  return form;
 }
 
 function createClinicSettingsSection(clinicId) {
@@ -6779,6 +6855,11 @@ function visitSummary(item) {
 function userSummary(item) {
   const identity = item.oidc_subject ? ` · ${item.oidc_subject}` : '';
   return `${item.display_name ?? item.username ?? item.email ?? item.id}${identity}`;
+}
+
+function rolePermissionSummary(item) {
+  const state = item.is_allowed ? 'allowed' : 'blocked';
+  return `${item.role ?? 'role'} · ${item.permission_key ?? 'permission'} · ${state}`;
 }
 
 function practitionerSummary(item) {

@@ -373,6 +373,13 @@ All routes except `GET /health` can be protected by bearer token when
 - Medication dispense rows store witness re-auth method, re-auth time, and signature hash metadata.
 - Controlled substance register dispense events include witness re-auth metadata.
 
+## Phase 3U Additions
+
+- Clinic role permission overrides are available through `GET /api/role-permissions`.
+- Admins can upsert a clinic role permission override with `PATCH /api/role-permissions`.
+- Session/OIDC actor resolution loads active role permission overrides from the database.
+- Route authorization applies DB overrides before falling back to the default role matrix.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

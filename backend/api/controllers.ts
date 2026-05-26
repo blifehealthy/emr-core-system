@@ -153,6 +153,7 @@ import {
   validateUpdateInvoiceBody,
   validateUpdateChargeTemplateBody,
   validateUpdateInsuranceClaimBody,
+  validateUpsertRolePermissionBody,
 } from './validation.ts';
 import { getActorContext, requireRole } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
@@ -1931,6 +1932,68 @@ export async function handleListUsers(
     headers: JSON_HEADERS,
     body: { data: toUserDtos(users.rows), meta: users.meta },
   };
+}
+
+export async function handleListRolePermissions(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listRolePermissions) {
+    return mapError(new Error('Role permission list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) {
+    return validationError('clinicId is required query parameter');
+  }
+
+  const permissions = await dependencies.listRolePermissions({ clinicId });
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: permissions },
+  };
+}
+
+export async function handleUpsertRolePermission(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.upsertRolePermission) {
+    return mapError(new Error('Role permission write dependency is not configured'));
+  }
+
+  const validation = validateUpsertRolePermissionBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const actor = getActorContext(request);
+    const permission = await dependencies.upsertRolePermission({
+      ...validation.value,
+      updatedByUserId: validation.value.updatedByUserId ?? actor.userId,
+    });
+
+    await dependencies.createAuditLog({
+      entityType: 'role_permission_override',
+      entityId: (permission as { id?: string }).id ?? validation.value.clinicId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        clinicId: validation.value.clinicId,
+        role: validation.value.role,
+        permissionKey: validation.value.permissionKey,
+        isAllowed: validation.value.isAllowed,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: permission } };
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unknown permission key:')) {
+      return validationError(error.message);
+    }
+    return mapError(error);
+  }
 }
 
 export async function handleCreateUser(

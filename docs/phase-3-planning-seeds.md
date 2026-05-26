@@ -54,10 +54,12 @@ real UAT findings, but the likely product directions are below.
   review metadata on controlled item dispensing.
 - Phase 3T completed the controlled witness re-authentication foundation with
   login-code confirmation and signature hash metadata.
+- Phase 3U completed database-backed role permission overrides for clinic-level
+  UAT customization.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
   per-user password/MFA integration, controlled-drug reconciliation, or
-  database-backed permission customization.
+  permission change approval workflow.
 
 ### Patient Communication
 

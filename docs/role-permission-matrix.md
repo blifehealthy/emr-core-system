@@ -208,6 +208,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `PATCH` | `/api/patient-flags/:flagId` | `flag_write` |
 | `DELETE` | `/api/patient-flags/:flagId` | `flag_write` |
 | `GET` | `/api/users` | `user_read` |
+| `GET` | `/api/role-permissions` | `user_read` |
+| `PATCH` | `/api/role-permissions` | `user_write` |
 | `POST` | `/api/users` | `user_write` |
 | `PATCH` | `/api/users/:userId` | `user_write` |
 | `GET` | `/api/practitioners` | `practitioner_read` |
@@ -215,13 +217,19 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `PATCH` | `/api/practitioners/:practitionerId` | `practitioner_write` |
 | `GET` | `/api/audit-logs` | `audit_read` |
 
-## Phase 1 Gaps
+## Phase 3U Database Overrides
 
-- Permissions are currently defined in code, not in database tables.
-- Pharmacy override and transfer action permissions are now separated, but the
-  permission policy is still static per role until a future database-backed
-  permission model is introduced.
+- Default permissions remain defined in `backend/api/auth.ts`.
+- `role_permission_overrides` can grant or deny a permission for a clinic role.
+- `resolveActor` and `resolveOidcActor` load active overrides for the resolved user's clinic and role.
+- `requireRole` applies the override first, then falls back to the default matrix.
+- Admin APIs expose `GET /api/role-permissions` and `PATCH /api/role-permissions`.
+
+## Remaining Gaps
+
 - Role checks are route-level checks; they do not yet express patient assignment,
   clinic membership, or ownership policies.
+- Overrides are role-level per clinic, not per user.
+- Permission changes do not yet require approval workflow.
 - Several clinical read routes share `patient_read` rather than entity-specific
   read permissions for diagnoses, vital signs, and SOAP notes.

@@ -42,6 +42,7 @@ export type AuthActor = {
   practitionerId?: string | null;
   role?: UserRole;
   oidcSubject?: string | null;
+  permissionOverrides?: Record<string, boolean>;
 };
 
 export type CreateAuthSessionInput = {
@@ -76,6 +77,15 @@ export type AuthSessionFailure = {
     role: UserRole;
     practitioner_id: string | null;
   };
+};
+
+export type RolePermissionOverrideInput = {
+  clinicId: string;
+  role: UserRole;
+  permissionKey: string;
+  isAllowed: boolean;
+  updatedByUserId?: string | null;
+  notes?: string | null;
 };
 
 export type HttpRequest = {
@@ -1283,6 +1293,8 @@ export type Dependencies = {
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;
+  listRolePermissions?: (input: { clinicId: string }) => Promise<unknown[]>;
+  upsertRolePermission?: (input: RolePermissionOverrideInput) => Promise<unknown>;
   createUser: (input: CreateUserInput) => Promise<unknown>;
   updateUser: (input: UpdateUserInput) => Promise<unknown | null>;
   listPractitioners: (input: {
@@ -1516,6 +1528,7 @@ export type Dependencies = {
     practitioner_id: string | null;
     clinic_id: string;
     display_name: string;
+    permission_overrides?: Record<string, boolean>;
   } | null>;
   resolveOidcActor?: (input: { oidcSubject: string }) => Promise<{
     user_id: string;
@@ -1523,6 +1536,7 @@ export type Dependencies = {
     practitioner_id: string | null;
     clinic_id: string;
     display_name: string;
+    permission_overrides?: Record<string, boolean>;
   } | null>;
   healthCheck: () => Promise<void>;
   apiToken?: string;

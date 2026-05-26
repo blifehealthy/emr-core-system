@@ -85,6 +85,7 @@ import type {
   UpdatePrescriptionInput,
   RecordInvoicePaymentInput,
   RecordInvoiceRefundInput,
+  RolePermissionOverrideInput,
   VoidInvoiceInput,
   CreateChargeTemplateInput,
   UpdateChargeTemplateInput,
@@ -2056,6 +2057,46 @@ export function validateCreateUserBody(body: unknown):
       displayName: displayName.value,
       role: role.value,
       oidcSubject: readOptionalNullableString(candidate.oidcSubject),
+    },
+  };
+}
+
+export function validateUpsertRolePermissionBody(body: unknown):
+  | { ok: true; value: RolePermissionOverrideInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+
+  const role = readRequiredEnumValue<UserRole>(candidate.role, 'role', ['doctor', 'nurse', 'admin']);
+  if (!role.ok) return role;
+
+  const permissionKey = readRequiredString(candidate.permissionKey, 'permissionKey');
+  if (!permissionKey.ok) return permissionKey;
+
+  if (typeof candidate.isAllowed !== 'boolean') {
+    return { ok: false, error: 'isAllowed must be a boolean' };
+  }
+
+  const updatedByUserId = readOptionalNullableStringField(candidate, 'updatedByUserId');
+  if (!updatedByUserId.ok) return updatedByUserId;
+
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      role: role.value,
+      permissionKey: permissionKey.value,
+      isAllowed: candidate.isAllowed,
+      updatedByUserId: updatedByUserId.value,
+      notes: notes.value,
     },
   };
 }

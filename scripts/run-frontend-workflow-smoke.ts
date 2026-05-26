@@ -17,6 +17,9 @@ assertContains(html, 'id="queue-export-button"', 'daily operations CSV export bu
 assertContains(app, 'function renderQueueBoard()', 'queue board renderer');
 assertContains(app, 'function createAuthSession(', 'auth session API helper');
 assertContains(app, '/api/auth/sessions', 'auth session endpoint');
+assertContains(app, 'fetchRolePermissions', 'role permission admin loader');
+assertContains(app, '/api/role-permissions', 'role permission admin endpoint');
+assertContains(app, 'Role Permissions', 'role permission admin section');
 assertContains(app, 'function createOperationsCharts()', 'operations chart renderer');
 assertContains(app, 'function createBarChart(', 'bar chart helper');
 assertContains(app, 'function createClaimVisitButton(', 'queue claim action');

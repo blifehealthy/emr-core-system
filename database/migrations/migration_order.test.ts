@@ -173,6 +173,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0040_add_phase_3t_controlled_witness_reauth.up.sql'),
     'expected Phase 3T controlled witness re-auth migration'
   );
+  assert.ok(
+    filenames.includes('0041_add_phase_3u_role_permission_overrides.up.sql'),
+    'expected Phase 3U role permission overrides migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

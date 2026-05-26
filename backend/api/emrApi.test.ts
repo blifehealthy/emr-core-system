@@ -185,6 +185,12 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
         meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
       };
     },
+    async listRolePermissions() {
+      return [];
+    },
+    async upsertRolePermission() {
+      return { id: 'override-1' };
+    },
     async createUser() {
       return { id: 'user-1' };
     },
@@ -674,6 +680,105 @@ test('session bearer token resolves actor without role headers', async () => {
   });
 
   assert.equal(response.status, 200);
+});
+
+test('database-backed permission overrides affect resolved actor role checks', async () => {
+  const sessionSecret = '0123456789abcdef0123456789abcdef';
+  const accessToken = createSessionToken(
+    {
+      userId: 'user-1',
+      issuedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+    sessionSecret
+  );
+
+  const api = createEmrApi(
+    makeDeps({
+      sessionAuthSecret: sessionSecret,
+      async resolveActor() {
+        return {
+          user_id: 'user-1',
+          role: 'doctor',
+          practitioner_id: 'practitioner-1',
+          clinic_id: 'clinic-1',
+          display_name: 'Dr One',
+          permission_overrides: { user_read: true, patient_read: false },
+        };
+      },
+      async listUsers() {
+        return { rows: [{ id: 'user-1', role: 'doctor' }], meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null } };
+      },
+    })
+  );
+
+  const granted = await api({
+    method: 'GET',
+    path: '/api/users',
+    headers: { authorization: `Bearer ${accessToken}` },
+    query: { clinicId: 'clinic-1' },
+  });
+  assert.equal(granted.status, 200);
+
+  const denied = await api({
+    method: 'GET',
+    path: '/api/patients/detail',
+    headers: { authorization: `Bearer ${accessToken}` },
+    query: { clinicId: 'clinic-1', medicalRecordNumber: 'MRN-001' },
+  });
+  assert.equal(denied.status, 403);
+  assert.deepEqual(denied.body, { error: 'Role doctor is not allowed for patient_read' });
+});
+
+test('role permission APIs list and upsert clinic overrides', async () => {
+  let auditAction: string | undefined;
+  const api = createEmrApi(
+    makeDeps({
+      async listRolePermissions(input) {
+        assert.deepEqual(input, { clinicId: 'clinic-1' });
+        return [
+          {
+            clinic_id: 'clinic-1',
+            role: 'nurse',
+            permission_key: 'prescription_write',
+            default_allowed: false,
+            is_allowed: true,
+            is_overridden: true,
+          },
+        ];
+      },
+      async upsertRolePermission(input) {
+        assert.equal(input.updatedByUserId, 'admin-1');
+        return { id: 'override-1', permission_key: input.permissionKey, is_allowed: input.isAllowed };
+      },
+      async createAuditLog(input) {
+        auditAction = input.action;
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const listed = await api({
+    method: 'GET',
+    path: '/api/role-permissions',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1' },
+  });
+  assert.equal(listed.status, 200);
+
+  const updated = await api({
+    method: 'PATCH',
+    path: '/api/role-permissions',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: {
+      clinicId: 'clinic-1',
+      role: 'nurse',
+      permissionKey: 'prescription_write',
+      isAllowed: true,
+    },
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(auditAction, 'updated');
 });
 
 test('OIDC bearer token resolves actor by subject without role headers', async () => {

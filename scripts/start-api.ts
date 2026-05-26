@@ -164,6 +164,10 @@ import { updateVitalSign } from '../backend/services/updateVitalSign.ts';
 import { upsertClinicSettings } from '../backend/services/upsertClinicSettings.ts';
 import { resolveActor } from '../backend/services/resolveActor.ts';
 import { resolveOidcActor } from '../backend/services/resolveOidcActor.ts';
+import {
+  listRolePermissions,
+  upsertRolePermission,
+} from '../backend/services/rolePermissions.ts';
 import { recordInvoicePayment } from '../backend/services/recordInvoicePayment.ts';
 import { recordInvoiceRefund } from '../backend/services/recordInvoiceRefund.ts';
 import { updateInvoice } from '../backend/services/updateInvoice.ts';
@@ -245,6 +249,8 @@ const server = createNodeServer({
   createPatientFlag: createPatientFlag(db),
   createPatientMedication: createPatientMedication(db),
   listUsers: listUsers(db),
+  listRolePermissions: listRolePermissions(db),
+  upsertRolePermission: upsertRolePermission(db),
   createUser: createUser(db),
   updateAppointment: updateAppointment(db),
   updateClinicVisit: updateClinicVisit(db),
