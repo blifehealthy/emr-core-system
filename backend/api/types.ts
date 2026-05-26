@@ -704,6 +704,8 @@ export type CreateInventoryTransferInput = {
   toBinLabel?: string | null;
   quantity: number | string;
   approvalRequired?: boolean;
+  expiryOverrideReason?: string | null;
+  fefoOverrideReason?: string | null;
   requestedByUserId?: string | null;
   transferredByUserId?: string | null;
   notes?: string | null;
@@ -949,6 +951,8 @@ export type DispensePrescriptionInput = {
   scannedBarcode?: string | null;
   requireBarcodeVerification?: boolean;
   quantity: number | string;
+  expiryOverrideReason?: string | null;
+  fefoOverrideReason?: string | null;
   dispensedByUserId?: string | null;
   notes?: string | null;
 };

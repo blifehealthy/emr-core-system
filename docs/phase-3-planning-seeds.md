@@ -41,10 +41,12 @@ real UAT findings, but the likely product directions are below.
 - Phase 3N completed lot-specific transfer requests, approval-required
   transfer workflow, in-transit receiving, cancellation metadata, and
   frontend transfer actions.
+- Phase 3O completed FEFO and expiry picking guards for lot-aware dispensing
+  and transfer creation, including override reason audit fields.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  FEFO/expiry picking guard, role-separated transfer approval, or controlled
-  substance workflow.
+  override review reports, role-separated transfer/override approval, or
+  controlled substance workflow.
 
 ### Patient Communication
 

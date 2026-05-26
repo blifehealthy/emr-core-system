@@ -115,6 +115,9 @@ test('approval transfer holds stock until approve and receive steps', async () =
       if (sql.includes('FROM inventory_items') && !sql.includes('JOIN inventory_items')) {
         return { rows: [{ id: 'item-1', clinic_id: 'clinic-1', quantity_on_hand: '10' }] as T[] };
       }
+      if (sql.includes('FROM inventory_lots l')) {
+        return { rows: [] as T[] };
+      }
       if (sql.includes('FROM inventory_lots')) {
         return {
           rows: [

@@ -2397,6 +2397,8 @@ export async function handleCreateInventoryTransfer(
         inventoryLotId: validation.value.inventoryLotId,
         quantity: validation.value.quantity,
         approvalRequired: validation.value.approvalRequired ?? false,
+        expiryOverrideReason: validation.value.expiryOverrideReason,
+        fefoOverrideReason: validation.value.fefoOverrideReason,
       },
     });
 
@@ -4343,7 +4345,10 @@ export async function handleDispensePrescription(
       metadata: {
         prescriptionId,
         inventoryItemId: validation.value.inventoryItemId,
+        inventoryLotId: validation.value.inventoryLotId,
         quantity: validation.value.quantity,
+        expiryOverrideReason: validation.value.expiryOverrideReason,
+        fefoOverrideReason: validation.value.fefoOverrideReason,
       },
     });
 

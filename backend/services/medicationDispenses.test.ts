@@ -17,6 +17,9 @@ test('medication dispense service reduces stock and records movement', async () 
       if (sql.includes('FROM inventory_items') && sql.includes('is_active')) {
         return { rows: [{ id: 'item-1', clinic_id: 'clinic-1', quantity_on_hand: '10.00' }] as T[] };
       }
+      if (sql.includes('FROM inventory_lots l')) {
+        return { rows: [] as T[] };
+      }
       if (sql.includes('FROM inventory_lots')) {
         return { rows: [{ id: 'lot-1', quantity_on_hand: '3.00' }] as T[] };
       }

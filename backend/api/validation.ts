@@ -2851,6 +2851,10 @@ export function validateCreateInventoryTransferBody(body: unknown):
   if (!quantity.ok) return quantity;
   const approvalRequired = readOptionalBooleanField(candidate, 'approvalRequired');
   if (!approvalRequired.ok) return approvalRequired;
+  const expiryOverrideReason = readOptionalNullableStringField(candidate, 'expiryOverrideReason');
+  if (!expiryOverrideReason.ok) return expiryOverrideReason;
+  const fefoOverrideReason = readOptionalNullableStringField(candidate, 'fefoOverrideReason');
+  if (!fefoOverrideReason.ok) return fefoOverrideReason;
   const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
   if (!requestedByUserId.ok) return requestedByUserId;
   const transferredByUserId = readOptionalNullableStringField(candidate, 'transferredByUserId');
@@ -2870,6 +2874,8 @@ export function validateCreateInventoryTransferBody(body: unknown):
       inventoryLotId: inventoryLotId.value,
       quantity: quantity.value,
       approvalRequired: approvalRequired.value,
+      expiryOverrideReason: expiryOverrideReason.value,
+      fefoOverrideReason: fefoOverrideReason.value,
       requestedByUserId: requestedByUserId.value,
       transferredByUserId: transferredByUserId.value,
       notes: notes.value,
@@ -3357,6 +3363,10 @@ export function validateDispensePrescriptionBody(
   if (!requireBarcodeVerification.ok) return requireBarcodeVerification;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
+  const expiryOverrideReason = readOptionalNullableStringField(candidate, 'expiryOverrideReason');
+  if (!expiryOverrideReason.ok) return expiryOverrideReason;
+  const fefoOverrideReason = readOptionalNullableStringField(candidate, 'fefoOverrideReason');
+  if (!fefoOverrideReason.ok) return fefoOverrideReason;
   const dispensedByUserId = readOptionalNullableStringField(candidate, 'dispensedByUserId');
   if (!dispensedByUserId.ok) return dispensedByUserId;
   const notes = readOptionalNullableStringField(candidate, 'notes');
@@ -3372,6 +3382,8 @@ export function validateDispensePrescriptionBody(
       scannedBarcode: scannedBarcode.value,
       requireBarcodeVerification: requireBarcodeVerification.value,
       quantity: quantity.value,
+      expiryOverrideReason: expiryOverrideReason.value,
+      fefoOverrideReason: fefoOverrideReason.value,
       dispensedByUserId: dispensedByUserId.value,
       notes: notes.value,
     },

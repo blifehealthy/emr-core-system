@@ -4,6 +4,7 @@ import type {
   CreateInventoryTransferInput,
   ReceiveInventoryTransferInput,
 } from '../api/types.ts';
+import { assertInventoryLotPickAllowed } from './inventoryLotPicking.ts';
 
 type Db = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -386,6 +387,19 @@ export function createInventoryTransfer(db: Db) {
 
     const quantity = Number(input.quantity);
     await assertTransferLotMatches(db, input);
+    const pick = input.inventoryLotId
+      ? await assertInventoryLotPickAllowed(db, {
+          clinicId: input.clinicId,
+          inventoryItemId: input.inventoryItemId,
+          inventoryLotId: input.inventoryLotId,
+          inventoryLocationId: input.fromInventoryLocationId,
+          binLabel: input.fromBinLabel ?? null,
+          quantity,
+          expiryOverrideReason: input.expiryOverrideReason,
+          fefoOverrideReason: input.fefoOverrideReason,
+        })
+      : null;
+    const fefoRecommendedLotId = pick?.fefoRecommendedLotId ?? null;
 
     if (input.approvalRequired) {
       const transferResult = await db.query<{ id: string }>(
@@ -400,10 +414,13 @@ export function createInventoryTransfer(db: Db) {
             to_bin_label,
             quantity,
             status,
+            expiry_override_reason,
+            fefo_override_reason,
+            fefo_recommended_lot_id,
             requested_by_user_id,
             notes
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12, $13)
           RETURNING id
         `,
         [
@@ -415,6 +432,9 @@ export function createInventoryTransfer(db: Db) {
           input.fromBinLabel ?? null,
           input.toBinLabel ?? null,
           quantity,
+          input.expiryOverrideReason ?? null,
+          input.fefoOverrideReason ?? null,
+          fefoRecommendedLotId,
           input.requestedByUserId ?? input.transferredByUserId ?? null,
           input.notes ?? null,
         ]
@@ -449,11 +469,14 @@ export function createInventoryTransfer(db: Db) {
           from_bin_label,
           to_bin_label,
           quantity,
+          expiry_override_reason,
+          fefo_override_reason,
+          fefo_recommended_lot_id,
           requested_by_user_id,
           transferred_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING id
       `,
       [
@@ -465,6 +488,9 @@ export function createInventoryTransfer(db: Db) {
         input.fromBinLabel ?? null,
         input.toBinLabel ?? null,
         quantity,
+        input.expiryOverrideReason ?? null,
+        input.fefoOverrideReason ?? null,
+        fefoRecommendedLotId,
         input.requestedByUserId ?? input.transferredByUserId ?? null,
         input.transferredByUserId ?? null,
         input.notes ?? null,

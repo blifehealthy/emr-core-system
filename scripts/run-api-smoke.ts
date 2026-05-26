@@ -66,6 +66,7 @@ const migrations = [
   '0034_add_phase_3l_inventory_locations.up.sql',
   '0035_add_phase_3m_location_stock_ledger.up.sql',
   '0036_add_phase_3n_transfer_workflow.up.sql',
+  '0037_add_phase_3o_fefo_picking_guard.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -1248,6 +1249,7 @@ async function main() {
       inventory_lot_id: string;
       inventory_location_id: string;
       barcode_verified: boolean;
+      fefo_override_reason: string | null;
     }>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
       adminHeaders,
@@ -1260,6 +1262,7 @@ async function main() {
         scannedBarcode: inventoryItem.data.barcode,
         requireBarcodeVerification: true,
         quantity: 2,
+        fefoOverrideReason: 'Smoke confirms selected lot for dispense',
         notes: 'Smoke dispense',
       }
     );
@@ -1268,6 +1271,7 @@ async function main() {
     assert.equal(dispense.data.inventory_location_id, inventoryLocation.data.id);
     assert.equal(Number(dispense.data.quantity), 2);
     assert.equal(dispense.data.barcode_verified, true);
+    assert.equal(dispense.data.fefo_override_reason, 'Smoke confirms selected lot for dispense');
 
     const dispenses = await requestJson<Array<{ id: string }>>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses?limit=10`,
@@ -1319,6 +1323,7 @@ async function main() {
         fromBinLabel: 'A1',
         toBinLabel: 'D1',
         quantity: 1,
+        fefoOverrideReason: 'Smoke confirms selected lot for immediate transfer',
       }
     );
     assert.equal(transfer.data.inventory_item_id, inventoryItem.data.id);
@@ -1340,6 +1345,7 @@ async function main() {
         toBinLabel: 'D1',
         quantity: 1,
         approvalRequired: true,
+        fefoOverrideReason: 'Smoke confirms selected lot for approval transfer',
       }
     );
     assert.equal(pendingTransfer.data.status, 'pending');

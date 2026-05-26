@@ -4136,7 +4136,9 @@ function createPharmacyInventoryPanel(patient) {
     createFormField('fromBinLabel', 'From bin', 'input'),
     createInventoryLocationSelectField('toInventoryLocationId', 'To location', true),
     createFormField('toBinLabel', 'To bin', 'input'),
-    createFormField('quantity', 'Transfer quantity', 'input', true)
+    createFormField('quantity', 'Transfer quantity', 'input', true),
+    createFormField('expiryOverrideReason', 'Expiry override reason', 'input'),
+    createFormField('fefoOverrideReason', 'FEFO override reason', 'input')
   );
   const approvalLabel = document.createElement('label');
   approvalLabel.textContent = 'Approval required';
@@ -4827,6 +4829,8 @@ async function createInventoryTransferFromForm(patient, form, submit) {
         toBinLabel: values.toBinLabel,
         quantity: values.quantity,
         approvalRequired: values.approvalRequired === 'true',
+        expiryOverrideReason: values.expiryOverrideReason,
+        fefoOverrideReason: values.fefoOverrideReason,
         requestedByUserId: readValue('userId'),
         transferredByUserId: readValue('userId'),
         notes: 'Inventory transfer from pharmacy panel',
@@ -5616,6 +5620,9 @@ function createInventoryTransferCard(transfer) {
     'approved_at',
     'received_at',
     'cancelled_at',
+    'expiry_override_reason',
+    'fefo_override_reason',
+    'fefo_recommended_lot_id',
   ]);
 
   if (transfer.id && ['pending', 'in_transit'].includes(transfer.status)) {
@@ -5714,6 +5721,19 @@ async function dispensePrescriptionPrompt(prescription) {
   const quantity = window.prompt('Quantity to dispense', '1');
   if (!quantity) return;
   const scannedBarcode = window.prompt('Scanned barcode (optional)', matchedLot?.barcode ?? matched?.barcode ?? '');
+  const selectedLot = currentInventoryLots.find((lot) => lot.id === inventoryLotId);
+  const recommendedLot = findFefoRecommendedLot(inventoryItemId, inventoryLocationId, Number(quantity));
+  const expiryOverrideReason = selectedLot?.expired
+    ? window.prompt('Expiry override reason', 'Expired lot approved for dispense') ?? ''
+    : '';
+  const needsFefoOverride =
+    selectedLot &&
+    recommendedLot &&
+    selectedLot.id !== recommendedLot.id &&
+    isEarlierExpiry(recommendedLot.expires_on, selectedLot.expires_on);
+  const fefoOverrideReason = needsFefoOverride
+    ? window.prompt('FEFO override reason', `Selected ${selectedLot.lot_number ?? selectedLot.id} instead of ${recommendedLot.lot_number ?? recommendedLot.id}`) ?? ''
+    : '';
 
   setStatus('กำลังจ่ายยา', '');
   try {
@@ -5727,6 +5747,8 @@ async function dispensePrescriptionPrompt(prescription) {
         scannedBarcode,
         requireBarcodeVerification: Boolean(scannedBarcode),
         quantity,
+        expiryOverrideReason,
+        fefoOverrideReason,
         dispensedByUserId: readValue('userId'),
         notes: 'Dispensed from patient record',
       })),
@@ -5738,6 +5760,29 @@ async function dispensePrescriptionPrompt(prescription) {
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'จ่ายยาไม่สำเร็จ', 'error');
   }
+}
+
+function findFefoRecommendedLot(inventoryItemId, inventoryLocationId, quantity) {
+  const candidates = currentInventoryLots
+    .filter((lot) => lot.inventory_item_id === inventoryItemId)
+    .filter((lot) => Number(lot.quantity_on_hand ?? 0) >= quantity)
+    .filter((lot) => !lot.expired)
+    .filter((lot) => !inventoryLocationId || lot.inventory_location_id === inventoryLocationId)
+    .sort(compareLotsByExpiry);
+  return candidates[0] ?? null;
+}
+
+function compareLotsByExpiry(left, right) {
+  const leftExpiry = left.expires_on ? Date.parse(left.expires_on) : Number.POSITIVE_INFINITY;
+  const rightExpiry = right.expires_on ? Date.parse(right.expires_on) : Number.POSITIVE_INFINITY;
+  if (leftExpiry !== rightExpiry) return leftExpiry - rightExpiry;
+  return String(left.lot_number ?? left.id).localeCompare(String(right.lot_number ?? right.id));
+}
+
+function isEarlierExpiry(leftExpiresOn, rightExpiresOn) {
+  if (!leftExpiresOn) return false;
+  if (!rightExpiresOn) return true;
+  return Date.parse(leftExpiresOn) < Date.parse(rightExpiresOn);
 }
 
 async function openPrescriptionPrint(prescription) {

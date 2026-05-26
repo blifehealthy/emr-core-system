@@ -252,6 +252,10 @@ All routes except `GET /health` can be protected by bearer token when
   lot-aware stock movement.
 - Dispense requests can include `inventoryLotId` so the selected lot quantity is
   reduced together with item-level stock.
+- Dispense and transfer requests that select a lot enforce expiry and FEFO
+  picking rules. Expired lots require `expiryOverrideReason`; later-expiring
+  selected lots require `fefoOverrideReason` when an earlier non-expired lot has
+  sufficient stock.
 - The Prescriptions tab exposes lot metrics, receiving controls, lot cards, and
   lot-aware dispense prompts.
 

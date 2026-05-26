@@ -44,6 +44,9 @@ assertContains(app, 'function createInventoryTransferCard(', 'inventory transfer
 assertContains(app, 'function createInventoryTransferActions(', 'inventory transfer workflow actions');
 assertContains(app, 'function runInventoryTransferAction(', 'inventory transfer action handler');
 assertContains(app, 'approvalRequired', 'inventory transfer approval flag');
+assertContains(app, 'expiryOverrideReason', 'expiry override reason payload');
+assertContains(app, 'fefoOverrideReason', 'FEFO override reason payload');
+assertContains(app, 'function findFefoRecommendedLot(', 'FEFO frontend recommendation helper');
 assertContains(app, "'approve'", 'inventory transfer approve action');
 assertContains(app, "'receive'", 'inventory transfer receive action');
 assertContains(app, "'cancel'", 'inventory transfer cancel action');

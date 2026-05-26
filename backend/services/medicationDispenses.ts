@@ -1,4 +1,5 @@
 import type { DispensePrescriptionInput } from '../api/types.ts';
+import { assertInventoryLotPickAllowed } from './inventoryLotPicking.ts';
 import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 export function listMedicationDispenses(db: {
@@ -104,6 +105,7 @@ export function dispensePrescription(db: {
     let barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
     let inventoryLocationId = input.inventoryLocationId ?? null;
     let binLabel: string | null = null;
+    let fefoRecommendedLotId: string | null = null;
     const quantityBefore = Number(item.quantity_on_hand);
     const quantityAfter = Number((quantityBefore - quantity).toFixed(2));
     if (quantityAfter < 0) {
@@ -111,6 +113,17 @@ export function dispensePrescription(db: {
     }
 
     if (input.inventoryLotId) {
+      const pick = await assertInventoryLotPickAllowed(db, {
+        clinicId: item.clinic_id,
+        inventoryItemId: input.inventoryItemId,
+        inventoryLotId: input.inventoryLotId,
+        inventoryLocationId: input.inventoryLocationId ?? null,
+        quantity,
+        expiryOverrideReason: input.expiryOverrideReason,
+        fefoOverrideReason: input.fefoOverrideReason,
+      });
+      if (!pick) return null;
+      fefoRecommendedLotId = pick.fefoRecommendedLotId;
       const lotResult = await db.query<{
         id: string;
         barcode: string | null;
@@ -182,10 +195,13 @@ export function dispensePrescription(db: {
           scanned_barcode,
           barcode_verified,
           barcode_verified_at,
+          expiry_override_reason,
+          fefo_override_reason,
+          fefo_recommended_lot_id,
           dispensed_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN now() ELSE NULL END, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 THEN now() ELSE NULL END, $9, $10, $11, $12, $13)
         RETURNING id
       `,
       [
@@ -197,6 +213,9 @@ export function dispensePrescription(db: {
         quantity,
         scannedBarcode,
         barcodeVerified,
+        input.expiryOverrideReason ?? null,
+        input.fefoOverrideReason ?? null,
+        fefoRecommendedLotId,
         input.dispensedByUserId ?? null,
         input.notes ?? null,
       ]
