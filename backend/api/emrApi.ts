@@ -20,6 +20,9 @@ import {
   handleCreateInventoryBarcodePrintJob,
   handleCreateInventoryLocation,
   handleCreateInventoryTransfer,
+  handleApproveInventoryTransfer,
+  handleReceiveInventoryTransfer,
+  handleCancelInventoryTransfer,
   handleCreateInventoryPrinterProfile,
   handleCreatePurchaseOrder,
   handleCreatePurchaseOrderApprovalPolicy,
@@ -720,6 +723,48 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
       return handleCreateInventoryTransfer(actorAwareRequest, dependencies);
+    }
+
+    const inventoryTransferApproveMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/approve$/)
+        : null;
+    if (inventoryTransferApproveMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleApproveInventoryTransfer(
+        actorAwareRequest,
+        dependencies,
+        decodeURIComponent(inventoryTransferApproveMatch[1])
+      );
+    }
+
+    const inventoryTransferReceiveMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/receive$/)
+        : null;
+    if (inventoryTransferReceiveMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleReceiveInventoryTransfer(
+        actorAwareRequest,
+        dependencies,
+        decodeURIComponent(inventoryTransferReceiveMatch[1])
+      );
+    }
+
+    const inventoryTransferCancelMatch =
+      request.method === 'POST'
+        ? request.path.match(/^\/api\/inventory-transfers\/([^/]+)\/cancel$/)
+        : null;
+    if (inventoryTransferCancelMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCancelInventoryTransfer(
+        actorAwareRequest,
+        dependencies,
+        decodeURIComponent(inventoryTransferCancelMatch[1])
+      );
     }
 
     if (request.method === 'POST' && request.path === '/api/inventory-barcode-scans') {

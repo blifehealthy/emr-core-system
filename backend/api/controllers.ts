@@ -86,6 +86,9 @@ import {
   validateAdjustInventoryStockBody,
   validateCreateInventoryLocationBody,
   validateCreateInventoryTransferBody,
+  validateApproveInventoryTransferBody,
+  validateReceiveInventoryTransferBody,
+  validateCancelInventoryTransferBody,
   validateUpdateInventoryLocationBody,
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
@@ -2338,6 +2341,14 @@ export async function handleListInventoryTransfers(
   if (!clinicId) return validationError('clinicId is required query parameter');
   const inventoryItemId = readOptionalQueryString(request, 'inventoryItemId');
   if (!inventoryItemId.ok) return validationError(inventoryItemId.error);
+  const status = readOptionalEnumQuery(request, 'status', [
+    'pending',
+    'in_transit',
+    'completed',
+    'cancelled',
+    'all',
+  ]);
+  if (!status.ok) return validationError(status.error);
   const limit = readOptionalLimitQuery(request);
   if (!limit.ok) return validationError(limit.error);
   const offset = readOptionalOffsetQuery(request);
@@ -2346,6 +2357,7 @@ export async function handleListInventoryTransfers(
   const transfers = await dependencies.listInventoryTransfers({
     clinicId,
     inventoryItemId: inventoryItemId.value,
+    status: status.value,
     limit: limit.value,
     offset: offset.value,
   });
@@ -2382,11 +2394,127 @@ export async function handleCreateInventoryTransfer(
       actorPractitionerId: actor.practitionerId,
       metadata: {
         inventoryItemId: validation.value.inventoryItemId,
+        inventoryLotId: validation.value.inventoryLotId,
         quantity: validation.value.quantity,
+        approvalRequired: validation.value.approvalRequired ?? false,
       },
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryTransferDto(transfer) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleApproveInventoryTransfer(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  transferId: string
+): Promise<HttpResponse> {
+  if (!dependencies.approveInventoryTransfer) {
+    return mapError(new Error('Inventory transfer approve dependency is not configured'));
+  }
+
+  const validation = validateApproveInventoryTransferBody(request.body, transferId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const transfer = await dependencies.approveInventoryTransfer(validation.value);
+    if (!transfer) {
+      return {
+        status: 404,
+        headers: JSON_HEADERS,
+        body: { error: 'Inventory transfer not found or not pending' },
+      };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_transfer',
+      entityId: (transfer as { id: string }).id,
+      action: 'approved',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { approvedByUserId: validation.value.approvedByUserId },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryTransferDto(transfer) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleReceiveInventoryTransfer(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  transferId: string
+): Promise<HttpResponse> {
+  if (!dependencies.receiveInventoryTransfer) {
+    return mapError(new Error('Inventory transfer receive dependency is not configured'));
+  }
+
+  const validation = validateReceiveInventoryTransferBody(request.body, transferId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const transfer = await dependencies.receiveInventoryTransfer(validation.value);
+    if (!transfer) {
+      return {
+        status: 404,
+        headers: JSON_HEADERS,
+        body: { error: 'Inventory transfer not found or not in transit' },
+      };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_transfer',
+      entityId: (transfer as { id: string }).id,
+      action: 'received',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { receivedByUserId: validation.value.receivedByUserId },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryTransferDto(transfer) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCancelInventoryTransfer(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  transferId: string
+): Promise<HttpResponse> {
+  if (!dependencies.cancelInventoryTransfer) {
+    return mapError(new Error('Inventory transfer cancel dependency is not configured'));
+  }
+
+  const validation = validateCancelInventoryTransferBody(request.body, transferId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const transfer = await dependencies.cancelInventoryTransfer(validation.value);
+    if (!transfer) {
+      return {
+        status: 404,
+        headers: JSON_HEADERS,
+        body: { error: 'Inventory transfer not found or not cancellable' },
+      };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_transfer',
+      entityId: (transfer as { id: string }).id,
+      action: 'cancelled',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        cancelledByUserId: validation.value.cancelledByUserId,
+        cancellationReason: validation.value.cancellationReason,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryTransferDto(transfer) } };
   } catch (error) {
     return mapError(error);
   }

@@ -153,6 +153,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0035_add_phase_3m_location_stock_ledger.up.sql'),
     'expected Phase 3M location stock ledger migration'
   );
+  assert.ok(
+    filenames.includes('0036_add_phase_3n_transfer_workflow.up.sql'),
+    'expected Phase 3N transfer workflow migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

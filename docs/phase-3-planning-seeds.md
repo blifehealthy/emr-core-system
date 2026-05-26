@@ -38,9 +38,13 @@ real UAT findings, but the likely product directions are below.
   and stock movement audit.
 - Phase 3M completed the first per-location stock ledger and immediate transfer
   workflow between inventory locations/bins.
+- Phase 3N completed lot-specific transfer requests, approval-required
+  transfer workflow, in-transit receiving, cancellation metadata, and
+  frontend transfer actions.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
-  notification integration, transfer approval/in-transit workflow, printer bridge delivery,
-  supplier payment handoff, or controlled substance workflow.
+  notification integration, printer bridge delivery, supplier payment handoff,
+  FEFO/expiry picking guard, role-separated transfer approval, or controlled
+  substance workflow.
 
 ### Patient Communication
 

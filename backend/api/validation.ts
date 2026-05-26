@@ -22,6 +22,9 @@ import type {
   ReceiveInventoryLotInput,
   CreateInventoryLocationInput,
   CreateInventoryTransferInput,
+  ApproveInventoryTransferInput,
+  ReceiveInventoryTransferInput,
+  CancelInventoryTransferInput,
   UpdateInventoryLocationInput,
   CreateSupplierInput,
   UpdateSupplierInput,
@@ -2842,8 +2845,14 @@ export function validateCreateInventoryTransferBody(body: unknown):
   if (!fromBinLabel.ok) return fromBinLabel;
   const toBinLabel = readOptionalNullableStringField(candidate, 'toBinLabel');
   if (!toBinLabel.ok) return toBinLabel;
+  const inventoryLotId = readOptionalNullableStringField(candidate, 'inventoryLotId');
+  if (!inventoryLotId.ok) return inventoryLotId;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
+  const approvalRequired = readOptionalBooleanField(candidate, 'approvalRequired');
+  if (!approvalRequired.ok) return approvalRequired;
+  const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
+  if (!requestedByUserId.ok) return requestedByUserId;
   const transferredByUserId = readOptionalNullableStringField(candidate, 'transferredByUserId');
   if (!transferredByUserId.ok) return transferredByUserId;
   const notes = readOptionalNullableStringField(candidate, 'notes');
@@ -2858,9 +2867,66 @@ export function validateCreateInventoryTransferBody(body: unknown):
       toInventoryLocationId: toInventoryLocationId.value,
       fromBinLabel: fromBinLabel.value,
       toBinLabel: toBinLabel.value,
+      inventoryLotId: inventoryLotId.value,
       quantity: quantity.value,
+      approvalRequired: approvalRequired.value,
+      requestedByUserId: requestedByUserId.value,
       transferredByUserId: transferredByUserId.value,
       notes: notes.value,
+    },
+  };
+}
+
+export function validateApproveInventoryTransferBody(
+  body: unknown,
+  transferId: string
+): { ok: true; value: ApproveInventoryTransferInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const approvedByUserId = readOptionalNullableStringField(candidate, 'approvedByUserId');
+  if (!approvedByUserId.ok) return approvedByUserId;
+
+  return { ok: true, value: { transferId, approvedByUserId: approvedByUserId.value } };
+}
+
+export function validateReceiveInventoryTransferBody(
+  body: unknown,
+  transferId: string
+): { ok: true; value: ReceiveInventoryTransferInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const receivedByUserId = readOptionalNullableStringField(candidate, 'receivedByUserId');
+  if (!receivedByUserId.ok) return receivedByUserId;
+
+  return { ok: true, value: { transferId, receivedByUserId: receivedByUserId.value } };
+}
+
+export function validateCancelInventoryTransferBody(
+  body: unknown,
+  transferId: string
+): { ok: true; value: CancelInventoryTransferInput } | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const cancelledByUserId = readOptionalNullableStringField(candidate, 'cancelledByUserId');
+  if (!cancelledByUserId.ok) return cancelledByUserId;
+  const cancellationReason = readOptionalNullableStringField(candidate, 'cancellationReason');
+  if (!cancellationReason.ok) return cancellationReason;
+
+  return {
+    ok: true,
+    value: {
+      transferId,
+      cancelledByUserId: cancelledByUserId.value,
+      cancellationReason: cancellationReason.value,
     },
   };
 }

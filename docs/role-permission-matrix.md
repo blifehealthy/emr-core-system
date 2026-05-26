@@ -122,6 +122,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/inventory-location-stocks` | `drug_catalog_read` |
 | `GET` | `/api/inventory-transfers` | `drug_catalog_read` |
 | `POST` | `/api/inventory-transfers` | `drug_catalog_write` |
+| `POST` | `/api/inventory-transfers/:transferId/approve` | `drug_catalog_write` |
+| `POST` | `/api/inventory-transfers/:transferId/receive` | `drug_catalog_write` |
+| `POST` | `/api/inventory-transfers/:transferId/cancel` | `drug_catalog_write` |
 | `GET` | `/api/inventory-lots` | `drug_catalog_read` |
 | `POST` | `/api/inventory-lots/receive` | `drug_catalog_write` |
 | `POST` | `/api/inventory-barcode-scans` | `drug_catalog_write` |

@@ -26,6 +26,7 @@
 - Phase 3K printer profiles add clinic printer routing profiles, default profile selection, and print-job delivery metadata
 - Phase 3L inventory locations add clinic location/bin setup plus location-aware lot, dispense, and stock movement metadata
 - Phase 3M location stock ledger adds per-location item quantity, immediate transfers, and transfer audit visibility
+- Phase 3N inventory transfer workflow adds lot-specific transfer requests, pending/in-transit states, approve/receive/cancel APIs, and frontend transfer actions
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -63,6 +64,7 @@
 - Review `docs/phase-3k-plan.md`, `docs/phase-3k-clinician-summary-th.md`, `docs/phase-3k-uat-checklist-th.md`, and `docs/phase-3k-closure-summary-th.md` with pharmacy staff, operations, and IT
 - Review `docs/phase-3l-plan.md`, `docs/phase-3l-clinician-summary-th.md`, `docs/phase-3l-uat-checklist-th.md`, and `docs/phase-3l-closure-summary-th.md` with pharmacy staff and operations
 - Review `docs/phase-3m-plan.md`, `docs/phase-3m-clinician-summary-th.md`, `docs/phase-3m-uat-checklist-th.md`, and `docs/phase-3m-closure-summary-th.md` with pharmacy staff and operations
+- Review `docs/phase-3n-plan.md`, `docs/phase-3n-clinician-summary-th.md`, `docs/phase-3n-uat-checklist-th.md`, and `docs/phase-3n-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 
 ## Verified
 
@@ -93,4 +95,6 @@
 - Phase 3K targeted printer profile service, API, frontend syntax, and migration tests pass
 - Phase 3L targeted inventory location service, API, frontend syntax, and migration tests pass
 - Phase 3M targeted location stock ledger service, frontend syntax, and migration tests pass
+- Phase 3N targeted transfer workflow service, frontend syntax, and migration tests pass
+- Phase 3N full suite passes `146/146`, and API smoke passes transfer approve/receive workflow
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

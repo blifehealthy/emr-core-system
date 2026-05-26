@@ -105,8 +105,11 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/inventory-locations` | Create an inventory location with default and active flags. |
 | `PATCH` | `/api/inventory-locations/:locationId` | Update an inventory location or default flag. |
 | `GET` | `/api/inventory-location-stocks` | List per-location/bin stock ledger rows. |
-| `GET` | `/api/inventory-transfers` | List inventory transfers between locations. |
-| `POST` | `/api/inventory-transfers` | Transfer item quantity between two inventory locations/bins. |
+| `GET` | `/api/inventory-transfers` | List inventory transfers between locations with optional status filter. |
+| `POST` | `/api/inventory-transfers` | Transfer item quantity between two inventory locations/bins, optionally as an approval request. |
+| `POST` | `/api/inventory-transfers/:transferId/approve` | Approve a pending transfer and move source stock into transit. |
+| `POST` | `/api/inventory-transfers/:transferId/receive` | Receive an in-transit transfer into destination stock. |
+| `POST` | `/api/inventory-transfers/:transferId/cancel` | Cancel a pending or in-transit transfer, restoring source stock when needed. |
 | `GET` | `/api/inventory-lots` | List inventory lots by clinic and optional inventory item. |
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
 | `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |

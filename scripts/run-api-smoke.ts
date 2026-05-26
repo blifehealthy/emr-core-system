@@ -65,6 +65,7 @@ const migrations = [
   '0033_add_phase_3k_printer_profiles.up.sql',
   '0034_add_phase_3l_inventory_locations.up.sql',
   '0035_add_phase_3m_location_stock_ledger.up.sql',
+  '0036_add_phase_3n_transfer_workflow.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -1312,6 +1313,7 @@ async function main() {
       {
         clinicId: '10000000-0000-0000-0000-000000000101',
         inventoryItemId: inventoryItem.data.id,
+        inventoryLotId: inventoryLot.data.id,
         fromInventoryLocationId: inventoryLocation.data.id,
         toInventoryLocationId: destinationLocation.data.id,
         fromBinLabel: 'A1',
@@ -1323,11 +1325,50 @@ async function main() {
     assert.equal(transfer.data.from_inventory_location_id, inventoryLocation.data.id);
     assert.equal(transfer.data.to_inventory_location_id, destinationLocation.data.id);
 
+    const pendingTransfer = await requestJson<{ id: string; status: string }>(
+      '/api/inventory-transfers',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        inventoryItemId: inventoryItem.data.id,
+        inventoryLotId: inventoryLot.data.id,
+        fromInventoryLocationId: inventoryLocation.data.id,
+        toInventoryLocationId: destinationLocation.data.id,
+        fromBinLabel: 'A1',
+        toBinLabel: 'D1',
+        quantity: 1,
+        approvalRequired: true,
+      }
+    );
+    assert.equal(pendingTransfer.data.status, 'pending');
+
+    const approvedTransfer = await requestJson<{ id: string; status: string }>(
+      `/api/inventory-transfers/${pendingTransfer.data.id}/approve`,
+      adminHeaders,
+      'POST',
+      200,
+      { approvedByUserId: createdUser.data.id }
+    );
+    assert.equal(approvedTransfer.data.status, 'in_transit');
+
+    const receivedTransfer = await requestJson<{ id: string; status: string; received_at: string }>(
+      `/api/inventory-transfers/${pendingTransfer.data.id}/receive`,
+      adminHeaders,
+      'POST',
+      200,
+      { receivedByUserId: createdUser.data.id }
+    );
+    assert.equal(receivedTransfer.data.status, 'completed');
+    assert.ok(receivedTransfer.data.received_at);
+
     const transfers = await requestJson<Array<{ id: string }>>(
-      `/api/inventory-transfers?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&limit=10`,
+      `/api/inventory-transfers?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&status=all&limit=10`,
       adminHeaders
     );
     assert.ok(transfers.data.some((item) => item.id === transfer.data.id));
+    assert.ok(transfers.data.some((item) => item.id === pendingTransfer.data.id));
 
     const chargeTemplate = await requestJson<{
       id: string;

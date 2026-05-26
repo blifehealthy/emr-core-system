@@ -697,13 +697,32 @@ export type UpdateInventoryLocationInput = {
 export type CreateInventoryTransferInput = {
   clinicId: string;
   inventoryItemId: string;
+  inventoryLotId?: string | null;
   fromInventoryLocationId: string;
   toInventoryLocationId: string;
   fromBinLabel?: string | null;
   toBinLabel?: string | null;
   quantity: number | string;
+  approvalRequired?: boolean;
+  requestedByUserId?: string | null;
   transferredByUserId?: string | null;
   notes?: string | null;
+};
+
+export type ApproveInventoryTransferInput = {
+  transferId: string;
+  approvedByUserId?: string | null;
+};
+
+export type ReceiveInventoryTransferInput = {
+  transferId: string;
+  receivedByUserId?: string | null;
+};
+
+export type CancelInventoryTransferInput = {
+  transferId: string;
+  cancelledByUserId?: string | null;
+  cancellationReason?: string | null;
 };
 
 export type CreateSupplierInput = {
@@ -1293,10 +1312,14 @@ export type Dependencies = {
   listInventoryTransfers?: (input: {
     clinicId: string;
     inventoryItemId?: string;
+    status?: 'pending' | 'in_transit' | 'completed' | 'cancelled' | 'all';
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;
   createInventoryTransfer?: (input: CreateInventoryTransferInput) => Promise<unknown | null>;
+  approveInventoryTransfer?: (input: ApproveInventoryTransferInput) => Promise<unknown | null>;
+  receiveInventoryTransfer?: (input: ReceiveInventoryTransferInput) => Promise<unknown | null>;
+  cancelInventoryTransfer?: (input: CancelInventoryTransferInput) => Promise<unknown | null>;
   listInventoryLots?: (input: {
     clinicId: string;
     inventoryItemId?: string;

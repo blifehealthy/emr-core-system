@@ -871,6 +871,7 @@ async function fetchInventoryLocationStocks(clinicId, apiToken) {
 async function fetchInventoryTransfers(clinicId, apiToken) {
   const params = new URLSearchParams({
     clinicId,
+    status: 'all',
     limit: '200',
     offset: '0',
   });
@@ -4130,17 +4131,25 @@ function createPharmacyInventoryPanel(patient) {
   transferForm.className = 'nested-inline-form';
   transferForm.append(
     createInventoryItemSelectField('inventoryItemId', 'Inventory item', true),
+    createInventoryLotSelectField('inventoryLotId', 'Lot'),
     createInventoryLocationSelectField('fromInventoryLocationId', 'From location', true),
     createFormField('fromBinLabel', 'From bin', 'input'),
     createInventoryLocationSelectField('toInventoryLocationId', 'To location', true),
     createFormField('toBinLabel', 'To bin', 'input'),
     createFormField('quantity', 'Transfer quantity', 'input', true)
   );
+  const approvalLabel = document.createElement('label');
+  approvalLabel.textContent = 'Approval required';
+  const approvalCheckbox = document.createElement('input');
+  approvalCheckbox.type = 'checkbox';
+  approvalCheckbox.name = 'approvalRequired';
+  approvalCheckbox.value = 'true';
+  approvalLabel.append(approvalCheckbox);
   const transferSubmit = document.createElement('button');
   transferSubmit.type = 'submit';
   transferSubmit.className = 'secondary-button compact-button';
   transferSubmit.textContent = 'ย้าย stock';
-  transferForm.append(transferSubmit);
+  transferForm.append(approvalLabel, transferSubmit);
   transferForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     await createInventoryTransferFromForm(patient, transferForm, transferSubmit);
@@ -4277,12 +4286,7 @@ function createPharmacyInventoryPanel(patient) {
   const transferList = document.createElement('div');
   transferList.className = 'record-list';
   for (const transfer of currentInventoryTransfers.slice(0, 4)) {
-    transferList.append(createRecordCard(transfer, inventoryTransferSummary, [
-      'from_inventory_location_display_name',
-      'to_inventory_location_display_name',
-      'quantity',
-      'status',
-    ]));
+    transferList.append(createInventoryTransferCard(transfer));
   }
   if (currentInventoryTransfers.length > 0) {
     section.append(transferList);
@@ -4552,6 +4556,26 @@ function createInventoryLocationSelectField(name, labelText, required = false) {
   return label;
 }
 
+function createInventoryLotSelectField(name, labelText, required = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  select.required = required;
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = 'Unassigned';
+  select.append(emptyOption);
+  for (const lot of currentInventoryLots) {
+    const option = document.createElement('option');
+    option.value = lot.id;
+    option.textContent = `${lot.lot_number ?? lot.id} (${lot.quantity_on_hand ?? 0})`;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
+}
+
 function applyDrugCatalogInventorySelection(form) {
   const selected = currentDrugCatalog.find((item) => item.id === form.elements.drugCatalogId.value);
   if (!selected) return;
@@ -4796,11 +4820,14 @@ async function createInventoryTransferFromForm(patient, form, submit) {
       body: JSON.stringify(compactPayload({
         clinicId: patient.clinic_id,
         inventoryItemId: values.inventoryItemId,
+        inventoryLotId: values.inventoryLotId,
         fromInventoryLocationId: values.fromInventoryLocationId,
         toInventoryLocationId: values.toInventoryLocationId,
         fromBinLabel: values.fromBinLabel,
         toBinLabel: values.toBinLabel,
         quantity: values.quantity,
+        approvalRequired: values.approvalRequired === 'true',
+        requestedByUserId: readValue('userId'),
         transferredByUserId: readValue('userId'),
         notes: 'Inventory transfer from pharmacy panel',
       })),
@@ -4809,7 +4836,7 @@ async function createInventoryTransferFromForm(patient, form, submit) {
     if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
     form.reset();
     await refreshPatientWorkspace('Prescriptions');
-    setStatus('ย้าย stock แล้ว', 'success');
+    setStatus(values.approvalRequired === 'true' ? 'ส่งคำขอย้าย stock แล้ว' : 'ย้าย stock แล้ว', 'success');
   } catch (error) {
     renderInlineFormError(form, error instanceof Error ? error.message : 'ย้าย stock ไม่สำเร็จ');
     setStatus('ย้าย stock ไม่สำเร็จ', 'error');
@@ -5574,6 +5601,90 @@ function createPrescriptionActions(prescription) {
   });
   actions.append(printButton, dispenseButton);
   return actions;
+}
+
+function createInventoryTransferCard(transfer) {
+  const card = createRecordCard(transfer, inventoryTransferSummary, [
+    'inventory_lot_number',
+    'from_inventory_location_display_name',
+    'from_bin_label',
+    'to_inventory_location_display_name',
+    'to_bin_label',
+    'quantity',
+    'status',
+    'requested_at',
+    'approved_at',
+    'received_at',
+    'cancelled_at',
+  ]);
+
+  if (transfer.id && ['pending', 'in_transit'].includes(transfer.status)) {
+    card.append(createInventoryTransferActions(transfer));
+  }
+
+  return card;
+}
+
+function createInventoryTransferActions(transfer) {
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+
+  if (transfer.status === 'pending') {
+    const approveButton = document.createElement('button');
+    approveButton.type = 'button';
+    approveButton.className = 'primary-button small-button';
+    approveButton.textContent = 'อนุมัติย้าย';
+    approveButton.addEventListener('click', async () => {
+      await runInventoryTransferAction(transfer, 'approve', { approvedByUserId: readValue('userId') }, 'อนุมัติย้าย stock แล้ว');
+    });
+    actions.append(approveButton);
+  }
+
+  if (transfer.status === 'in_transit') {
+    const receiveButton = document.createElement('button');
+    receiveButton.type = 'button';
+    receiveButton.className = 'primary-button small-button';
+    receiveButton.textContent = 'รับเข้าปลายทาง';
+    receiveButton.addEventListener('click', async () => {
+      await runInventoryTransferAction(transfer, 'receive', { receivedByUserId: readValue('userId') }, 'รับ stock ปลายทางแล้ว');
+    });
+    actions.append(receiveButton);
+  }
+
+  const cancelButton = document.createElement('button');
+  cancelButton.type = 'button';
+  cancelButton.className = 'secondary-button small-button';
+  cancelButton.textContent = 'ยกเลิก';
+  cancelButton.addEventListener('click', async () => {
+    const cancellationReason = window.prompt('เหตุผลการยกเลิก', 'Cancelled from pharmacy panel');
+    if (cancellationReason === null) return;
+    await runInventoryTransferAction(
+      transfer,
+      'cancel',
+      { cancelledByUserId: readValue('userId'), cancellationReason },
+      'ยกเลิกการย้าย stock แล้ว'
+    );
+  });
+  actions.append(cancelButton);
+
+  return actions;
+}
+
+async function runInventoryTransferAction(transfer, action, payload, successMessage) {
+  setStatus('กำลังอัปเดตการย้าย stock', '');
+  try {
+    const response = await fetch(`/api/inventory-transfers/${transfer.id}/${action}`, {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload(payload)),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus(successMessage, 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'อัปเดตการย้าย stock ไม่สำเร็จ', 'error');
+  }
 }
 
 async function dispensePrescriptionPrompt(prescription) {

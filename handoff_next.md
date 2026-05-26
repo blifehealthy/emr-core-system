@@ -165,6 +165,15 @@
     - receiving, adjustment, PO receiving, and dispensing update location stock when location is provided
     - Pharmacy inventory location stock cards and transfer form/history
     - Phase 3M plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3N inventory transfer workflow:
+    - migration `0036_add_phase_3n_transfer_workflow`
+    - `inventory_transfers` now supports `pending`, `in_transit`, `completed`, and `cancelled`
+    - transfer requests can include `inventory_lot_id`
+    - `POST /api/inventory-transfers/:transferId/approve`
+    - `POST /api/inventory-transfers/:transferId/receive`
+    - `POST /api/inventory-transfers/:transferId/cancel`
+    - Pharmacy inventory cards now show transfer workflow actions
+    - Phase 3N plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -172,7 +181,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `145/145` passing
+  - current result: `146/146` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -199,8 +208,8 @@
     two-step approval, Phase 3H barcode scan lookup, verified receiving,
     verified PO receiving, verified dispensing, Phase 3J ZPL print job
     creation, Phase 3K printer profile routing, and Phase 3L inventory
-    location-aware receiving/dispensing, plus Phase 3M location stock ledger
-    and transfer workflow
+    location-aware receiving/dispensing, Phase 3M location stock ledger and
+    transfer workflow, plus Phase 3N transfer approval/receiving workflow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -770,8 +779,11 @@ Then produce:
 6. Run Phase 3I pharmacy UAT for scanner panel ergonomics and barcode label
    printing.
 7. Run Phase 3J pharmacy/IT UAT for ZPL/ESC/POS export and print-job audit.
-8. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
-   integration, GS1 parsing, budget controls, multi-location stock, supplier
-   payment handoff, or controlled-substance register.
-9. If pharmacy UAT is not the blocker, switch to accounting or payer export
+8. Run Phase 3N pharmacy/operations UAT for lot-specific transfer request,
+   approval, in-transit receiving, and cancellation behavior.
+9. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+   integration, GS1 parsing, budget controls, FEFO picking guard, supplier
+   payment handoff, role-separated transfer approval, or controlled-substance
+   register.
+10. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.
