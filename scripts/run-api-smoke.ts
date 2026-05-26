@@ -1376,6 +1376,27 @@ async function main() {
     assert.ok(transfers.data.some((item) => item.id === transfer.data.id));
     assert.ok(transfers.data.some((item) => item.id === pendingTransfer.data.id));
 
+    const pharmacyOverrideReport = await requestJson<{
+      override_total: number;
+      dispense_override_total: number;
+      transfer_override_total: number;
+      recent_events: unknown[];
+    }>(
+      `/api/reports/pharmacy-overrides?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.ok(pharmacyOverrideReport.data.override_total >= 3);
+    assert.ok(pharmacyOverrideReport.data.dispense_override_total >= 1);
+    assert.ok(pharmacyOverrideReport.data.transfer_override_total >= 2);
+    assert.ok(Array.isArray(pharmacyOverrideReport.data.recent_events));
+
+    const pharmacyOverrideCsv = await requestText(
+      `/api/reports/pharmacy-overrides.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,
+      adminHeaders
+    );
+    assert.equal(pharmacyOverrideCsv.statusCode, 200);
+    assert.match(pharmacyOverrideCsv.body, /override_total,/);
+
     const chargeTemplate = await requestJson<{
       id: string;
       code: string;

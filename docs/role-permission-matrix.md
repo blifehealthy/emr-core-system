@@ -91,6 +91,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `PATCH` | `/api/clinics/:clinicId/settings` | `practitioner_write` |
 | `GET` | `/api/reports/daily-operations` | `audit_read` |
 | `GET` | `/api/reports/daily-operations.csv` | `audit_read` |
+| `GET` | `/api/reports/pharmacy-overrides` | `audit_read` |
+| `GET` | `/api/reports/pharmacy-overrides.csv` | `audit_read` |
 | `GET` | `/api/diagnoses/:diagnosisId` | `patient_read` |
 | `GET` | `/api/encounters/:encounterId/diagnoses` | `patient_read` |
 | `POST` | `/api/diagnoses` | `diagnosis_update` |

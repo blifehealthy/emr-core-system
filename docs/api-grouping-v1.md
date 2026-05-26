@@ -159,6 +159,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/reports/daily-operations.csv` | CSV export for the same operations report metrics. |
 | `GET` | `/api/reports/billing-summary` | Date-range invoice, payment, refund, outstanding, and claim aggregates. |
 | `GET` | `/api/reports/billing-summary.csv` | CSV export for billing summary metrics. |
+| `GET` | `/api/reports/pharmacy-overrides` | Date-range expiry and FEFO override review report for dispensing and transfer events. |
+| `GET` | `/api/reports/pharmacy-overrides.csv` | CSV export for the pharmacy override review report. |
 
 | Method | Route | Purpose |
 | --- | --- | --- |

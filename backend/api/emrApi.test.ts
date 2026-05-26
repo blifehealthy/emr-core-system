@@ -94,6 +94,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getDailyOperationsReport() {
       return { start_date: '2026-05-24', end_date: '2026-05-24', visits_total: 0 };
     },
+    async getPharmacyOverrideReport() {
+      return { start_date: '2026-05-24', end_date: '2026-05-24', override_total: 0 };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -1062,6 +1065,18 @@ test('clinic settings and daily operations report APIs work', async () => {
           by_prescriber: [{ prescribed_by_practitioner_id: 'doctor-1', prescriptions: 3 }],
         };
       },
+      async getPharmacyOverrideReport(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.startDate, '2026-05-24');
+        assert.equal(input.endDate, '2026-05-31');
+        return {
+          start_date: input.startDate,
+          end_date: input.endDate,
+          override_total: 2,
+          by_event_type: [{ event_type: 'dispense', count: 1 }],
+          by_item: [{ inventory_item_display_name: 'Amoxicillin', count: 2 }],
+        };
+      },
     })
   );
 
@@ -1108,6 +1123,34 @@ test('clinic settings and daily operations report APIs work', async () => {
   assert.match(csv.body as string, /visits_total,7/);
   assert.match(csv.body as string, /by_room:Room A,2/);
   assert.match(csv.body as string, /by_prescriber:doctor-1,3/);
+
+  const overrideReport = await api({
+    method: 'GET',
+    path: '/api/reports/pharmacy-overrides',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(overrideReport.status, 200);
+  assert.deepEqual(overrideReport.body, {
+    data: {
+      start_date: '2026-05-24',
+      end_date: '2026-05-31',
+      override_total: 2,
+      by_event_type: [{ event_type: 'dispense', count: 1 }],
+      by_item: [{ inventory_item_display_name: 'Amoxicillin', count: 2 }],
+    },
+  });
+
+  const overrideCsv = await api({
+    method: 'GET',
+    path: '/api/reports/pharmacy-overrides.csv',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(overrideCsv.status, 200);
+  assert.match(overrideCsv.body as string, /override_total,2/);
+  assert.match(overrideCsv.body as string, /by_event_type:dispense,1/);
+  assert.match(overrideCsv.body as string, /by_item:Amoxicillin,2/);
 });
 
 test('appointments API rejects unsupported status transitions', async () => {

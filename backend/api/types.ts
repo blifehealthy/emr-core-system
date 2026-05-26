@@ -1199,6 +1199,11 @@ export type Dependencies = {
     startDate: string;
     endDate: string;
   }) => Promise<unknown | null>;
+  getPharmacyOverrideReport?: (input: {
+    clinicId: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<unknown | null>;
   listConsentRecordsByPatient: (input: {
     patientId: string;
     status?: ConsentStatus;

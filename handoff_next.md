@@ -181,6 +181,12 @@
     - lot-aware dispensing and transfer creation block non-FEFO lots without `fefoOverrideReason`
     - Pharmacy panel exposes override fields/prompts
     - Phase 3O plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3P pharmacy override review report:
+    - `GET /api/reports/pharmacy-overrides`
+    - `GET /api/reports/pharmacy-overrides.csv`
+    - report combines dispense and transfer expiry/FEFO override rows
+    - Operations dashboard shows pharmacy override chart and recent override notes
+    - Phase 3P plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -188,7 +194,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `148/148` passing
+  - current result: `149/149` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -217,7 +223,8 @@
     creation, Phase 3K printer profile routing, and Phase 3L inventory
     location-aware receiving/dispensing, Phase 3M location stock ledger and
     transfer workflow, Phase 3N transfer approval/receiving workflow, plus
-    Phase 3O FEFO/expiry override fields
+    Phase 3O FEFO/expiry override fields and Phase 3P pharmacy override
+    JSON/CSV report
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -791,9 +798,9 @@ Then produce:
    approval, in-transit receiving, and cancellation behavior.
 9. Run Phase 3O pharmacy UAT for expiry blocking, FEFO recommendation, and
    override reason review.
-10. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
-   integration, GS1 parsing, budget controls, override review reports, supplier
-   payment handoff, role-separated transfer/override approval, or
-   controlled-substance register.
-11. If pharmacy UAT is not the blocker, switch to accounting or payer export
+10. Run Phase 3P pharmacy/owner UAT for override review report and CSV export.
+11. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+   integration, GS1 parsing, budget controls, supplier payment handoff,
+   role-separated transfer/override approval, or controlled-substance register.
+12. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

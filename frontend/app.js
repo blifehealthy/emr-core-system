@@ -55,6 +55,7 @@ let currentPurchaseOrderApprovalPolicies = [];
 let currentInventoryPrinterProfiles = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
+let currentPharmacyOverrideReport = null;
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -266,6 +267,7 @@ queueForm.addEventListener('submit', async (event) => {
     currentQueue = await fetchQueue(clinicId, apiToken);
     currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
     currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
+    currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
     renderQueueBoard();
     setStatus('โหลดคิวแล้ว', 'success');
   } catch (error) {
@@ -989,6 +991,24 @@ async function fetchDailyOperationsReport(clinicId, apiToken) {
     endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
   });
   const response = await fetch(`/api/reports/daily-operations?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
+async function fetchPharmacyOverrideReport(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+  });
+  const response = await fetch(`/api/reports/pharmacy-overrides?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2227,10 +2247,40 @@ function createOperationsCharts() {
     createBarChart('Prescribers', (report.by_prescriber ?? []).map((item) => [
       practitionerLabel(item.prescribed_by_practitioner_id) || 'No prescriber',
       item.prescriptions ?? 0,
-    ]))
+    ])),
+    createPharmacyOverrideChart()
   );
 
   return section;
+}
+
+function createPharmacyOverrideChart() {
+  const report = currentPharmacyOverrideReport ?? {};
+  const rows = [
+    ['Expiry overrides', report.expiry_override_total ?? 0],
+    ['FEFO overrides', report.fefo_override_total ?? 0],
+    ['Dispense overrides', report.dispense_override_total ?? 0],
+    ['Transfer overrides', report.transfer_override_total ?? 0],
+  ];
+  const chart = createBarChart('Pharmacy overrides', rows);
+  const events = (report.recent_events ?? []).slice(0, 3);
+  if (events.length > 0) {
+    const list = document.createElement('dl');
+    for (const event of events) {
+      const term = document.createElement('dt');
+      term.textContent = `${event.event_type ?? 'override'} · ${event.inventory_item_display_name ?? event.inventory_item_id ?? ''}`;
+      const description = document.createElement('dd');
+      description.textContent =
+        event.expiry_override_reason ||
+        event.fefo_override_reason ||
+        event.fefo_recommended_lot_number ||
+        event.inventory_lot_number ||
+        '';
+      list.append(term, description);
+    }
+    chart.append(list);
+  }
+  return chart;
 }
 
 function createBarChart(title, rows) {

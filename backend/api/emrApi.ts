@@ -55,6 +55,8 @@ import {
   handleGetDailyOperationsReportCsv,
   handleGetBillingSummaryReport,
   handleGetBillingSummaryReportCsv,
+  handleGetPharmacyOverrideReport,
+  handleGetPharmacyOverrideReportCsv,
   handleGetDiagnosis,
   handleAssessPrescriptionSafety,
   handleGetEncounter,
@@ -417,6 +419,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_read');
       if (roleError) return roleError;
       return handleGetBillingSummaryReportCsv(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/pharmacy-overrides') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetPharmacyOverrideReport(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/pharmacy-overrides.csv') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetPharmacyOverrideReportCsv(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/audit-logs') {
