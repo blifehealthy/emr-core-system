@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  approveControlledSubstanceReconciliation,
   closeControlledSubstanceReconciliation,
   createControlledSubstanceReconciliation,
   listControlledSubstanceReconciliations,
 } from './controlledSubstanceReconciliations.ts';
 
-test('controlled substance reconciliation services list create and close a count', async () => {
+test('controlled substance reconciliation services list create close and approve a count variance', async () => {
   const calls: Array<{ sql: string; params?: unknown[] }> = [];
   const db = {
     async query<T = unknown>(sql: string, params?: unknown[]) {
@@ -25,7 +26,10 @@ test('controlled substance reconciliation services list create and close a count
         return { rows: [{ id: 'csr-2', expected_quantity: '12.50' }] as T[] };
       }
       if (sql.includes('UPDATE controlled_substance_reconciliations')) {
-        return { rows: [{ id: 'csr-2', status: 'closed', variance_quantity: '-0.50' }] as T[] };
+        if (sql.includes("status = 'closed'")) {
+          return { rows: [{ id: 'csr-2', status: 'closed', approved_by_user_id: 'admin-1' }] as T[] };
+        }
+        return { rows: [{ id: 'csr-2', status: 'pending_approval', variance_quantity: '-0.50' }] as T[] };
       }
       return { rows: [] as T[] };
     },
@@ -44,9 +48,16 @@ test('controlled substance reconciliation services list create and close a count
     countedQuantity: 12,
     varianceReason: 'One tablet damaged',
   });
+  const approved = await approveControlledSubstanceReconciliation(db)({
+    reconciliationId: 'csr-2',
+    approvedByUserId: 'admin-1',
+    approvalNote: 'Reviewed variance',
+  });
 
   assert.equal((list.rows[0] as { id: string }).id, 'csr-1');
   assert.equal((created as { id: string }).id, 'csr-2');
-  assert.equal((closed as { status: string }).status, 'closed');
-  assert.deepEqual(calls.at(-1)?.params, ['csr-2', 12, -0.5, 'One tablet damaged', null, null]);
+  assert.equal((closed as { status: string }).status, 'pending_approval');
+  assert.equal((approved as { status: string }).status, 'closed');
+  assert.deepEqual(calls.at(-2)?.params, ['csr-2', 12, -0.5, 'One tablet damaged', null, null, 'pending_approval']);
+  assert.deepEqual(calls.at(-1)?.params, ['csr-2', 'admin-1', 'Reviewed variance']);
 });

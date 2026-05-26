@@ -232,6 +232,14 @@
     - closed rounds store counted quantity, variance, variance reason, and user audit fields
     - Operations dashboard can open and close controlled-drug count rounds
     - Phase 3V plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3W controlled reconciliation variance approval:
+    - migration `0043_add_phase_3w_controlled_reconciliation_approval`
+    - `PATCH /api/controlled-substance-reconciliations/:reconciliationId/approve`
+    - close with zero variance returns `closed`
+    - close with non-zero variance returns `pending_approval`
+    - approval stores approver, approval timestamp, and approval note
+    - Operations dashboard can approve pending variance rounds
+    - Phase 3W plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -239,7 +247,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `157/157` passing
+  - current result: `158/158` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -272,8 +280,9 @@
     JSON/CSV report, Phase 3Q separated transfer/override permissions,
     Phase 3R controlled substance register JSON/CSV report, Phase 3S
     controlled dispense witness metadata, Phase 3T controlled witness
-    re-auth metadata, Phase 3U role permission override API flow, and
-    Phase 3V controlled substance reconciliation open/list/close flow
+    re-auth metadata, Phase 3U role permission override API flow,
+    Phase 3V controlled substance reconciliation open/list/close flow, and
+    Phase 3W controlled reconciliation pending approval/approve flow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -850,9 +859,11 @@ Then produce:
 10. Run Phase 3P pharmacy/owner UAT for override review report and CSV export.
 11. Run Phase 3V pharmacy/owner UAT for controlled-drug reconciliation open,
    count, variance reason, and audit review.
-12. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+12. Run Phase 3W pharmacy lead/owner UAT for controlled-drug variance pending
+   approval and approval note behavior.
+13. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
    integration, GS1 parsing, budget controls, supplier payment handoff,
-   per-lot controlled count, variance approval, or permission change approval
-   workflow.
-13. If pharmacy UAT is not the blocker, switch to accounting or payer export
+   per-lot controlled count, stricter approver separation, or permission
+   change approval workflow.
+14. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

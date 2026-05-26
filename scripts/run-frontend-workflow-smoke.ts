@@ -77,6 +77,7 @@ assertContains(app, 'function createControlledSubstanceChart(', 'controlled subs
 assertContains(app, 'fetchControlledSubstanceReconciliations', 'controlled substance reconciliation fetch');
 assertContains(app, '/api/controlled-substance-reconciliations', 'controlled substance reconciliation endpoint');
 assertContains(app, 'closeControlledSubstanceReconciliation', 'controlled substance reconciliation close action');
+assertContains(app, 'approveControlledSubstanceReconciliation', 'controlled substance reconciliation approve action');
 assertContains(app, 'isControlledSubstance', 'controlled inventory item payload');
 assertContains(app, 'witnessUserId', 'controlled dispense witness payload');
 assertContains(app, 'Witness user ID for controlled dispense', 'controlled dispense witness prompt');

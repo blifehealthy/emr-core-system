@@ -181,6 +181,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0042_add_phase_3v_controlled_substance_reconciliations.up.sql'),
     'expected Phase 3V controlled substance reconciliations migration'
   );
+  assert.ok(
+    filenames.includes('0043_add_phase_3w_controlled_reconciliation_approval.up.sql'),
+    'expected Phase 3W controlled reconciliation approval migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

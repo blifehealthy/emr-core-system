@@ -1,4 +1,5 @@
 import type {
+  ApproveControlledSubstanceReconciliationInput,
   CloseControlledSubstanceReconciliationInput,
   CreateControlledSubstanceReconciliationInput,
 } from '../api/types.ts';
@@ -118,10 +119,11 @@ export function closeControlledSubstanceReconciliation(db: Queryable) {
     const counted = Number(input.countedQuantity);
     const expected = Number(row.expected_quantity);
     const variance = Number((counted - expected).toFixed(2));
+    const status = variance === 0 ? 'closed' : 'pending_approval';
     const result = await db.query(
       `
         UPDATE controlled_substance_reconciliations
-        SET status = 'closed',
+        SET status = $7,
             counted_quantity = $2,
             variance_quantity = $3,
             variance_reason = $4,
@@ -138,7 +140,30 @@ export function closeControlledSubstanceReconciliation(db: Queryable) {
         input.varianceReason ?? null,
         input.closedByUserId ?? null,
         input.notes ?? null,
+        status,
       ]
+    );
+
+    return result.rows[0] ?? null;
+  };
+}
+
+export function approveControlledSubstanceReconciliation(db: Queryable) {
+  return async function run(input: ApproveControlledSubstanceReconciliationInput) {
+    const result = await db.query(
+      `
+        UPDATE controlled_substance_reconciliations
+        SET status = 'closed',
+            approved_by_user_id = $2,
+            approved_at = now(),
+            approval_note = $3,
+            updated_at = now()
+        WHERE id = $1
+          AND status = 'pending_approval'
+          AND deleted_at IS NULL
+        RETURNING *
+      `,
+      [input.reconciliationId, input.approvedByUserId ?? null, input.approvalNote ?? null]
     );
 
     return result.rows[0] ?? null;

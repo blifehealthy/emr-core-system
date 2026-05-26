@@ -153,6 +153,7 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/controlled-substance-reconciliations` | List controlled-drug reconciliation rounds by clinic and status. |
 | `POST` | `/api/controlled-substance-reconciliations` | Open a controlled-drug reconciliation round and snapshot expected quantity. |
 | `PATCH` | `/api/controlled-substance-reconciliations/:reconciliationId/close` | Close a controlled-drug reconciliation round and calculate quantity variance. |
+| `PATCH` | `/api/controlled-substance-reconciliations/:reconciliationId/approve` | Approve a controlled-drug reconciliation variance and mark the round closed. |
 
 ## Reporting
 

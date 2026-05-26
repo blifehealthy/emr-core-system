@@ -95,6 +95,7 @@ import type {
   CloseCashierReconciliationInput,
   CreateControlledSubstanceReconciliationInput,
   CloseControlledSubstanceReconciliationInput,
+  ApproveControlledSubstanceReconciliationInput,
   IssueBillingNumberInput,
   UpdateInsuranceClaimInput,
   UpdateUserValidatedInput,
@@ -892,6 +893,30 @@ export function validateCloseControlledSubstanceReconciliationBody(
       closedByUserId: closedByUserId.value,
       varianceReason: varianceReason.value,
       notes: notes.value,
+    },
+  };
+}
+
+export function validateApproveControlledSubstanceReconciliationBody(
+  body: unknown,
+  reconciliationId: string
+): { ok: true; value: ApproveControlledSubstanceReconciliationInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const approvedByUserId = readOptionalNullableStringField(candidate, 'approvedByUserId');
+  if (!approvedByUserId.ok) return approvedByUserId;
+  const approvalNote = readOptionalNullableStringField(candidate, 'approvalNote');
+  if (!approvalNote.ok) return approvalNote;
+
+  return {
+    ok: true,
+    value: {
+      reconciliationId,
+      approvedByUserId: approvedByUserId.value,
+      approvalNote: approvalNote.value,
     },
   };
 }

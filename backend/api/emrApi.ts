@@ -6,6 +6,7 @@ import {
   handleCreateChargeTemplate,
   handleCreateClinicVisit,
   handleCreateClinicalNoteTemplate,
+  handleApproveControlledSubstanceReconciliation,
   handleCreateConsentRecord,
   handleCreateFileAsset,
   handleCreateInvoice,
@@ -1067,6 +1068,20 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         actorAwareRequest,
         dependencies,
         controlledSubstanceReconciliationCloseMatch[1]
+      );
+    }
+
+    const controlledSubstanceReconciliationApproveMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/controlled-substance-reconciliations\/([^/]+)\/approve$/)
+        : null;
+    if (controlledSubstanceReconciliationApproveMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleApproveControlledSubstanceReconciliation(
+        actorAwareRequest,
+        dependencies,
+        controlledSubstanceReconciliationApproveMatch[1]
       );
     }
 

@@ -109,6 +109,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async closeControlledSubstanceReconciliation() {
       return { id: 'controlled-reconciliation-1', status: 'closed' };
     },
+    async approveControlledSubstanceReconciliation() {
+      return { id: 'controlled-reconciliation-1', status: 'closed' };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -1348,10 +1351,23 @@ test('controlled substance reconciliation APIs list, open, close, and enforce ro
         });
         return {
           id: 'controlled-reconciliation-1',
-          status: 'closed',
+          status: 'pending_approval',
           counted_quantity: '9.00',
           variance_quantity: '-1.00',
           variance_reason: 'One tablet broken',
+        };
+      },
+      async approveControlledSubstanceReconciliation(input) {
+        assert.deepEqual(input, {
+          reconciliationId: 'controlled-reconciliation-1',
+          approvedByUserId: 'admin-1',
+          approvalNote: 'Variance reviewed',
+        });
+        return {
+          id: 'controlled-reconciliation-1',
+          status: 'closed',
+          approved_by_user_id: 'admin-1',
+          approval_note: 'Variance reviewed',
         };
       },
       async createAuditLog(input) {
@@ -1393,12 +1409,29 @@ test('controlled substance reconciliation APIs list, open, close, and enforce ro
     body: { countedQuantity: 9, varianceReason: 'One tablet broken' },
   });
   assert.equal(closed.status, 200);
-  assert.equal((closed.body as { data: { status: string } }).data.status, 'closed');
+  assert.equal((closed.body as { data: { status: string } }).data.status, 'pending_approval');
+
+  const deniedApproval = await api({
+    method: 'PATCH',
+    path: '/api/controlled-substance-reconciliations/controlled-reconciliation-1/approve',
+    headers: { 'x-user-role': 'doctor' },
+    body: { approvalNote: 'Reviewed' },
+  });
+  assert.equal(deniedApproval.status, 403);
+
+  const approved = await api({
+    method: 'PATCH',
+    path: '/api/controlled-substance-reconciliations/controlled-reconciliation-1/approve',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { approvalNote: 'Variance reviewed' },
+  });
+  assert.equal(approved.status, 200);
+  assert.equal((approved.body as { data: { status: string } }).data.status, 'closed');
   assert.deepEqual(
     auditInputs
       .filter((input) => input.entityType === 'controlled_substance_reconciliation')
       .map((input) => input.action),
-    ['created', 'closed']
+    ['created', 'closed', 'approved']
   );
 });
 

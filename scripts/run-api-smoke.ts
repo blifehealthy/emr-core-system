@@ -72,6 +72,7 @@ const migrations = [
   '0040_add_phase_3t_controlled_witness_reauth.up.sql',
   '0041_add_phase_3u_role_permission_overrides.up.sql',
   '0042_add_phase_3v_controlled_substance_reconciliations.up.sql',
+  '0043_add_phase_3w_controlled_reconciliation_approval.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -1515,6 +1516,54 @@ async function main() {
     );
     assert.equal(closedControlledSubstanceReconciliation.data.status, 'closed');
     assert.equal(closedControlledSubstanceReconciliation.data.variance_reason, 'Smoke count matched');
+
+    const varianceReconciliationDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const varianceControlledSubstanceReconciliation = await requestJson<{
+      id: string;
+      status: string;
+      expected_quantity: string;
+    }>(
+      '/api/controlled-substance-reconciliations',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        reconciliationDate: varianceReconciliationDate,
+        notes: 'Smoke controlled substance variance reconciliation',
+      }
+    );
+    const pendingControlledSubstanceReconciliation = await requestJson<{
+      id: string;
+      status: string;
+      variance_quantity: string;
+      variance_reason: string | null;
+    }>(
+      `/api/controlled-substance-reconciliations/${varianceControlledSubstanceReconciliation.data.id}/close`,
+      adminHeaders,
+      'PATCH',
+      200,
+      {
+        countedQuantity: Number(varianceControlledSubstanceReconciliation.data.expected_quantity) + 1,
+        varianceReason: 'Smoke variance requires approval',
+      }
+    );
+    assert.equal(pendingControlledSubstanceReconciliation.data.status, 'pending_approval');
+    assert.equal(pendingControlledSubstanceReconciliation.data.variance_reason, 'Smoke variance requires approval');
+
+    const approvedControlledSubstanceReconciliation = await requestJson<{
+      id: string;
+      status: string;
+      approval_note: string | null;
+    }>(
+      `/api/controlled-substance-reconciliations/${varianceControlledSubstanceReconciliation.data.id}/approve`,
+      adminHeaders,
+      'PATCH',
+      200,
+      { approvalNote: 'Smoke variance approved' }
+    );
+    assert.equal(approvedControlledSubstanceReconciliation.data.status, 'closed');
+    assert.equal(approvedControlledSubstanceReconciliation.data.approval_note, 'Smoke variance approved');
 
     const pharmacyOverrideCsv = await requestText(
       `/api/reports/pharmacy-overrides.csv?clinicId=10000000-0000-0000-0000-000000000101&startDate=${smokeReportDate}&endDate=${smokeReportDate}`,

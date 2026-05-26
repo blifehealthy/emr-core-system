@@ -58,10 +58,12 @@ real UAT findings, but the likely product directions are below.
   UAT customization.
 - Phase 3V completed controlled-drug reconciliation rounds for expected versus
   counted quantity review.
+- Phase 3W completed controlled-drug reconciliation variance approval for
+  non-zero count differences.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  per-user password/MFA integration, per-lot controlled count, variance
-  approval, or permission change approval workflow.
+  per-user password/MFA integration, per-lot controlled count, stricter
+  approver separation, or permission change approval workflow.
 
 ### Patient Communication
 

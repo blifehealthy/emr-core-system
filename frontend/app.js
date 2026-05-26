@@ -1055,7 +1055,7 @@ async function fetchControlledSubstanceRegister(clinicId, apiToken) {
 }
 
 async function fetchControlledSubstanceReconciliations(clinicId, apiToken) {
-  const params = new URLSearchParams({ clinicId, status: 'open', limit: '10' });
+  const params = new URLSearchParams({ clinicId, limit: '10' });
   const response = await fetch(`/api/controlled-substance-reconciliations?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
@@ -2283,6 +2283,26 @@ async function closeControlledSubstanceReconciliation(reconciliationId, countedQ
   }
 }
 
+async function approveControlledSubstanceReconciliation(reconciliationId, approvalNote = '') {
+  setStatus('กำลังอนุมัติส่วนต่าง controlled drug', '');
+  try {
+    const response = await fetch(`/api/controlled-substance-reconciliations/${reconciliationId}/approve`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        approvedByUserId: readValue('userId'),
+        approvalNote,
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadOperationsWorkspace();
+    setStatus('อนุมัติส่วนต่าง controlled drug แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'อนุมัติส่วนต่าง controlled drug ไม่สำเร็จ', 'error');
+  }
+}
+
 function createBillingInput(name, labelText, value = '', required = false, type = 'text') {
   const field = createFormField(name, labelText, 'input', required);
   const input = field.querySelector('input');
@@ -2437,17 +2457,29 @@ function createControlledSubstanceChart() {
       term.textContent =
         `${reconciliation.reconciliation_date ?? 'รอบตรวจนับ'} · expected ${reconciliation.expected_quantity ?? 0}`;
       const description = document.createElement('dd');
-      const closeButton = document.createElement('button');
-      closeButton.type = 'button';
-      closeButton.className = 'secondary-button small-button';
-      closeButton.textContent = 'ปิดรอบ';
-      closeButton.addEventListener('click', async () => {
-        const countedQuantity = window.prompt('จำนวนที่นับได้', reconciliation.expected_quantity ?? '');
-        if (!countedQuantity) return;
-        const varianceReason = window.prompt('เหตุผลส่วนต่าง (ถ้ามี)', '') ?? '';
-        await closeControlledSubstanceReconciliation(reconciliation.id, countedQuantity, varianceReason);
-      });
-      description.append(closeButton);
+      if (reconciliation.status === 'pending_approval') {
+        const approveButton = document.createElement('button');
+        approveButton.type = 'button';
+        approveButton.className = 'secondary-button small-button';
+        approveButton.textContent = 'อนุมัติส่วนต่าง';
+        approveButton.addEventListener('click', async () => {
+          const approvalNote = window.prompt('หมายเหตุอนุมัติส่วนต่าง', reconciliation.variance_reason ?? '') ?? '';
+          await approveControlledSubstanceReconciliation(reconciliation.id, approvalNote);
+        });
+        description.append(approveButton);
+      } else {
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'secondary-button small-button';
+        closeButton.textContent = 'ปิดรอบ';
+        closeButton.addEventListener('click', async () => {
+          const countedQuantity = window.prompt('จำนวนที่นับได้', reconciliation.expected_quantity ?? '');
+          if (!countedQuantity) return;
+          const varianceReason = window.prompt('เหตุผลส่วนต่าง (ถ้ามี)', '') ?? '';
+          await closeControlledSubstanceReconciliation(reconciliation.id, countedQuantity, varianceReason);
+        });
+        description.append(closeButton);
+      }
       list.append(term, description);
     }
     chart.append(list);

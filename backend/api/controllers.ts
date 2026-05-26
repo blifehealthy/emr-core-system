@@ -128,6 +128,7 @@ import {
   validateCloseCashierReconciliationBody,
   validateCreateControlledSubstanceReconciliationBody,
   validateCloseControlledSubstanceReconciliationBody,
+  validateApproveControlledSubstanceReconciliationBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -172,7 +173,7 @@ import type {
   UserRole,
 } from './types.ts';
 
-type ControlledSubstanceReconciliationStatus = 'open' | 'closed' | 'cancelled';
+type ControlledSubstanceReconciliationStatus = 'open' | 'pending_approval' | 'closed' | 'cancelled';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const appointmentTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
@@ -4211,7 +4212,7 @@ export async function handleListControlledSubstanceReconciliations(
   const status = readOptionalEnumQuery<ControlledSubstanceReconciliationStatus>(
     request,
     'status',
-    ['open', 'closed', 'cancelled']
+    ['open', 'pending_approval', 'closed', 'cancelled']
   );
   if (!status.ok) return validationError(status.error);
   const limit = readOptionalLimitQuery(request);
@@ -4307,6 +4308,47 @@ export async function handleCloseControlledSubstanceReconciliation(
       countedQuantity: validation.value.countedQuantity,
       varianceReason: validation.value.varianceReason,
     },
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toControlledSubstanceReconciliationDto(reconciliation) },
+  };
+}
+
+export async function handleApproveControlledSubstanceReconciliation(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  reconciliationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.approveControlledSubstanceReconciliation) {
+    return mapError(new Error('Controlled substance reconciliation approval dependency is not configured'));
+  }
+
+  const validation = validateApproveControlledSubstanceReconciliationBody(request.body, reconciliationId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const reconciliation = await dependencies.approveControlledSubstanceReconciliation({
+    ...validation.value,
+    approvedByUserId: validation.value.approvedByUserId ?? actor.userId,
+  });
+  if (!reconciliation) {
+    return {
+      status: 404,
+      headers: JSON_HEADERS,
+      body: { error: 'Pending controlled substance reconciliation approval not found' },
+    };
+  }
+
+  await dependencies.createAuditLog({
+    entityType: 'controlled_substance_reconciliation',
+    entityId: reconciliationId,
+    action: 'approved',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: { approvalNote: validation.value.approvalNote },
   });
 
   return {

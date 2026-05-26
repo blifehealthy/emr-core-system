@@ -26,6 +26,7 @@ import {
   listCashierReconciliations,
 } from '../backend/services/cashierReconciliations.ts';
 import {
+  approveControlledSubstanceReconciliation,
   closeControlledSubstanceReconciliation,
   createControlledSubstanceReconciliation,
   listControlledSubstanceReconciliations,
@@ -342,6 +343,7 @@ const server = createNodeServer({
   listControlledSubstanceReconciliations: listControlledSubstanceReconciliations(db),
   createControlledSubstanceReconciliation: createControlledSubstanceReconciliation(db),
   closeControlledSubstanceReconciliation: closeControlledSubstanceReconciliation(db),
+  approveControlledSubstanceReconciliation: approveControlledSubstanceReconciliation(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),

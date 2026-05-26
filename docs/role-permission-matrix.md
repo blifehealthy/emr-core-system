@@ -102,6 +102,7 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/controlled-substance-reconciliations` | `audit_read` |
 | `POST` | `/api/controlled-substance-reconciliations` | `drug_catalog_write` |
 | `PATCH` | `/api/controlled-substance-reconciliations/:reconciliationId/close` | `drug_catalog_write` |
+| `PATCH` | `/api/controlled-substance-reconciliations/:reconciliationId/approve` | `drug_catalog_write` |
 | `GET` | `/api/diagnoses/:diagnosisId` | `patient_read` |
 | `GET` | `/api/encounters/:encounterId/diagnoses` | `patient_read` |
 | `POST` | `/api/diagnoses` | `diagnosis_update` |
