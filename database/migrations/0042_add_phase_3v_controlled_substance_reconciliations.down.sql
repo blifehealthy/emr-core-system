@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_controlled_substance_reconciliations_clinic_status_active;
+DROP TABLE IF EXISTS controlled_substance_reconciliations;

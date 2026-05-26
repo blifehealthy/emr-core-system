@@ -1153,6 +1153,21 @@ export type CloseCashierReconciliationInput = {
   notes?: string | null;
 };
 
+export type CreateControlledSubstanceReconciliationInput = {
+  clinicId: string;
+  reconciliationDate: string;
+  openedByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type CloseControlledSubstanceReconciliationInput = {
+  reconciliationId: string;
+  countedQuantity: number | string;
+  closedByUserId?: string | null;
+  varianceReason?: string | null;
+  notes?: string | null;
+};
+
 export type Dependencies = {
   createAuthSession?: (input: CreateAuthSessionInput) => Promise<AuthSession | AuthSessionFailure | null>;
   getPatientWithEncountersAndSOAP: (input: {
@@ -1494,6 +1509,18 @@ export type Dependencies = {
   }) => Promise<PaginatedListResult>;
   createCashierReconciliation?: (input: CreateCashierReconciliationInput) => Promise<unknown>;
   closeCashierReconciliation?: (input: CloseCashierReconciliationInput) => Promise<unknown | null>;
+  listControlledSubstanceReconciliations?: (input: {
+    clinicId: string;
+    status?: 'open' | 'closed' | 'cancelled';
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createControlledSubstanceReconciliation?: (
+    input: CreateControlledSubstanceReconciliationInput
+  ) => Promise<unknown>;
+  closeControlledSubstanceReconciliation?: (
+    input: CloseControlledSubstanceReconciliationInput
+  ) => Promise<unknown | null>;
   createEncounterWithSOAP: (input: CreateEncounterInput) => Promise<CreateEncounterResult>;
   updateEncounter: (input: UpdateEncounterInput) => Promise<unknown | null>;
   updateSoapNote: (input: UpdateSoapNoteInput) => Promise<unknown | null>;

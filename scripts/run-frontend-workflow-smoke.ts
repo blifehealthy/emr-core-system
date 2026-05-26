@@ -74,6 +74,9 @@ assertContains(app, 'function createPharmacyOverrideChart(', 'pharmacy override 
 assertContains(app, 'fetchControlledSubstanceRegister', 'controlled substance register fetch');
 assertContains(app, '/api/reports/controlled-substances', 'controlled substance register endpoint');
 assertContains(app, 'function createControlledSubstanceChart(', 'controlled substance chart');
+assertContains(app, 'fetchControlledSubstanceReconciliations', 'controlled substance reconciliation fetch');
+assertContains(app, '/api/controlled-substance-reconciliations', 'controlled substance reconciliation endpoint');
+assertContains(app, 'closeControlledSubstanceReconciliation', 'controlled substance reconciliation close action');
 assertContains(app, 'isControlledSubstance', 'controlled inventory item payload');
 assertContains(app, 'witnessUserId', 'controlled dispense witness payload');
 assertContains(app, 'Witness user ID for controlled dispense', 'controlled dispense witness prompt');

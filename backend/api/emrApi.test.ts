@@ -100,6 +100,15 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getControlledSubstanceRegister() {
       return { start_date: '2026-05-24', end_date: '2026-05-24', event_total: 0 };
     },
+    async listControlledSubstanceReconciliations() {
+      return { rows: [], meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null } };
+    },
+    async createControlledSubstanceReconciliation() {
+      return { id: 'controlled-reconciliation-1', status: 'open' };
+    },
+    async closeControlledSubstanceReconciliation() {
+      return { id: 'controlled-reconciliation-1', status: 'closed' };
+    },
     async listAttachmentsByTarget() {
       return [];
     },
@@ -1301,6 +1310,96 @@ test('clinic settings and daily operations report APIs work', async () => {
   assert.match(controlledCsv.body as string, /controlled_item_total,1/);
   assert.match(controlledCsv.body as string, /by_event_type:dispense,2/);
   assert.match(controlledCsv.body as string, /by_item:Diazepam,3/);
+});
+
+test('controlled substance reconciliation APIs list, open, close, and enforce roles', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      async listControlledSubstanceReconciliations(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.status, 'open');
+        return {
+          rows: [{ id: 'controlled-reconciliation-1', status: 'open', expected_quantity: '10.00' }],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
+      async createControlledSubstanceReconciliation(input) {
+        assert.deepEqual(input, {
+          clinicId: 'clinic-1',
+          reconciliationDate: '2026-05-24',
+          openedByUserId: 'admin-1',
+          notes: 'End of day count',
+        });
+        return {
+          id: 'controlled-reconciliation-1',
+          status: 'open',
+          expected_quantity: '10.00',
+          opened_by_user_id: 'admin-1',
+        };
+      },
+      async closeControlledSubstanceReconciliation(input) {
+        assert.deepEqual(input, {
+          reconciliationId: 'controlled-reconciliation-1',
+          countedQuantity: 9,
+          closedByUserId: 'admin-1',
+          varianceReason: 'One tablet broken',
+          notes: undefined,
+        });
+        return {
+          id: 'controlled-reconciliation-1',
+          status: 'closed',
+          counted_quantity: '9.00',
+          variance_quantity: '-1.00',
+          variance_reason: 'One tablet broken',
+        };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/controlled-substance-reconciliations',
+    headers: { 'x-user-role': 'doctor' },
+    query: { clinicId: 'clinic-1', status: 'open' },
+  });
+  assert.equal(list.status, 200);
+  assert.equal((list.body as { data: Array<{ id: string }> }).data[0].id, 'controlled-reconciliation-1');
+
+  const deniedOpen = await api({
+    method: 'POST',
+    path: '/api/controlled-substance-reconciliations',
+    headers: { 'x-user-role': 'nurse' },
+    body: { clinicId: 'clinic-1', reconciliationDate: '2026-05-24' },
+  });
+  assert.equal(deniedOpen.status, 403);
+
+  const opened = await api({
+    method: 'POST',
+    path: '/api/controlled-substance-reconciliations',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { clinicId: 'clinic-1', reconciliationDate: '2026-05-24', notes: 'End of day count' },
+  });
+  assert.equal(opened.status, 201);
+
+  const closed = await api({
+    method: 'PATCH',
+    path: '/api/controlled-substance-reconciliations/controlled-reconciliation-1/close',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
+    body: { countedQuantity: 9, varianceReason: 'One tablet broken' },
+  });
+  assert.equal(closed.status, 200);
+  assert.equal((closed.body as { data: { status: string } }).data.status, 'closed');
+  assert.deepEqual(
+    auditInputs
+      .filter((input) => input.entityType === 'controlled_substance_reconciliation')
+      .map((input) => input.action),
+    ['created', 'closed']
+  );
 });
 
 test('appointments API rejects unsupported status transitions', async () => {

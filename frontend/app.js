@@ -57,6 +57,7 @@ const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentPharmacyOverrideReport = null;
 let currentControlledSubstanceRegister = null;
+let currentControlledSubstanceReconciliations = [];
 let currentAdminFilters = {
   usersSearch: '',
   usersActive: 'active',
@@ -270,6 +271,8 @@ queueForm.addEventListener('submit', async (event) => {
     currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
     currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
     currentControlledSubstanceRegister = await fetchControlledSubstanceRegister(clinicId, apiToken).catch(() => null);
+    currentControlledSubstanceReconciliations = await fetchControlledSubstanceReconciliations(clinicId, apiToken)
+      .catch(() => []);
     renderQueueBoard();
     setStatus('โหลดคิวแล้ว', 'success');
   } catch (error) {
@@ -1049,6 +1052,20 @@ async function fetchControlledSubstanceRegister(clinicId, apiToken) {
   }
 
   return result.data;
+}
+
+async function fetchControlledSubstanceReconciliations(clinicId, apiToken) {
+  const params = new URLSearchParams({ clinicId, status: 'open', limit: '10' });
+  const response = await fetch(`/api/controlled-substance-reconciliations?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
 }
 
 async function fetchFileAssets(clinicId, apiToken, filters = {}) {
@@ -2204,6 +2221,68 @@ async function reloadBillingWorkspace() {
   renderBillingWorkspace();
 }
 
+async function reloadOperationsWorkspace() {
+  const clinicId = readValue('queueClinicId');
+  const apiToken = currentApiToken || readValue('apiToken');
+  currentQueue = await fetchQueue(clinicId, apiToken);
+  currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
+  currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
+  currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
+  currentControlledSubstanceRegister = await fetchControlledSubstanceRegister(clinicId, apiToken).catch(() => null);
+  currentControlledSubstanceReconciliations = await fetchControlledSubstanceReconciliations(clinicId, apiToken)
+    .catch(() => []);
+  renderQueueBoard();
+}
+
+async function createControlledSubstanceReconciliation() {
+  const reconciliationDate = window.prompt(
+    'วันที่ตรวจนับ controlled drug (YYYY-MM-DD)',
+    readValue('queueReportEndDate') || new Date().toISOString().slice(0, 10)
+  );
+  if (!reconciliationDate) return;
+
+  setStatus('กำลังเปิดรอบตรวจนับ controlled drug', '');
+  try {
+    const response = await fetch('/api/controlled-substance-reconciliations', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: readValue('queueClinicId'),
+        reconciliationDate,
+        openedByUserId: readValue('userId'),
+        notes: 'Opened from operations dashboard',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadOperationsWorkspace();
+    setStatus('เปิดรอบตรวจนับ controlled drug แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'เปิดรอบตรวจนับ controlled drug ไม่สำเร็จ', 'error');
+  }
+}
+
+async function closeControlledSubstanceReconciliation(reconciliationId, countedQuantity, varianceReason = '') {
+  setStatus('กำลังปิดรอบตรวจนับ controlled drug', '');
+  try {
+    const response = await fetch(`/api/controlled-substance-reconciliations/${reconciliationId}/close`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        countedQuantity,
+        closedByUserId: readValue('userId'),
+        varianceReason,
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    await reloadOperationsWorkspace();
+    setStatus('ปิดรอบตรวจนับ controlled drug แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'ปิดรอบตรวจนับ controlled drug ไม่สำเร็จ', 'error');
+  }
+}
+
 function createBillingInput(name, labelText, value = '', required = false, type = 'text') {
   const field = createFormField(name, labelText, 'input', required);
   const input = field.querySelector('input');
@@ -2333,6 +2412,42 @@ function createControlledSubstanceChart() {
       term.textContent = `${event.event_type ?? 'event'} · ${event.inventory_item_display_name ?? event.inventory_item_id ?? ''}`;
       const description = document.createElement('dd');
       description.textContent = `${event.quantity ?? 0} ${event.direction ?? ''} · ${event.inventory_lot_number ?? event.reference_number ?? ''}`;
+      list.append(term, description);
+    }
+    chart.append(list);
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const openButton = document.createElement('button');
+  openButton.type = 'button';
+  openButton.className = 'secondary-button small-button';
+  openButton.textContent = 'เปิดรอบตรวจนับ';
+  openButton.addEventListener('click', () => {
+    createControlledSubstanceReconciliation();
+  });
+  actions.append(openButton);
+  chart.append(actions);
+
+  const reconciliations = currentControlledSubstanceReconciliations.slice(0, 3);
+  if (reconciliations.length > 0) {
+    const list = document.createElement('dl');
+    for (const reconciliation of reconciliations) {
+      const term = document.createElement('dt');
+      term.textContent =
+        `${reconciliation.reconciliation_date ?? 'รอบตรวจนับ'} · expected ${reconciliation.expected_quantity ?? 0}`;
+      const description = document.createElement('dd');
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'secondary-button small-button';
+      closeButton.textContent = 'ปิดรอบ';
+      closeButton.addEventListener('click', async () => {
+        const countedQuantity = window.prompt('จำนวนที่นับได้', reconciliation.expected_quantity ?? '');
+        if (!countedQuantity) return;
+        const varianceReason = window.prompt('เหตุผลส่วนต่าง (ถ้ามี)', '') ?? '';
+        await closeControlledSubstanceReconciliation(reconciliation.id, countedQuantity, varianceReason);
+      });
+      description.append(closeButton);
       list.append(term, description);
     }
     chart.append(list);

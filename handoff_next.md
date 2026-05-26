@@ -223,6 +223,15 @@
     - `requireRole` applies overrides before default role matrix
     - Admin workspace includes Role Permissions editor
     - Phase 3U plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3V controlled substance reconciliation:
+    - migration `0042_add_phase_3v_controlled_substance_reconciliations`
+    - `GET /api/controlled-substance-reconciliations`
+    - `POST /api/controlled-substance-reconciliations`
+    - `PATCH /api/controlled-substance-reconciliations/:reconciliationId/close`
+    - open rounds snapshot active controlled inventory expected quantity
+    - closed rounds store counted quantity, variance, variance reason, and user audit fields
+    - Operations dashboard can open and close controlled-drug count rounds
+    - Phase 3V plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -230,7 +239,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `155/155` passing
+  - current result: `157/157` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -263,7 +272,8 @@
     JSON/CSV report, Phase 3Q separated transfer/override permissions,
     Phase 3R controlled substance register JSON/CSV report, Phase 3S
     controlled dispense witness metadata, Phase 3T controlled witness
-    re-auth metadata, and Phase 3U role permission override API flow
+    re-auth metadata, Phase 3U role permission override API flow, and
+    Phase 3V controlled substance reconciliation open/list/close flow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -838,8 +848,11 @@ Then produce:
 9. Run Phase 3O pharmacy UAT for expiry blocking, FEFO recommendation, and
    override reason review.
 10. Run Phase 3P pharmacy/owner UAT for override review report and CSV export.
-11. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+11. Run Phase 3V pharmacy/owner UAT for controlled-drug reconciliation open,
+   count, variance reason, and audit review.
+12. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
    integration, GS1 parsing, budget controls, supplier payment handoff,
-   role-separated transfer/override approval, or controlled-substance register.
-12. If pharmacy UAT is not the blocker, switch to accounting or payer export
+   per-lot controlled count, variance approval, or permission change approval
+   workflow.
+13. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

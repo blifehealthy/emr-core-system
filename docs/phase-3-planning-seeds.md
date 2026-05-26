@@ -56,10 +56,12 @@ real UAT findings, but the likely product directions are below.
   login-code confirmation and signature hash metadata.
 - Phase 3U completed database-backed role permission overrides for clinic-level
   UAT customization.
+- Phase 3V completed controlled-drug reconciliation rounds for expected versus
+  counted quantity review.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  per-user password/MFA integration, controlled-drug reconciliation, or
-  permission change approval workflow.
+  per-user password/MFA integration, per-lot controlled count, variance
+  approval, or permission change approval workflow.
 
 ### Patient Communication
 

@@ -150,6 +150,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/cashier-reconciliations` | List cashier reconciliation sessions by clinic and status. |
 | `POST` | `/api/cashier-reconciliations` | Open a cashier reconciliation session with opening cash. |
 | `PATCH` | `/api/cashier-reconciliations/:reconciliationId/close` | Close a cashier reconciliation session and calculate expected cash and variance. |
+| `GET` | `/api/controlled-substance-reconciliations` | List controlled-drug reconciliation rounds by clinic and status. |
+| `POST` | `/api/controlled-substance-reconciliations` | Open a controlled-drug reconciliation round and snapshot expected quantity. |
+| `PATCH` | `/api/controlled-substance-reconciliations/:reconciliationId/close` | Close a controlled-drug reconciliation round and calculate quantity variance. |
 
 ## Reporting
 

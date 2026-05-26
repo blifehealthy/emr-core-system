@@ -25,6 +25,11 @@ import {
   createCashierReconciliation,
   listCashierReconciliations,
 } from '../backend/services/cashierReconciliations.ts';
+import {
+  closeControlledSubstanceReconciliation,
+  createControlledSubstanceReconciliation,
+  listControlledSubstanceReconciliations,
+} from '../backend/services/controlledSubstanceReconciliations.ts';
 import { createFileAsset } from '../backend/services/createFileAsset.ts';
 import { createInvoice, getInvoiceById } from '../backend/services/createInvoice.ts';
 import { createInvoiceFromEncounter } from '../backend/services/createInvoiceFromEncounter.ts';
@@ -334,6 +339,9 @@ const server = createNodeServer({
   listCashierReconciliations: listCashierReconciliations(db),
   createCashierReconciliation: createCashierReconciliation(db),
   closeCashierReconciliation: closeCashierReconciliation(db),
+  listControlledSubstanceReconciliations: listControlledSubstanceReconciliations(db),
+  createControlledSubstanceReconciliation: createControlledSubstanceReconciliation(db),
+  closeControlledSubstanceReconciliation: closeControlledSubstanceReconciliation(db),
   createDiagnosis: createDiagnosis(db),
   createVitalSign: createVitalSign(db),
   updatePrescription: updatePrescription(db),

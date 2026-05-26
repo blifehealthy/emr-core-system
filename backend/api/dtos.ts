@@ -246,6 +246,26 @@ const CASHIER_RECONCILIATION_KEYS = [
   'deleted_at',
 ] as const;
 
+const CONTROLLED_SUBSTANCE_RECONCILIATION_KEYS = [
+  'id',
+  'clinic_id',
+  'reconciliation_date',
+  'status',
+  'controlled_item_count',
+  'expected_quantity',
+  'counted_quantity',
+  'variance_quantity',
+  'variance_reason',
+  'opened_by_user_id',
+  'closed_by_user_id',
+  'opened_at',
+  'closed_at',
+  'notes',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+] as const;
+
 const DRUG_CATALOG_KEYS = [
   'id',
   'clinic_id',
@@ -951,6 +971,14 @@ export function toCashierReconciliationDto(row: unknown): Record<string, unknown
 
 export function toCashierReconciliationDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toCashierReconciliationDto(row));
+}
+
+export function toControlledSubstanceReconciliationDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...CONTROLLED_SUBSTANCE_RECONCILIATION_KEYS]);
+}
+
+export function toControlledSubstanceReconciliationDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toControlledSubstanceReconciliationDto(row));
 }
 
 export function toDrugCatalogItemDto(row: unknown): Record<string, unknown> {

@@ -13,6 +13,7 @@ import {
   handleCreateInsuranceClaim,
   handleCreateBillingNumberSequence,
   handleCreateCashierReconciliation,
+  handleCreateControlledSubstanceReconciliation,
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
@@ -100,6 +101,7 @@ import {
   handleListInsuranceClaims,
   handleListBillingNumberSequences,
   handleListCashierReconciliations,
+  handleListControlledSubstanceReconciliations,
   handleListPatientAllergies,
   handleListPatientConditions,
   handleListPatientFlags,
@@ -147,6 +149,7 @@ import {
   handleDispensePrescription,
   handleIssueBillingNumber,
   handleCloseCashierReconciliation,
+  handleCloseControlledSubstanceReconciliation,
   handleUpdateChargeTemplate,
   handleUpdateInsuranceClaim,
   handleUpdateInvoice,
@@ -305,6 +308,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'billing_read');
       if (roleError) return roleError;
       return handleListCashierReconciliations(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/controlled-substance-reconciliations') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleListControlledSubstanceReconciliations(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/inventory-items') {
@@ -977,6 +986,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreateCashierReconciliation(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/controlled-substance-reconciliations') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateControlledSubstanceReconciliation(actorAwareRequest, dependencies);
+    }
+
     const invoicePaymentMatch =
       request.method === 'POST'
         ? request.path.match(/^\/api\/invoices\/([^/]+)\/payments$/)
@@ -1038,6 +1053,20 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
         actorAwareRequest,
         dependencies,
         cashierReconciliationCloseMatch[1]
+      );
+    }
+
+    const controlledSubstanceReconciliationCloseMatch =
+      request.method === 'PATCH'
+        ? request.path.match(/^\/api\/controlled-substance-reconciliations\/([^/]+)\/close$/)
+        : null;
+    if (controlledSubstanceReconciliationCloseMatch) {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCloseControlledSubstanceReconciliation(
+        actorAwareRequest,
+        dependencies,
+        controlledSubstanceReconciliationCloseMatch[1]
       );
     }
 

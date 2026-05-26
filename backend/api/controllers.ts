@@ -52,6 +52,8 @@ import {
   toBillingNumberSequenceDtos,
   toCashierReconciliationDto,
   toCashierReconciliationDtos,
+  toControlledSubstanceReconciliationDto,
+  toControlledSubstanceReconciliationDtos,
   toPatientDto,
   toPatientAllergyDto,
   toPatientAllergyDtos,
@@ -124,6 +126,8 @@ import {
   validateIssueBillingNumberBody,
   validateCreateCashierReconciliationBody,
   validateCloseCashierReconciliationBody,
+  validateCreateControlledSubstanceReconciliationBody,
+  validateCloseControlledSubstanceReconciliationBody,
   validateCreateFileAssetBody,
   validateUploadFileAssetBody,
   validateCreatePatientBody,
@@ -167,6 +171,8 @@ import type {
   HttpResponse,
   UserRole,
 } from './types.ts';
+
+type ControlledSubstanceReconciliationStatus = 'open' | 'closed' | 'cancelled';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const appointmentTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
@@ -4190,6 +4196,124 @@ export async function handleCloseCashierReconciliation(
   });
 
   return { status: 200, headers: JSON_HEADERS, body: { data: toCashierReconciliationDto(reconciliation) } };
+}
+
+export async function handleListControlledSubstanceReconciliations(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listControlledSubstanceReconciliations) {
+    return mapError(new Error('Controlled substance reconciliation list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const status = readOptionalEnumQuery<ControlledSubstanceReconciliationStatus>(
+    request,
+    'status',
+    ['open', 'closed', 'cancelled']
+  );
+  if (!status.ok) return validationError(status.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const reconciliations = await dependencies.listControlledSubstanceReconciliations({
+    clinicId,
+    status: status.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: {
+      data: toControlledSubstanceReconciliationDtos(reconciliations.rows),
+      meta: reconciliations.meta,
+    },
+  };
+}
+
+export async function handleCreateControlledSubstanceReconciliation(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createControlledSubstanceReconciliation) {
+    return mapError(new Error('Controlled substance reconciliation create dependency is not configured'));
+  }
+
+  const validation = validateCreateControlledSubstanceReconciliationBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const actor = getActorContext(request);
+    const reconciliation = await dependencies.createControlledSubstanceReconciliation({
+      ...validation.value,
+      openedByUserId: validation.value.openedByUserId ?? actor.userId,
+    });
+    await dependencies.createAuditLog({
+      entityType: 'controlled_substance_reconciliation',
+      entityId: (reconciliation as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: { reconciliationDate: validation.value.reconciliationDate },
+    });
+
+    return {
+      status: 201,
+      headers: JSON_HEADERS,
+      body: { data: toControlledSubstanceReconciliationDto(reconciliation) },
+    };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleCloseControlledSubstanceReconciliation(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  reconciliationId: string
+): Promise<HttpResponse> {
+  if (!dependencies.closeControlledSubstanceReconciliation) {
+    return mapError(new Error('Controlled substance reconciliation close dependency is not configured'));
+  }
+
+  const validation = validateCloseControlledSubstanceReconciliationBody(request.body, reconciliationId);
+  if (!validation.ok) return validationError(validation.error);
+
+  const actor = getActorContext(request);
+  const reconciliation = await dependencies.closeControlledSubstanceReconciliation({
+    ...validation.value,
+    closedByUserId: validation.value.closedByUserId ?? actor.userId,
+  });
+  if (!reconciliation) {
+    return {
+      status: 404,
+      headers: JSON_HEADERS,
+      body: { error: 'Open controlled substance reconciliation not found' },
+    };
+  }
+
+  await dependencies.createAuditLog({
+    entityType: 'controlled_substance_reconciliation',
+    entityId: reconciliationId,
+    action: 'closed',
+    actorUserId: actor.userId,
+    actorPractitionerId: actor.practitionerId,
+    metadata: {
+      countedQuantity: validation.value.countedQuantity,
+      varianceReason: validation.value.varianceReason,
+    },
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toControlledSubstanceReconciliationDto(reconciliation) },
+  };
 }
 
 export async function handleListDiagnosesByEncounter(

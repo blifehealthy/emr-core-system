@@ -93,6 +93,8 @@ import type {
   CreateBillingNumberSequenceInput,
   CreateCashierReconciliationInput,
   CloseCashierReconciliationInput,
+  CreateControlledSubstanceReconciliationInput,
+  CloseControlledSubstanceReconciliationInput,
   IssueBillingNumberInput,
   UpdateInsuranceClaimInput,
   UpdateUserValidatedInput,
@@ -828,6 +830,67 @@ export function validateCloseCashierReconciliationBody(
       reconciliationId,
       countedCashAmount: countedCashAmount.value,
       closedByUserId: closedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCreateControlledSubstanceReconciliationBody(body: unknown):
+  | { ok: true; value: CreateControlledSubstanceReconciliationInput }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const reconciliationDate = readRequiredString(candidate.reconciliationDate, 'reconciliationDate');
+  if (!reconciliationDate.ok) return reconciliationDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(reconciliationDate.value)) {
+    return { ok: false, error: 'reconciliationDate must be YYYY-MM-DD' };
+  }
+  const openedByUserId = readOptionalNullableStringField(candidate, 'openedByUserId');
+  if (!openedByUserId.ok) return openedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      reconciliationDate: reconciliationDate.value,
+      openedByUserId: openedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateCloseControlledSubstanceReconciliationBody(
+  body: unknown,
+  reconciliationId: string
+): { ok: true; value: CloseControlledSubstanceReconciliationInput } | { ok: false; error: string } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const countedQuantity = readNonNegativeNumberLikeValue(candidate.countedQuantity, 'countedQuantity');
+  if (!countedQuantity.ok) return countedQuantity;
+  const closedByUserId = readOptionalNullableStringField(candidate, 'closedByUserId');
+  if (!closedByUserId.ok) return closedByUserId;
+  const varianceReason = readOptionalNullableStringField(candidate, 'varianceReason');
+  if (!varianceReason.ok) return varianceReason;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      reconciliationId,
+      countedQuantity: countedQuantity.value,
+      closedByUserId: closedByUserId.value,
+      varianceReason: varianceReason.value,
       notes: notes.value,
     },
   };

@@ -177,6 +177,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0041_add_phase_3u_role_permission_overrides.up.sql'),
     'expected Phase 3U role permission overrides migration'
   );
+  assert.ok(
+    filenames.includes('0042_add_phase_3v_controlled_substance_reconciliations.up.sql'),
+    'expected Phase 3V controlled substance reconciliations migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {
