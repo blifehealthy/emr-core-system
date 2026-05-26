@@ -21,6 +21,7 @@
 - Phase 3F purchase order approval controls add submit/approve/reject workflow, approval audit fields, approved-only receiving, and Prescriptions tab approval actions
 - Phase 3G approval routing adds threshold policies, generated approval steps, multi-step approval, and approval progress in the Prescriptions tab
 - Phase 3H barcode verification adds item/lot barcode fields, scan audit rows, verified receiving, verified dispensing, and Prescriptions tab barcode entry points
+- Phase 3I barcode scanner UX adds a pharmacy scan panel, item/lot label printing, and bulk barcode label sheets
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -53,6 +54,7 @@
 - Review `docs/phase-3f-plan.md`, `docs/phase-3f-clinician-summary-th.md`, `docs/phase-3f-uat-checklist-th.md`, and `docs/phase-3f-closure-summary-th.md` with pharmacy managers and clinic owners
 - Review `docs/phase-3g-plan.md`, `docs/phase-3g-clinician-summary-th.md`, `docs/phase-3g-uat-checklist-th.md`, and `docs/phase-3g-closure-summary-th.md` with pharmacy managers and clinic owners
 - Review `docs/phase-3h-plan.md`, `docs/phase-3h-clinician-summary-th.md`, `docs/phase-3h-uat-checklist-th.md`, and `docs/phase-3h-closure-summary-th.md` with pharmacy staff
+- Review `docs/phase-3i-plan.md`, `docs/phase-3i-clinician-summary-th.md`, `docs/phase-3i-uat-checklist-th.md`, and `docs/phase-3i-closure-summary-th.md` with pharmacy staff and operations
 
 ## Verified
 
@@ -78,4 +80,5 @@
 - Phase 3F targeted purchase order approval service, API, frontend syntax, and migration tests pass
 - Phase 3G targeted approval routing service, API, frontend syntax, and migration tests pass
 - Phase 3H targeted barcode verification service, API, frontend syntax, and migration tests pass
+- Phase 3I targeted scanner UX and barcode label print frontend checks pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

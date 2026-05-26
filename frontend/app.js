@@ -3950,6 +3950,8 @@ function createPharmacyInventoryPanel(patient) {
     ['Barcode required', currentInventoryItems.filter((item) => item.barcode_required).length],
   ]));
 
+  section.append(createBarcodeScannerPanel(patient));
+
   const form = document.createElement('form');
   form.className = 'nested-inline-form';
   form.append(
@@ -4119,6 +4121,82 @@ function createRoleSelectField(name, labelText) {
   return label;
 }
 
+function createBarcodeScannerPanel(patient) {
+  const panel = document.createElement('form');
+  panel.className = 'nested-inline-form';
+  const contextLabel = document.createElement('label');
+  contextLabel.textContent = 'Scan context';
+  const contextSelect = createSelect('scanContext', ['lookup', 'receiving', 'dispensing']);
+  contextLabel.append(contextSelect);
+  panel.append(
+    createFormField('barcode', 'Scan barcode', 'input', true),
+    contextLabel
+  );
+
+  const scanButton = document.createElement('button');
+  scanButton.type = 'submit';
+  scanButton.className = 'primary-button compact-button';
+  scanButton.textContent = 'Scan';
+  const printAllButton = document.createElement('button');
+  printAllButton.type = 'button';
+  printAllButton.className = 'secondary-button compact-button';
+  printAllButton.textContent = 'พิมพ์ labels ทั้งหมด';
+  printAllButton.addEventListener('click', () => {
+    const labels = [
+      ...currentInventoryItems.filter((item) => item.barcode).map(toInventoryItemLabel),
+      ...currentInventoryLots.filter((lot) => lot.barcode).map(toInventoryLotLabel),
+    ];
+    if (labels.length === 0) {
+      setStatus('ยังไม่มี barcode สำหรับพิมพ์ label', 'error');
+      return;
+    }
+    openBarcodeLabelPrint(labels, 'Pharmacy barcode labels');
+  });
+  panel.append(scanButton, printAllButton);
+
+  const result = document.createElement('p');
+  result.className = 'muted-text compact-note';
+  panel.append(result);
+
+  panel.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(panel).entries());
+    scanButton.disabled = true;
+    scanButton.textContent = 'Scanning';
+    result.textContent = '';
+    try {
+      const response = await fetch('/api/inventory-barcode-scans', {
+        method: 'POST',
+        headers: buildHeaders(currentApiToken || readValue('apiToken')),
+        body: JSON.stringify(compactPayload({
+          clinicId: patient.clinic_id,
+          barcode: values.barcode,
+          scanContext: values.scanContext,
+          scannedByUserId: readValue('userId'),
+        })),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
+      const scan = payload.data ?? {};
+      const label =
+        scan.inventory_lot_number ??
+        scan.inventory_item_display_name ??
+        scan.inventory_item_code ??
+        'ไม่พบ item/lot';
+      result.textContent = `${scan.matched ? 'Matched' : 'Not matched'} · ${label}`;
+      setStatus(scan.matched ? 'scan barcode สำเร็จ' : 'scan แล้วไม่พบ item/lot', scan.matched ? 'success' : 'error');
+    } catch (error) {
+      result.textContent = error instanceof Error ? error.message : 'scan barcode ไม่สำเร็จ';
+      setStatus(result.textContent, 'error');
+    } finally {
+      scanButton.disabled = false;
+      scanButton.textContent = 'Scan';
+    }
+  });
+
+  return panel;
+}
+
 function createSupplierSelectField(name, labelText, required = false) {
   const label = document.createElement('label');
   label.textContent = labelText;
@@ -4187,13 +4265,18 @@ function createInventoryItemCard(item) {
   adjustOut.className = 'secondary-button small-button';
   adjustOut.textContent = 'ตัดออก';
   adjustOut.addEventListener('click', () => adjustInventoryStockPrompt(item, 'adjustment_out'));
-  actions.append(adjustIn, adjustOut);
+  const printLabel = document.createElement('button');
+  printLabel.type = 'button';
+  printLabel.className = 'secondary-button small-button';
+  printLabel.textContent = 'พิมพ์ label';
+  printLabel.addEventListener('click', () => openBarcodeLabelPrint([toInventoryItemLabel(item)], 'Inventory item label'));
+  actions.append(adjustIn, adjustOut, printLabel);
   card.append(actions);
   return card;
 }
 
 function createInventoryLotCard(lot) {
-  return createRecordCard(lot, inventoryLotSummary, [
+  const card = createRecordCard(lot, inventoryLotSummary, [
     'inventory_item_display_name',
     'lot_number',
     'barcode',
@@ -4204,6 +4287,16 @@ function createInventoryLotCard(lot) {
     'expiring_soon',
     'expired',
   ]);
+  const actions = document.createElement('div');
+  actions.className = 'record-actions';
+  const printLabel = document.createElement('button');
+  printLabel.type = 'button';
+  printLabel.className = 'secondary-button small-button';
+  printLabel.textContent = 'พิมพ์ lot label';
+  printLabel.addEventListener('click', () => openBarcodeLabelPrint([toInventoryLotLabel(lot)], 'Inventory lot label'));
+  actions.append(printLabel);
+  card.append(actions);
+  return card;
 }
 
 function createPurchaseOrderCard(order) {
@@ -5122,6 +5215,102 @@ function openReceiptPrint(invoice) {
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();
+}
+
+function openBarcodeLabelPrint(labels, title = 'Barcode labels') {
+  const printWindow = window.open('', '_blank', 'width=720,height=840');
+  if (!printWindow) return;
+
+  printWindow.document.write(buildBarcodeLabelPrintHtml(labels, title));
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
+function toInventoryItemLabel(item) {
+  return {
+    type: 'ITEM',
+    title: item.display_name ?? item.item_code ?? item.id,
+    subtitle: item.item_code ?? item.drug_catalog_medication_name ?? '',
+    barcode: item.barcode ?? item.item_code ?? item.id,
+    detail: `QOH ${item.quantity_on_hand ?? 0} ${item.unit ?? ''}`.trim(),
+  };
+}
+
+function toInventoryLotLabel(lot) {
+  return {
+    type: 'LOT',
+    title: lot.inventory_item_display_name ?? lot.inventory_item_code ?? lot.inventory_item_id,
+    subtitle: lot.lot_number ?? lot.id,
+    barcode: lot.barcode ?? lot.lot_number ?? lot.id,
+    detail: `EXP ${lot.expires_on ?? '-'} · QOH ${lot.quantity_on_hand ?? 0}`,
+  };
+}
+
+function buildBarcodeLabelPrintHtml(labels, title = 'Barcode labels') {
+  const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const clinicName = currentClinicSettings?.display_name ?? 'EMR Core Clinic';
+
+  return `
+    <!doctype html>
+    <html lang="th">
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { margin: 0; color: #17211f; font-family: Arial, sans-serif; }
+          main { padding: 18px; }
+          header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+          h1 { margin: 0; font-size: 18px; }
+          .printed-at { color: #5f706b; font-size: 11px; text-align: right; }
+          .sheet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+          .label {
+            border: 1px solid #17211f;
+            border-radius: 4px;
+            min-height: 126px;
+            padding: 10px;
+            page-break-inside: avoid;
+          }
+          .label-type { font-weight: 700; font-size: 11px; letter-spacing: 0; color: #37534b; }
+          .label-title { font-size: 15px; font-weight: 700; margin-top: 4px; }
+          .label-subtitle, .label-detail { font-size: 11px; color: #5f706b; margin-top: 3px; }
+          .barcode-bars {
+            height: 42px;
+            margin: 8px 0 4px;
+            background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px);
+          }
+          .barcode-text { font-family: "Courier New", monospace; font-size: 13px; font-weight: 700; word-break: break-all; }
+          @media print {
+            body { print-color-adjust: exact; }
+            main { padding: 8mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <main>
+          <header>
+            <div>
+              <h1>${escapeHtml(title)}</h1>
+              <div>${escapeHtml(clinicName)}</div>
+            </div>
+            <div class="printed-at">${escapeHtml(printedAt)}</div>
+          </header>
+          <section class="sheet">
+            ${labels.map((label) => `
+              <article class="label">
+                <div class="label-type">${escapeHtml(label.type ?? 'LABEL')}</div>
+                <div class="label-title">${escapeHtml(label.title ?? '')}</div>
+                <div class="label-subtitle">${escapeHtml(label.subtitle ?? '')}</div>
+                <div class="barcode-bars" aria-hidden="true"></div>
+                <div class="barcode-text">${escapeHtml(label.barcode ?? '')}</div>
+                <div class="label-detail">${escapeHtml(label.detail ?? '')}</div>
+              </article>
+            `).join('')}
+          </section>
+        </main>
+      </body>
+    </html>
+  `;
 }
 
 function buildReceiptPrintHtml(invoice) {

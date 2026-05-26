@@ -274,6 +274,12 @@ All routes except `GET /health` can be protected by bearer token when
 - Barcode scan audit rows record lookup, receiving, and dispensing scans.
 - The Prescriptions tab exposes barcode fields in pharmacy inventory workflows.
 
+## Phase 3I Additions
+
+- The Prescriptions tab exposes a scanner panel backed by the barcode scan API.
+- Inventory item and lot cards can open printable barcode labels.
+- The Pharmacy inventory panel can print a bulk sheet of loaded barcode labels.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

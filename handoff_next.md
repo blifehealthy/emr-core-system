@@ -129,6 +129,12 @@
     - manual lot receiving, PO receiving, and dispensing barcode verification
     - Prescriptions tab barcode entry points and barcode verification display
     - Phase 3H plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3I barcode scanner UX and label printing:
+    - Pharmacy inventory scanner panel backed by `POST /api/inventory-barcode-scans`
+    - matched/not matched scan feedback in the Prescriptions tab
+    - item and lot barcode label print views
+    - bulk print sheet for loaded barcode-enabled items/lots
+    - Phase 3I plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -147,6 +153,11 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
+  - frontend workflow smoke coverage
+  - current result: passing, including Phase 3I scanner panel and barcode label
+    print builder checks
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - `npm run db:test`
   - current result: passing via Docker Postgres fallback
   - command used on this machine:
@@ -228,6 +239,7 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - frontend workflow smoke coverage
   - current result: passing
+  - now covers barcode scanner panel and barcode label print builder checks
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - browser workflow smoke coverage
@@ -721,8 +733,10 @@ Then produce:
    approval routing.
 5. Run Phase 3H pharmacy UAT for barcode scan lookup, verified receiving, and
    verified dispensing.
-6. Start the next Phase 3 pharmacy follow-up from UAT findings: barcode label
-   printing, scanner UX tuning, budget controls, multi-location stock, supplier
+6. Run Phase 3I pharmacy UAT for scanner panel ergonomics and barcode label
+   printing.
+7. Start the next Phase 3 pharmacy follow-up from UAT findings: ZPL/ESC/POS
+   printer export, GS1 parsing, budget controls, multi-location stock, supplier
    payment handoff, or controlled-substance register.
-7. If pharmacy UAT is not the blocker, switch to accounting or payer export
+8. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.
