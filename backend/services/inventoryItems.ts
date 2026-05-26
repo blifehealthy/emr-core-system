@@ -34,6 +34,7 @@ export function listInventoryItems(db: {
       params.push(`%${input.search}%`);
       conditions.push(`(
         i.item_code ILIKE $${params.length}
+        OR i.barcode ILIKE $${params.length}
         OR i.display_name ILIKE $${params.length}
         OR dc.medication_name ILIKE $${params.length}
         OR dc.generic_name ILIKE $${params.length}
@@ -82,13 +83,15 @@ export function createInventoryItem(db: {
           drug_catalog_id,
           item_code,
           display_name,
+          barcode,
+          barcode_required,
           unit,
           quantity_on_hand,
           reorder_level,
           is_active,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `,
       [
@@ -96,6 +99,8 @@ export function createInventoryItem(db: {
         input.drugCatalogId ?? null,
         input.itemCode,
         input.displayName,
+        input.barcode ?? null,
+        input.barcodeRequired ?? false,
         input.unit ?? 'unit',
         Number(input.quantityOnHand ?? 0),
         Number(input.reorderLevel ?? 0),
@@ -118,6 +123,8 @@ export function updateInventoryItem(db: {
       ['drugCatalogId', 'drug_catalog_id'],
       ['itemCode', 'item_code'],
       ['displayName', 'display_name'],
+      ['barcode', 'barcode'],
+      ['barcodeRequired', 'barcode_required'],
       ['unit', 'unit'],
       ['reorderLevel', 'reorder_level'],
       ['isActive', 'is_active'],

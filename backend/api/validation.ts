@@ -30,6 +30,8 @@ import type {
   RejectPurchaseOrderInput,
   CreatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderApprovalPolicyInput,
+  InventoryBarcodeScanContext,
+  ScanInventoryBarcodeInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
   DispensePrescriptionInput,
@@ -138,6 +140,7 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
   'adjustment_out',
   'return',
 ];
+const inventoryBarcodeScanContexts: InventoryBarcodeScanContext[] = ['lookup', 'receiving', 'dispensing'];
 const userRoles: UserRole[] = ['doctor', 'nurse', 'admin'];
 const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
 const purchaseOrderStatuses: PurchaseOrderStatus[] = [
@@ -2492,6 +2495,10 @@ export function validateCreateInventoryItemBody(body: unknown):
   if (!itemCode.ok) return itemCode;
   const displayName = readRequiredString(candidate.displayName, 'displayName');
   if (!displayName.ok) return displayName;
+  const barcode = readOptionalNullableStringField(candidate, 'barcode');
+  if (!barcode.ok) return barcode;
+  const barcodeRequired = readOptionalBooleanField(candidate, 'barcodeRequired');
+  if (!barcodeRequired.ok) return barcodeRequired;
   const drugCatalogId = readOptionalNullableStringField(candidate, 'drugCatalogId');
   if (!drugCatalogId.ok) return drugCatalogId;
   const unit = readOptionalTrimmedStringField(candidate, 'unit');
@@ -2511,6 +2518,8 @@ export function validateCreateInventoryItemBody(body: unknown):
       clinicId: clinicId.value,
       itemCode: itemCode.value,
       displayName: displayName.value,
+      barcode: barcode.value,
+      barcodeRequired: barcodeRequired.value,
       drugCatalogId: drugCatalogId.value,
       unit: unit.value,
       quantityOnHand: quantityOnHand.value ?? undefined,
@@ -2534,6 +2543,8 @@ export function validateUpdateInventoryItemBody(
     'drugCatalogId',
     'itemCode',
     'displayName',
+    'barcode',
+    'barcodeRequired',
     'unit',
     'reorderLevel',
     'isActive',
@@ -2547,6 +2558,10 @@ export function validateUpdateInventoryItemBody(
   if (!itemCode.ok) return itemCode;
   const displayName = readOptionalTrimmedStringField(candidate, 'displayName');
   if (!displayName.ok) return displayName;
+  const barcode = readOptionalNullableStringField(candidate, 'barcode');
+  if (!barcode.ok) return barcode;
+  const barcodeRequired = readOptionalBooleanField(candidate, 'barcodeRequired');
+  if (!barcodeRequired.ok) return barcodeRequired;
   const unit = readOptionalTrimmedStringField(candidate, 'unit');
   if (!unit.ok) return unit;
   const reorderLevel = readOptionalNonNegativeNumberLikeField(candidate, 'reorderLevel');
@@ -2563,6 +2578,8 @@ export function validateUpdateInventoryItemBody(
       ...(Object.hasOwn(candidate, 'drugCatalogId') ? { drugCatalogId: drugCatalogId.value } : {}),
       ...(Object.hasOwn(candidate, 'itemCode') ? { itemCode: itemCode.value } : {}),
       ...(Object.hasOwn(candidate, 'displayName') ? { displayName: displayName.value } : {}),
+      ...(Object.hasOwn(candidate, 'barcode') ? { barcode: barcode.value } : {}),
+      ...(Object.hasOwn(candidate, 'barcodeRequired') ? { barcodeRequired: barcodeRequired.value } : {}),
       ...(Object.hasOwn(candidate, 'unit') ? { unit: unit.value } : {}),
       ...(Object.hasOwn(candidate, 'reorderLevel') ? { reorderLevel: reorderLevel.value ?? undefined } : {}),
       ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
@@ -2617,6 +2634,12 @@ export function validateReceiveInventoryLotBody(body: unknown):
   if (!inventoryItemId.ok) return inventoryItemId;
   const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
   if (!lotNumber.ok) return lotNumber;
+  const lotBarcode = readOptionalNullableStringField(candidate, 'lotBarcode');
+  if (!lotBarcode.ok) return lotBarcode;
+  const scannedBarcode = readOptionalNullableStringField(candidate, 'scannedBarcode');
+  if (!scannedBarcode.ok) return scannedBarcode;
+  const requireBarcodeVerification = readOptionalBooleanField(candidate, 'requireBarcodeVerification');
+  if (!requireBarcodeVerification.ok) return requireBarcodeVerification;
   const expiresOn = readOptionalNullableDateField(candidate, 'expiresOn');
   if (!expiresOn.ok) return expiresOn;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
@@ -2637,6 +2660,9 @@ export function validateReceiveInventoryLotBody(body: unknown):
     value: {
       inventoryItemId: inventoryItemId.value,
       lotNumber: lotNumber.value,
+      lotBarcode: lotBarcode.value,
+      scannedBarcode: scannedBarcode.value,
+      requireBarcodeVerification: requireBarcodeVerification.value,
       expiresOn: expiresOn.value,
       quantity: quantity.value,
       supplierId: supplierId.value,
@@ -2882,6 +2908,12 @@ export function validateReceivePurchaseOrderBody(
   if (!purchaseOrderLineId.ok) return purchaseOrderLineId;
   const lotNumber = readRequiredString(candidate.lotNumber, 'lotNumber');
   if (!lotNumber.ok) return lotNumber;
+  const lotBarcode = readOptionalNullableStringField(candidate, 'lotBarcode');
+  if (!lotBarcode.ok) return lotBarcode;
+  const scannedBarcode = readOptionalNullableStringField(candidate, 'scannedBarcode');
+  if (!scannedBarcode.ok) return scannedBarcode;
+  const requireBarcodeVerification = readOptionalBooleanField(candidate, 'requireBarcodeVerification');
+  if (!requireBarcodeVerification.ok) return requireBarcodeVerification;
   const expiresOn = readOptionalNullableDateField(candidate, 'expiresOn');
   if (!expiresOn.ok) return expiresOn;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
@@ -2897,6 +2929,9 @@ export function validateReceivePurchaseOrderBody(
       purchaseOrderId,
       purchaseOrderLineId: purchaseOrderLineId.value,
       lotNumber: lotNumber.value,
+      lotBarcode: lotBarcode.value,
+      scannedBarcode: scannedBarcode.value,
+      requireBarcodeVerification: requireBarcodeVerification.value,
       expiresOn: expiresOn.value,
       quantity: quantity.value,
       receivedByUserId: receivedByUserId.value,
@@ -3094,6 +3129,10 @@ export function validateDispensePrescriptionBody(
   if (!inventoryItemId.ok) return inventoryItemId;
   const inventoryLotId = readOptionalNullableStringField(candidate, 'inventoryLotId');
   if (!inventoryLotId.ok) return inventoryLotId;
+  const scannedBarcode = readOptionalNullableStringField(candidate, 'scannedBarcode');
+  if (!scannedBarcode.ok) return scannedBarcode;
+  const requireBarcodeVerification = readOptionalBooleanField(candidate, 'requireBarcodeVerification');
+  if (!requireBarcodeVerification.ok) return requireBarcodeVerification;
   const quantity = readPositiveNumberLikeValue(candidate.quantity, 'quantity');
   if (!quantity.ok) return quantity;
   const dispensedByUserId = readOptionalNullableStringField(candidate, 'dispensedByUserId');
@@ -3107,8 +3146,45 @@ export function validateDispensePrescriptionBody(
       prescriptionId,
       inventoryItemId: inventoryItemId.value,
       inventoryLotId: inventoryLotId.value,
+      scannedBarcode: scannedBarcode.value,
+      requireBarcodeVerification: requireBarcodeVerification.value,
       quantity: quantity.value,
       dispensedByUserId: dispensedByUserId.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateScanInventoryBarcodeBody(body: unknown):
+  | { ok: true; value: ScanInventoryBarcodeInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const barcode = readRequiredString(candidate.barcode, 'barcode');
+  if (!barcode.ok) return barcode;
+  const scanContext = readEnumValue<InventoryBarcodeScanContext>(
+    candidate.scanContext,
+    'scanContext',
+    inventoryBarcodeScanContexts
+  );
+  if (!scanContext.ok) return scanContext;
+  const scannedByUserId = readOptionalNullableStringField(candidate, 'scannedByUserId');
+  if (!scannedByUserId.ok) return scannedByUserId;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      barcode: barcode.value,
+      scanContext: scanContext.value,
+      scannedByUserId: scannedByUserId.value,
       notes: notes.value,
     },
   };

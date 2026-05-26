@@ -518,6 +518,7 @@ export type BillingDocumentType = 'invoice' | 'receipt' | 'tax_invoice' | 'claim
 export type CashierReconciliationStatus = 'open' | 'closed' | 'cancelled';
 export type DrugCatalogActiveFilter = 'active' | 'inactive' | 'all';
 export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' | 'return';
+export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
 export type SupplierStatus = 'active' | 'inactive';
 export type PurchaseOrderStatus =
   | 'draft'
@@ -622,6 +623,8 @@ export type CreateInventoryItemInput = {
   drugCatalogId?: string | null;
   itemCode: string;
   displayName: string;
+  barcode?: string | null;
+  barcodeRequired?: boolean;
   unit?: string;
   quantityOnHand?: number | string;
   reorderLevel?: number | string;
@@ -634,6 +637,8 @@ export type UpdateInventoryItemInput = {
   drugCatalogId?: string | null;
   itemCode?: string;
   displayName?: string;
+  barcode?: string | null;
+  barcodeRequired?: boolean;
   unit?: string;
   reorderLevel?: number | string;
   isActive?: boolean;
@@ -651,6 +656,9 @@ export type AdjustInventoryStockInput = {
 export type ReceiveInventoryLotInput = {
   inventoryItemId: string;
   lotNumber: string;
+  lotBarcode?: string | null;
+  scannedBarcode?: string | null;
+  requireBarcodeVerification?: boolean;
   expiresOn?: string | null;
   quantity: number | string;
   supplierId?: string | null;
@@ -715,6 +723,9 @@ export type ReceivePurchaseOrderInput = {
   purchaseOrderId: string;
   purchaseOrderLineId: string;
   lotNumber: string;
+  lotBarcode?: string | null;
+  scannedBarcode?: string | null;
+  requireBarcodeVerification?: boolean;
   expiresOn?: string | null;
   quantity: number | string;
   receivedByUserId?: string | null;
@@ -851,8 +862,18 @@ export type DispensePrescriptionInput = {
   prescriptionId: string;
   inventoryItemId: string;
   inventoryLotId?: string | null;
+  scannedBarcode?: string | null;
+  requireBarcodeVerification?: boolean;
   quantity: number | string;
   dispensedByUserId?: string | null;
+  notes?: string | null;
+};
+
+export type ScanInventoryBarcodeInput = {
+  clinicId: string;
+  barcode: string;
+  scanContext?: InventoryBarcodeScanContext;
+  scannedByUserId?: string | null;
   notes?: string | null;
 };
 
@@ -1182,6 +1203,7 @@ export type Dependencies = {
     offset?: number;
   }) => Promise<PaginatedListResult>;
   receiveInventoryLot?: (input: ReceiveInventoryLotInput) => Promise<unknown | null>;
+  scanInventoryBarcode?: (input: ScanInventoryBarcodeInput) => Promise<unknown | null>;
   listSuppliers?: (input: {
     clinicId: string;
     search?: string;

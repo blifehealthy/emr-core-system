@@ -19,6 +19,7 @@ import {
   toDrugInteractionRuleDtos,
   toInventoryItemDto,
   toInventoryItemDtos,
+  toInventoryBarcodeScanDto,
   toInventoryLotDto,
   toInventoryLotDtos,
   toPurchaseOrderDto,
@@ -76,6 +77,7 @@ import {
   validateUpdateInventoryItemBody,
   validateAdjustInventoryStockBody,
   validateReceiveInventoryLotBody,
+  validateScanInventoryBarcodeBody,
   validateCreateSupplierBody,
   validateUpdateSupplierBody,
   validateCreatePurchaseOrderBody,
@@ -2248,6 +2250,25 @@ export async function handleReceiveInventoryLot(
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryLotDto(lot) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleScanInventoryBarcode(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.scanInventoryBarcode) {
+    return mapError(new Error('Inventory barcode scan dependency is not configured'));
+  }
+
+  const validation = validateScanInventoryBarcodeBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const scan = await dependencies.scanInventoryBarcode(validation.value);
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodeScanDto(scan) } };
   } catch (error) {
     return mapError(error);
   }

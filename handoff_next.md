@@ -121,6 +121,14 @@
     - PO becomes approved only after every required step is approved
     - Prescriptions tab approval policy form and PO approval progress display
     - Phase 3G plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3H barcode verification foundation:
+    - migration `0031_add_phase_3h_barcode_verification`
+    - inventory item and lot barcode fields
+    - medication dispense and stock movement scanned barcode fields
+    - barcode scan audit table and `POST /api/inventory-barcode-scans`
+    - manual lot receiving, PO receiving, and dispensing barcode verification
+    - Prescriptions tab barcode entry points and barcode verification display
+    - Phase 3H plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -128,7 +136,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `135/135` passing
+  - current result: `137/137` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -145,8 +153,9 @@
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_DB=emr_core_registration POSTGRES_USER=postgres npm run db:test`
   - `npm run api:smoke`
   - current result: passing, including Phase 3E supplier creation/listing,
-    purchase order creation/listing, and Phase 3G approval policy creation,
-    two-step approval, then PO receiving into lot/stock movement
+    purchase order creation/listing, Phase 3G approval policy creation,
+    two-step approval, Phase 3H barcode scan lookup, verified receiving,
+    verified PO receiving, and verified dispensing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -710,8 +719,10 @@ Then produce:
    receiving controls.
 4. Run Phase 3G pharmacy owner/manager UAT for threshold policy and multi-step
    approval routing.
-5. Start the next Phase 3 pharmacy follow-up from UAT findings: budget controls,
-   approval notifications, barcode scanning, multi-location stock, supplier
+5. Run Phase 3H pharmacy UAT for barcode scan lookup, verified receiving, and
+   verified dispensing.
+6. Start the next Phase 3 pharmacy follow-up from UAT findings: barcode label
+   printing, scanner UX tuning, budget controls, multi-location stock, supplier
    payment handoff, or controlled-substance register.
-6. If pharmacy UAT is not the blocker, switch to accounting or payer export
+7. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

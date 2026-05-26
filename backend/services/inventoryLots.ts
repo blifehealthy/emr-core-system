@@ -72,10 +72,12 @@ export function receiveInventoryLot(db: Db) {
     const itemResult = await db.query<{
       id: string;
       clinic_id: string;
+      barcode: string | null;
+      barcode_required: boolean;
       quantity_on_hand: string;
     }>(
       `
-        SELECT id, clinic_id, quantity_on_hand
+        SELECT id, clinic_id, barcode, barcode_required, quantity_on_hand
         FROM inventory_items
         WHERE id = $1
           AND is_active IS TRUE
@@ -89,6 +91,13 @@ export function receiveInventoryLot(db: Db) {
     const quantity = Number(input.quantity);
     const quantityBefore = Number(item.quantity_on_hand);
     const quantityAfter = Number((quantityBefore + quantity).toFixed(2));
+    const scannedBarcode = input.scannedBarcode ?? null;
+    const lotBarcode = input.lotBarcode ?? null;
+    const expectedBarcode = item.barcode ?? lotBarcode;
+    const barcodeVerified = Boolean(scannedBarcode && expectedBarcode && scannedBarcode === expectedBarcode);
+    if ((input.requireBarcodeVerification || item.barcode_required) && !barcodeVerified) {
+      throw new Error('Barcode verification failed for inventory receiving');
+    }
 
     const lotResult = await db.query<{ id: string }>(
       `
@@ -97,6 +106,11 @@ export function receiveInventoryLot(db: Db) {
           inventory_item_id,
           supplier_id,
           lot_number,
+          barcode,
+          received_barcode,
+          barcode_verified,
+          barcode_verified_at,
+          barcode_verified_by_user_id,
           expires_on,
           received_quantity,
           quantity_on_hand,
@@ -105,7 +119,7 @@ export function receiveInventoryLot(db: Db) {
           received_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 THEN now() ELSE NULL END, $8, $9, $10, $10, $11, $12, $13, $14)
         RETURNING id
       `,
       [
@@ -113,6 +127,10 @@ export function receiveInventoryLot(db: Db) {
         input.inventoryItemId,
         input.supplierId ?? null,
         input.lotNumber,
+        lotBarcode ?? scannedBarcode,
+        scannedBarcode,
+        barcodeVerified,
+        barcodeVerified ? input.receivedByUserId ?? null : null,
         input.expiresOn ?? null,
         quantity,
         input.supplierName ?? null,
@@ -143,9 +161,11 @@ export function receiveInventoryLot(db: Db) {
           quantity_before,
           quantity_after,
           reason,
+          scanned_barcode,
+          barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         item.clinic_id,
@@ -155,6 +175,8 @@ export function receiveInventoryLot(db: Db) {
         quantityBefore,
         quantityAfter,
         input.notes ?? `Inventory receiving ${input.lotNumber}`,
+        scannedBarcode,
+        barcodeVerified,
         input.receivedByUserId ?? null,
       ]
     );

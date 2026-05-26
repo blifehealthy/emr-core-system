@@ -121,6 +121,7 @@ import {
   handleRecordInvoiceRefund,
   handleAdjustInventoryStock,
   handleReceiveInventoryLot,
+  handleScanInventoryBarcode,
   handleReceivePurchaseOrder,
   handleSubmitPurchaseOrder,
   handleApprovePurchaseOrder,
@@ -673,6 +674,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
       return handleReceiveInventoryLot(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'POST' && request.path === '/api/inventory-barcode-scans') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleScanInventoryBarcode(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'POST' && request.path === '/api/suppliers') {

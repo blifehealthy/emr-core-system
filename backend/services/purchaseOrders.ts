@@ -544,6 +544,8 @@ export function receivePurchaseOrder(db: Db) {
       purchase_order_number: string;
       approval_status: string;
       inventory_item_id: string;
+      inventory_item_barcode: string | null;
+      inventory_item_barcode_required: boolean;
       ordered_quantity: string;
       received_quantity: string;
       quantity_on_hand: string;
@@ -557,6 +559,8 @@ export function receivePurchaseOrder(db: Db) {
           po.purchase_order_number,
           po.approval_status,
           pol.inventory_item_id,
+          i.barcode AS inventory_item_barcode,
+          i.barcode_required AS inventory_item_barcode_required,
           pol.ordered_quantity,
           pol.received_quantity,
           i.quantity_on_hand
@@ -588,6 +592,13 @@ export function receivePurchaseOrder(db: Db) {
 
     const quantityBefore = Number(line.quantity_on_hand);
     const quantityAfter = Number((quantityBefore + quantity).toFixed(2));
+    const scannedBarcode = input.scannedBarcode ?? null;
+    const lotBarcode = input.lotBarcode ?? null;
+    const expectedBarcode = line.inventory_item_barcode ?? lotBarcode;
+    const barcodeVerified = Boolean(scannedBarcode && expectedBarcode && scannedBarcode === expectedBarcode);
+    if ((input.requireBarcodeVerification || line.inventory_item_barcode_required) && !barcodeVerified) {
+      throw new Error('Barcode verification failed for purchase order receiving');
+    }
 
     const lotResult = await db.query<{ id: string }>(
       `
@@ -598,6 +609,11 @@ export function receivePurchaseOrder(db: Db) {
           purchase_order_id,
           purchase_order_line_id,
           lot_number,
+          barcode,
+          received_barcode,
+          barcode_verified,
+          barcode_verified_at,
+          barcode_verified_by_user_id,
           expires_on,
           received_quantity,
           quantity_on_hand,
@@ -606,7 +622,7 @@ export function receivePurchaseOrder(db: Db) {
           received_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $9 THEN now() ELSE NULL END, $10, $11, $12, $12, $13, $14, $15, $16)
         RETURNING id
       `,
       [
@@ -616,6 +632,10 @@ export function receivePurchaseOrder(db: Db) {
         input.purchaseOrderId,
         input.purchaseOrderLineId,
         input.lotNumber,
+        lotBarcode ?? scannedBarcode,
+        scannedBarcode,
+        barcodeVerified,
+        barcodeVerified ? input.receivedByUserId ?? null : null,
         input.expiresOn ?? null,
         quantity,
         line.supplier_display_name,
@@ -655,9 +675,11 @@ export function receivePurchaseOrder(db: Db) {
           quantity_before,
           quantity_after,
           reason,
+          scanned_barcode,
+          barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, 'adjustment_in', $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         line.clinic_id,
@@ -667,6 +689,8 @@ export function receivePurchaseOrder(db: Db) {
         quantityBefore,
         quantityAfter,
         input.notes ?? `Purchase order receiving ${line.purchase_order_number}`,
+        scannedBarcode,
+        barcodeVerified,
         input.receivedByUserId ?? null,
       ]
     );

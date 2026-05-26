@@ -60,6 +60,7 @@ const migrations = [
   '0028_add_phase_3e_procurement.up.sql',
   '0029_add_phase_3f_purchase_order_approvals.up.sql',
   '0030_add_phase_3g_multi_approver_routing.up.sql',
+  '0031_add_phase_3h_barcode_verification.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -860,6 +861,7 @@ async function main() {
     const inventoryItem = await requestJson<{
       id: string;
       item_code: string;
+      barcode: string;
       quantity_on_hand: string;
       low_stock: boolean;
     }>(
@@ -872,6 +874,7 @@ async function main() {
         drugCatalogId: '10000000-0000-0000-0000-000000020001',
         itemCode: `AMOX-STOCK-${Date.now()}`,
         displayName: 'Amoxicillin 500mg stock',
+        barcode: `BC-AMOX-${Date.now()}`,
         unit: 'tablet',
         quantityOnHand: 10,
         reorderLevel: 5,
@@ -903,6 +906,7 @@ async function main() {
       lot_number: string;
       quantity_on_hand: string;
       inventory_item_id: string;
+      barcode_verified: boolean;
     }>(
       '/api/inventory-lots/receive',
       adminHeaders,
@@ -911,6 +915,9 @@ async function main() {
       {
         inventoryItemId: inventoryItem.data.id,
         lotNumber: `AMOX-LOT-${Date.now()}`,
+        lotBarcode: `BC-LOT-${Date.now()}`,
+        scannedBarcode: inventoryItem.data.barcode,
+        requireBarcodeVerification: true,
         expiresOn: '2026-12-31',
         quantity: 6,
         supplierName: 'Smoke supplier',
@@ -919,6 +926,25 @@ async function main() {
     );
     assert.equal(inventoryLot.data.inventory_item_id, inventoryItem.data.id);
     assert.equal(Number(inventoryLot.data.quantity_on_hand), 6);
+    assert.equal(inventoryLot.data.barcode_verified, true);
+
+    const barcodeScan = await requestJson<{
+      id: string;
+      matched: boolean;
+      inventory_item_id: string;
+    }>(
+      '/api/inventory-barcode-scans',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        barcode: inventoryItem.data.barcode,
+        scanContext: 'dispensing',
+      }
+    );
+    assert.equal(barcodeScan.data.matched, true);
+    assert.equal(barcodeScan.data.inventory_item_id, inventoryItem.data.id);
 
     const inventoryLots = await requestJson<Array<{ id: string; lot_number: string }>>(
       `/api/inventory-lots?clinicId=10000000-0000-0000-0000-000000000101&inventoryItemId=${inventoryItem.data.id}&includeEmpty=true&limit=10`,
@@ -1084,6 +1110,8 @@ async function main() {
       {
         purchaseOrderLineId: purchaseOrder.data.lines[0].id,
         lotNumber: `PO-LOT-${Date.now()}`,
+        scannedBarcode: inventoryItem.data.barcode,
+        requireBarcodeVerification: true,
         expiresOn: '2027-01-31',
         quantity: 4,
         notes: 'Smoke PO receive',
@@ -1103,6 +1131,7 @@ async function main() {
       quantity: string;
       inventory_item_id: string;
       inventory_lot_id: string;
+      barcode_verified: boolean;
     }>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
       adminHeaders,
@@ -1111,6 +1140,8 @@ async function main() {
       {
         inventoryItemId: inventoryItem.data.id,
         inventoryLotId: inventoryLot.data.id,
+        scannedBarcode: inventoryItem.data.barcode,
+        requireBarcodeVerification: true,
         quantity: 2,
         notes: 'Smoke dispense',
       }
@@ -1118,6 +1149,7 @@ async function main() {
     assert.equal(dispense.data.inventory_item_id, inventoryItem.data.id);
     assert.equal(dispense.data.inventory_lot_id, inventoryLot.data.id);
     assert.equal(Number(dispense.data.quantity), 2);
+    assert.equal(dispense.data.barcode_verified, true);
 
     const dispenses = await requestJson<Array<{ id: string }>>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses?limit=10`,

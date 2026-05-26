@@ -79,10 +79,12 @@ export function dispensePrescription(db: {
     const itemResult = await db.query<{
       id: string;
       clinic_id: string;
+      barcode: string | null;
+      barcode_required: boolean;
       quantity_on_hand: string;
     }>(
       `
-        SELECT id, clinic_id, quantity_on_hand
+        SELECT id, clinic_id, barcode, barcode_required, quantity_on_hand
         FROM inventory_items
         WHERE id = $1
           AND is_active IS TRUE
@@ -94,6 +96,8 @@ export function dispensePrescription(db: {
     if (!item) return null;
 
     const quantity = Number(input.quantity);
+    const scannedBarcode = input.scannedBarcode ?? null;
+    let barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
     const quantityBefore = Number(item.quantity_on_hand);
     const quantityAfter = Number((quantityBefore - quantity).toFixed(2));
     if (quantityAfter < 0) {
@@ -103,10 +107,11 @@ export function dispensePrescription(db: {
     if (input.inventoryLotId) {
       const lotResult = await db.query<{
         id: string;
+        barcode: string | null;
         quantity_on_hand: string;
       }>(
         `
-          SELECT id, quantity_on_hand
+          SELECT id, barcode, quantity_on_hand
           FROM inventory_lots
           WHERE id = $1
             AND inventory_item_id = $2
@@ -116,6 +121,14 @@ export function dispensePrescription(db: {
       );
       const lot = lotResult.rows[0];
       if (!lot) return null;
+      barcodeVerified = Boolean(
+        scannedBarcode &&
+          ((lot.barcode && scannedBarcode === lot.barcode) ||
+            (item.barcode && scannedBarcode === item.barcode))
+      );
+      if ((input.requireBarcodeVerification || item.barcode_required) && !barcodeVerified) {
+        throw new Error('Barcode verification failed for prescription dispensing');
+      }
 
       const lotQuantityBefore = Number(lot.quantity_on_hand);
       const lotQuantityAfter = Number((lotQuantityBefore - quantity).toFixed(2));
@@ -131,6 +144,11 @@ export function dispensePrescription(db: {
         `,
         [input.inventoryLotId, lotQuantityAfter]
       );
+    } else if (input.requireBarcodeVerification || item.barcode_required) {
+      const barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
+      if (!barcodeVerified) {
+        throw new Error('Barcode verification failed for prescription dispensing');
+      }
     }
 
     await db.query(
@@ -150,10 +168,13 @@ export function dispensePrescription(db: {
           inventory_item_id,
           inventory_lot_id,
           quantity,
+          scanned_barcode,
+          barcode_verified,
+          barcode_verified_at,
           dispensed_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 THEN now() ELSE NULL END, $8, $9)
         RETURNING id
       `,
       [
@@ -162,6 +183,8 @@ export function dispensePrescription(db: {
         input.inventoryItemId,
         input.inventoryLotId ?? null,
         quantity,
+        scannedBarcode,
+        barcodeVerified,
         input.dispensedByUserId ?? null,
         input.notes ?? null,
       ]
@@ -181,9 +204,11 @@ export function dispensePrescription(db: {
           quantity_before,
           quantity_after,
           reason,
+          scanned_barcode,
+          barcode_verified,
           performed_by_user_id
         )
-        VALUES ($1, $2, $3, $4, $5, 'dispense', $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, 'dispense', $6, $7, $8, $9, $10, $11, $12)
       `,
       [
         item.clinic_id,
@@ -195,6 +220,8 @@ export function dispensePrescription(db: {
         quantityBefore,
         quantityAfter,
         input.notes ?? 'Prescription dispense',
+        scannedBarcode,
+        barcodeVerified,
         input.dispensedByUserId ?? null,
       ]
     );

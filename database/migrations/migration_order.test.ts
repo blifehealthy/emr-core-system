@@ -133,6 +133,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0030_add_phase_3g_multi_approver_routing.up.sql'),
     'expected Phase 3G multi-approver routing migration'
   );
+  assert.ok(
+    filenames.includes('0031_add_phase_3h_barcode_verification.up.sql'),
+    'expected Phase 3H barcode verification migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

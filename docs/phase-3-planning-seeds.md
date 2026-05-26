@@ -28,9 +28,11 @@ real UAT findings, but the likely product directions are below.
   receiving until a purchase order is approved.
 - Phase 3G completed approval thresholds, generated approval steps, and
   multi-step approval routing.
+- Phase 3H completed barcode verification foundation for item/lot barcode
+  capture, scan audit, receiving verification, and dispensing verification.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
-  notification integration, multi-location stock, barcode scanning, supplier
-  payment handoff, or controlled substance workflow.
+  notification integration, multi-location stock, barcode label printing,
+  supplier payment handoff, or controlled substance workflow.
 
 ### Patient Communication
 

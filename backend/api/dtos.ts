@@ -286,6 +286,8 @@ const INVENTORY_ITEM_KEYS = [
   'drug_catalog_id',
   'item_code',
   'display_name',
+  'barcode',
+  'barcode_required',
   'unit',
   'quantity_on_hand',
   'reorder_level',
@@ -307,6 +309,11 @@ const INVENTORY_LOT_KEYS = [
   'purchase_order_id',
   'purchase_order_line_id',
   'lot_number',
+  'barcode',
+  'received_barcode',
+  'barcode_verified',
+  'barcode_verified_at',
+  'barcode_verified_by_user_id',
   'expires_on',
   'received_quantity',
   'quantity_on_hand',
@@ -427,6 +434,8 @@ const STOCK_MOVEMENT_KEYS = [
   'quantity_before',
   'quantity_after',
   'reason',
+  'scanned_barcode',
+  'barcode_verified',
   'performed_by_user_id',
   'moved_at',
   'inventory_item_display_name',
@@ -445,6 +454,9 @@ const MEDICATION_DISPENSE_KEYS = [
   'inventory_lot_id',
   'status',
   'quantity',
+  'scanned_barcode',
+  'barcode_verified',
+  'barcode_verified_at',
   'dispensed_at',
   'dispensed_by_user_id',
   'notes',
@@ -454,6 +466,27 @@ const MEDICATION_DISPENSE_KEYS = [
   'inventory_lot_expires_on',
   'created_at',
   'updated_at',
+  'deleted_at',
+] as const;
+
+const INVENTORY_BARCODE_SCAN_KEYS = [
+  'id',
+  'clinic_id',
+  'barcode',
+  'scan_context',
+  'inventory_item_id',
+  'inventory_lot_id',
+  'matched',
+  'scanned_by_user_id',
+  'scanned_at',
+  'notes',
+  'inventory_item_display_name',
+  'inventory_item_code',
+  'inventory_item_barcode',
+  'inventory_lot_number',
+  'inventory_lot_barcode',
+  'inventory_lot_expires_on',
+  'created_at',
   'deleted_at',
 ] as const;
 
@@ -825,6 +858,10 @@ export function toInventoryLotDto(row: unknown): Record<string, unknown> {
 
 export function toInventoryLotDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryLotDto(row));
+}
+
+export function toInventoryBarcodeScanDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_BARCODE_SCAN_KEYS]);
 }
 
 export function toSupplierDto(row: unknown): Record<string, unknown> {

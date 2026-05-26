@@ -103,6 +103,7 @@ All routes except `GET /health` can be protected by bearer token when
 | `PATCH` | `/api/inventory-items/:inventoryItemId/stock` | Record manual stock adjustment and update quantity on hand. |
 | `GET` | `/api/inventory-lots` | List inventory lots by clinic and optional inventory item. |
 | `POST` | `/api/inventory-lots/receive` | Receive pharmacy stock into a lot and update quantity on hand. |
+| `POST` | `/api/inventory-barcode-scans` | Record a pharmacy barcode scan and return any matching inventory item or lot. |
 | `GET` | `/api/stock-movements` | List stock movement audit rows by clinic and optional inventory item. |
 | `GET` | `/api/medication-dispenses` | List medication dispense rows by clinic. |
 | `GET` | `/api/drug-interaction-rules` | List clinic-managed interaction rules. |
@@ -264,6 +265,14 @@ All routes except `GET /health` can be protected by bearer token when
 - Submitting a purchase order creates approval steps from matching policies.
 - Approval and rejection can target a specific pending step.
 - Purchase orders become approved only after every required step is approved.
+
+## Phase 3H Additions
+
+- Inventory items and lots can store barcode values.
+- Lot receiving, purchase order receiving, and prescription dispensing can verify
+  scanned barcode values before changing stock.
+- Barcode scan audit rows record lookup, receiving, and dispensing scans.
+- The Prescriptions tab exposes barcode fields in pharmacy inventory workflows.
 
 ## Historical Phase 1 Mismatches and Follow-ups
 

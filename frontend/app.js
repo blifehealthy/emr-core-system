@@ -3947,6 +3947,7 @@ function createPharmacyInventoryPanel(patient) {
     ['Suppliers', currentSuppliers.length],
     ['PO open', currentPurchaseOrders.filter((order) => !['received', 'cancelled'].includes(order.status)).length],
     ['Approval policies', currentPurchaseOrderApprovalPolicies.length],
+    ['Barcode required', currentInventoryItems.filter((item) => item.barcode_required).length],
   ]));
 
   const form = document.createElement('form');
@@ -3955,6 +3956,7 @@ function createPharmacyInventoryPanel(patient) {
     createDrugCatalogField(),
     createFormField('itemCode', 'Item code', 'input', true),
     createFormField('displayName', 'Display name', 'input', true),
+    createFormField('barcode', 'Barcode', 'input'),
     createFormField('unit', 'Unit', 'input'),
     createFormField('quantityOnHand', 'Quantity on hand', 'input'),
     createFormField('reorderLevel', 'Reorder level', 'input')
@@ -3978,6 +3980,8 @@ function createPharmacyInventoryPanel(patient) {
   receiveForm.append(
     createInventoryItemSelectField('inventoryItemId', 'Inventory item', true),
     createFormField('lotNumber', 'Lot number', 'input', true),
+    createFormField('lotBarcode', 'Lot barcode', 'input'),
+    createFormField('scannedBarcode', 'Scanned barcode', 'input'),
     expiresOnField,
     createFormField('quantity', 'Receive quantity', 'input', true),
     createSupplierSelectField('supplierId', 'Supplier master'),
@@ -4164,6 +4168,8 @@ function applyDrugCatalogInventorySelection(form) {
 function createInventoryItemCard(item) {
   const card = createRecordCard(item, inventoryItemSummary, [
     'item_code',
+    'barcode',
+    'barcode_required',
     'quantity_on_hand',
     'reorder_level',
     'unit',
@@ -4190,6 +4196,8 @@ function createInventoryLotCard(lot) {
   return createRecordCard(lot, inventoryLotSummary, [
     'inventory_item_display_name',
     'lot_number',
+    'barcode',
+    'barcode_verified',
     'expires_on',
     'quantity_on_hand',
     'supplier_name',
@@ -4277,6 +4285,7 @@ async function createInventoryItemFromForm(patient, form, submit) {
         drugCatalogId: values.drugCatalogId,
         itemCode: values.itemCode,
         displayName: values.displayName,
+        barcode: values.barcode,
         unit: values.unit || 'unit',
         quantityOnHand: values.quantityOnHand || '0',
         reorderLevel: values.reorderLevel || '0',
@@ -4307,6 +4316,9 @@ async function receiveInventoryLotFromForm(patient, form, submit) {
       body: JSON.stringify(compactPayload({
         inventoryItemId: values.inventoryItemId,
         lotNumber: values.lotNumber,
+        lotBarcode: values.lotBarcode,
+        scannedBarcode: values.scannedBarcode,
+        requireBarcodeVerification: Boolean(values.scannedBarcode),
         expiresOn: values.expiresOn,
         quantity: values.quantity,
         supplierId: values.supplierId,
@@ -4482,6 +4494,8 @@ async function receivePurchaseOrderPrompt(order) {
   if (!line) return;
   const lotNumber = window.prompt('Lot number', `${order.purchase_order_number ?? 'PO'}-${Date.now()}`);
   if (!lotNumber) return;
+  const lotBarcode = window.prompt('Lot barcode (optional)', '');
+  const scannedBarcode = window.prompt('Scanned barcode (optional)', lotBarcode || '');
   const remaining = Math.max(
     Number(line.ordered_quantity ?? 0) - Number(line.received_quantity ?? 0),
     0
@@ -4498,6 +4512,9 @@ async function receivePurchaseOrderPrompt(order) {
       body: JSON.stringify(compactPayload({
         purchaseOrderLineId: line.id,
         lotNumber,
+        lotBarcode,
+        scannedBarcode,
+        requireBarcodeVerification: Boolean(scannedBarcode),
         expiresOn,
         quantity,
         receivedByUserId: readValue('userId'),
@@ -5060,6 +5077,7 @@ async function dispensePrescriptionPrompt(prescription) {
   const inventoryLotId = window.prompt('Inventory lot ID (optional)', matchedLot?.id ?? '');
   const quantity = window.prompt('Quantity to dispense', '1');
   if (!quantity) return;
+  const scannedBarcode = window.prompt('Scanned barcode (optional)', matchedLot?.barcode ?? matched?.barcode ?? '');
 
   setStatus('กำลังจ่ายยา', '');
   try {
@@ -5069,6 +5087,8 @@ async function dispensePrescriptionPrompt(prescription) {
       body: JSON.stringify(compactPayload({
         inventoryItemId,
         inventoryLotId,
+        scannedBarcode,
+        requireBarcodeVerification: Boolean(scannedBarcode),
         quantity,
         dispensedByUserId: readValue('userId'),
         notes: 'Dispensed from patient record',
