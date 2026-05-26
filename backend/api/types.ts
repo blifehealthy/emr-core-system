@@ -959,6 +959,7 @@ export type DispensePrescriptionInput = {
   fefoOverrideReason?: string | null;
   dispensedByUserId?: string | null;
   witnessUserId?: string | null;
+  witnessLoginCode?: string | null;
   witnessNote?: string | null;
   notes?: string | null;
 };

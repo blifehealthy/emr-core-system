@@ -5832,6 +5832,13 @@ async function dispensePrescriptionPrompt(prescription) {
     setStatus('ยาควบคุมต้องมี witness user', 'error');
     return;
   }
+  const witnessLoginCode = selectedItem?.is_controlled_substance
+    ? window.prompt('Witness login code for re-authentication', '') ?? ''
+    : '';
+  if (selectedItem?.is_controlled_substance && !witnessLoginCode) {
+    setStatus('ยาควบคุมต้องยืนยันตัวตน witness', 'error');
+    return;
+  }
   const witnessNote = selectedItem?.is_controlled_substance
     ? window.prompt('Witness note', 'Controlled dispense witnessed') ?? ''
     : '';
@@ -5865,6 +5872,7 @@ async function dispensePrescriptionPrompt(prescription) {
         fefoOverrideReason,
         dispensedByUserId: readValue('userId'),
         witnessUserId,
+        witnessLoginCode,
         witnessNote,
         notes: 'Dispensed from patient record',
       })),

@@ -74,6 +74,8 @@ assertContains(app, 'function createControlledSubstanceChart(', 'controlled subs
 assertContains(app, 'isControlledSubstance', 'controlled inventory item payload');
 assertContains(app, 'witnessUserId', 'controlled dispense witness payload');
 assertContains(app, 'Witness user ID for controlled dispense', 'controlled dispense witness prompt');
+assertContains(app, 'witnessLoginCode', 'controlled dispense witness re-auth payload');
+assertContains(app, 'Witness login code for re-authentication', 'controlled dispense witness re-auth prompt');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');
 assertContains(styles, '.operations-charts', 'operations chart layout');

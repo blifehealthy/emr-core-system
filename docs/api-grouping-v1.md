@@ -365,6 +365,14 @@ All routes except `GET /health` can be protected by bearer token when
 - Medication dispense rows store witness user, witness time, and optional witness note.
 - Controlled substance register dispense events include witness metadata.
 
+## Phase 3T Additions
+
+- Controlled substance witness capture now requires witness re-authentication.
+- Controlled dispense payloads can include `witnessLoginCode`; the code is validated against configured witness login code and is not stored.
+- Witness users must be active users in the same clinic as the controlled inventory item.
+- Medication dispense rows store witness re-auth method, re-auth time, and signature hash metadata.
+- Controlled substance register dispense events include witness re-auth metadata.
+
 ## Historical Phase 1 Mismatches and Follow-ups
 
 - Permission and workflow definitions now exist as documentation, while

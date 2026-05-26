@@ -69,6 +69,7 @@ const migrations = [
   '0037_add_phase_3o_fefo_picking_guard.up.sql',
   '0038_add_phase_3r_controlled_substance_register.up.sql',
   '0039_add_phase_3s_controlled_dispense_witness.up.sql',
+  '0040_add_phase_3t_controlled_witness_reauth.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -1260,6 +1261,9 @@ async function main() {
       fefo_override_reason: string | null;
       witness_user_id: string | null;
       witnessed_at: string | null;
+      witness_reauth_method: string | null;
+      witness_reauthenticated_at: string | null;
+      witness_signature_hash: string | null;
     }>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses`,
       adminHeaders,
@@ -1274,7 +1278,8 @@ async function main() {
         quantity: 2,
         fefoOverrideReason: 'Smoke confirms selected lot for dispense',
         dispensedByUserId: '10000000-0000-0000-0000-000000000202',
-        witnessUserId: createdUser.data.id,
+        witnessUserId: doctorSession.data.user.id,
+        witnessLoginCode: AUTH_LOGIN_CODE,
         witnessNote: 'Smoke nurse witnessed controlled dispense',
         notes: 'Smoke dispense',
       }
@@ -1285,8 +1290,11 @@ async function main() {
     assert.equal(Number(dispense.data.quantity), 2);
     assert.equal(dispense.data.barcode_verified, true);
     assert.equal(dispense.data.fefo_override_reason, 'Smoke confirms selected lot for dispense');
-    assert.equal(dispense.data.witness_user_id, createdUser.data.id);
+    assert.equal(dispense.data.witness_user_id, doctorSession.data.user.id);
     assert.ok(dispense.data.witnessed_at);
+    assert.equal(dispense.data.witness_reauth_method, 'login_code');
+    assert.ok(dispense.data.witness_reauthenticated_at);
+    assert.match(dispense.data.witness_signature_hash ?? '', /^hmac-sha256:/);
 
     const dispenses = await requestJson<Array<{ id: string }>>(
       `/api/prescriptions/${createdPrescription.data.id}/dispenses?limit=10`,

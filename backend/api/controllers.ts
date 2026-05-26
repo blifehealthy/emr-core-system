@@ -4487,12 +4487,19 @@ export async function handleDispensePrescription(
         expiryOverrideReason: validation.value.expiryOverrideReason,
         fefoOverrideReason: validation.value.fefoOverrideReason,
         witnessUserId: validation.value.witnessUserId,
+        witnessReauthenticated: Boolean(validation.value.witnessLoginCode),
         witnessNote: validation.value.witnessNote,
       },
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toMedicationDispenseDto(dispense) } };
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Controlled substance dispense')) {
+      return validationError(error.message);
+    }
+    if (error instanceof Error && error.message === 'Controlled substance witness re-auth is not configured') {
+      return validationError(error.message);
+    }
     return mapError(error);
   }
 }

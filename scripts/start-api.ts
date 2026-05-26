@@ -303,7 +303,11 @@ const server = createNodeServer({
   listPrescriptionsByEncounter: listPrescriptionsByEncounter(db),
   createPrescription: createPrescription(db),
   listMedicationDispenses: listMedicationDispenses(db),
-  dispensePrescription: dispensePrescription(db),
+  dispensePrescription: dispensePrescription(db, {
+    witnessLoginCode: process.env.CONTROLLED_DISPENSE_WITNESS_LOGIN_CODE ?? process.env.AUTH_LOGIN_CODE,
+    witnessSignatureSecret:
+      process.env.CONTROLLED_DISPENSE_SIGNATURE_SECRET ?? process.env.AUTH_SESSION_SECRET,
+  }),
   listInvoices: listInvoices(db),
   getInvoiceById: getInvoiceById(db),
   createInvoice: createInvoice(db),

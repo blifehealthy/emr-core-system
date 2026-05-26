@@ -52,10 +52,12 @@ real UAT findings, but the likely product directions are below.
   controlled item receiving, dispensing, and transfer review.
 - Phase 3S completed the controlled dispense witness foundation for two-person
   review metadata on controlled item dispensing.
+- Phase 3T completed the controlled witness re-authentication foundation with
+  login-code confirmation and signature hash metadata.
 - Remaining pharmacy follow-up should come from UAT: budget controls,
   notification integration, printer bridge delivery, supplier payment handoff,
-  witness re-authentication/digital signature, or database-backed permission
-  customization.
+  per-user password/MFA integration, controlled-drug reconciliation, or
+  database-backed permission customization.
 
 ### Patient Communication
 

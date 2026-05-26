@@ -1,3 +1,5 @@
+import { createHmac, createHash } from 'node:crypto';
+
 import type { DispensePrescriptionInput } from '../api/types.ts';
 import { assertInventoryLotPickAllowed } from './inventoryLotPicking.ts';
 import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
@@ -64,7 +66,11 @@ export function listMedicationDispenses(db: {
 
 export function dispensePrescription(db: {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
-}) {
+}, config: {
+  witnessLoginCode?: string;
+  witnessSignatureSecret?: string;
+  now?: () => Date;
+} = {}) {
   return async function run(input: DispensePrescriptionInput) {
     const prescriptionResult = await db.query<{
       id: string;
@@ -101,14 +107,57 @@ export function dispensePrescription(db: {
     const item = itemResult.rows[0];
     if (!item) return null;
 
+    let witnessUserId: string | null = null;
+    let witnessReauthenticatedAt: string | null = null;
+    let witnessSignatureHash: string | null = null;
+    let witnessReauthMethod: string | null = null;
+
     if (item.is_controlled_substance) {
-      const witnessUserId = input.witnessUserId?.trim();
+      witnessUserId = input.witnessUserId?.trim() ?? null;
       if (!witnessUserId) {
         throw new Error('Controlled substance dispense requires witnessUserId');
       }
       if (input.dispensedByUserId && witnessUserId === input.dispensedByUserId) {
         throw new Error('Controlled substance dispense witness must be different from dispenser');
       }
+      const expectedWitnessLoginCode = config.witnessLoginCode?.trim();
+      if (!expectedWitnessLoginCode) {
+        throw new Error('Controlled substance witness re-auth is not configured');
+      }
+      if (input.witnessLoginCode !== expectedWitnessLoginCode) {
+        throw new Error('Controlled substance dispense requires valid witness re-auth');
+      }
+
+      const witnessResult = await db.query<{ id: string }>(
+        `
+          SELECT id
+          FROM users
+          WHERE id = $1
+            AND clinic_id = $2
+            AND is_active IS TRUE
+            AND deleted_at IS NULL
+        `,
+        [witnessUserId, item.clinic_id]
+      );
+      if (!witnessResult.rows[0]) {
+        throw new Error('Controlled substance dispense witness user is not active in this clinic');
+      }
+
+      witnessReauthMethod = 'login_code';
+      witnessReauthenticatedAt = (config.now?.() ?? new Date()).toISOString();
+      witnessSignatureHash = createWitnessSignatureHash(
+        {
+          prescriptionId: input.prescriptionId,
+          inventoryItemId: input.inventoryItemId,
+          inventoryLotId: input.inventoryLotId ?? null,
+          quantity: input.quantity,
+          dispensedByUserId: input.dispensedByUserId ?? null,
+          witnessUserId,
+          witnessReauthenticatedAt,
+          witnessNote: input.witnessNote ?? null,
+        },
+        config.witnessSignatureSecret
+      );
     }
 
     const quantity = Number(input.quantity);
@@ -212,6 +261,9 @@ export function dispensePrescription(db: {
           dispensed_by_user_id,
           witness_user_id,
           witnessed_at,
+          witness_reauth_method,
+          witness_reauthenticated_at,
+          witness_signature_hash,
           witness_note,
           notes
         )
@@ -219,8 +271,8 @@ export function dispensePrescription(db: {
           $1, $2, $3, $4, $5, $6, $7, $8,
           CASE WHEN $8 THEN now() ELSE NULL END,
           $9, $10, $11, $12, $13,
-          CASE WHEN $13::uuid IS NOT NULL THEN now() ELSE NULL END,
-          $14, $15
+          $14, $15, $16,
+          $17, $18, $19
         )
         RETURNING id
       `,
@@ -237,7 +289,11 @@ export function dispensePrescription(db: {
         input.fefoOverrideReason ?? null,
         fefoRecommendedLotId,
         input.dispensedByUserId ?? null,
-        input.witnessUserId ?? null,
+        witnessUserId,
+        witnessReauthenticatedAt,
+        witnessReauthMethod,
+        witnessReauthenticatedAt,
+        witnessSignatureHash,
         input.witnessNote ?? null,
         input.notes ?? null,
       ]
@@ -312,4 +368,16 @@ export function dispensePrescription(db: {
 
     return dispense.rows[0] ?? null;
   };
+}
+
+function createWitnessSignatureHash(
+  payload: Record<string, unknown>,
+  secret?: string
+) {
+  const canonicalPayload = JSON.stringify(payload);
+  const trimmedSecret = secret?.trim();
+  const digest = trimmedSecret
+    ? createHmac('sha256', trimmedSecret).update(canonicalPayload).digest('hex')
+    : createHash('sha256').update(canonicalPayload).digest('hex');
+  return `${trimmedSecret ? 'hmac-sha256' : 'sha256'}:${digest}`;
 }
