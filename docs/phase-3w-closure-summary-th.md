@@ -31,5 +31,6 @@ Phase 3W ปิดงาน controlled reconciliation variance approval foundati
 
 ## งานถัดไปที่แนะนำ
 
-Phase 3X ควรเลือกจาก UAT: บังคับ approver คนละคนกับ closer, per-lot controlled count,
-controlled reconciliation witness/re-auth, หรือ printer bridge/GS1 parsing ถ้าห้องยาต้องใช้ก่อน
+Phase 3X ทำ strict approver separation ต่อแล้ว งานถัดไปควรเลือกจาก UAT:
+per-lot controlled count, controlled reconciliation witness/re-auth, approval routing หลายชั้น,
+หรือ printer bridge/GS1 parsing ถ้าห้องยาต้องใช้ก่อน

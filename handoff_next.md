@@ -240,6 +240,13 @@
     - approval stores approver, approval timestamp, and approval note
     - Operations dashboard can approve pending variance rounds
     - Phase 3W plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3X controlled reconciliation approver separation:
+    - migration `0044_add_phase_3x_controlled_approval_separation`
+    - database constraint prevents `approved_by_user_id = closed_by_user_id`
+    - approval API uses resolved actor user instead of trusting body `approvedByUserId`
+    - self-approval returns `409`
+    - API smoke covers self-approval rejection and separate-user approval
+    - Phase 3X plan, clinician summary, UAT checklist, and closure summary docs
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -247,7 +254,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `158/158` passing
+  - current result: `159/159` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -282,7 +289,8 @@
     controlled dispense witness metadata, Phase 3T controlled witness
     re-auth metadata, Phase 3U role permission override API flow,
     Phase 3V controlled substance reconciliation open/list/close flow, and
-    Phase 3W controlled reconciliation pending approval/approve flow
+    Phase 3W controlled reconciliation pending approval/approve flow, and
+    Phase 3X self-approval rejection/separate approver flow
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -861,9 +869,11 @@ Then produce:
    count, variance reason, and audit review.
 12. Run Phase 3W pharmacy lead/owner UAT for controlled-drug variance pending
    approval and approval note behavior.
-13. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
+13. Run Phase 3X pharmacy lead/owner UAT for approver separation and
+   self-approval rejection.
+14. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
    integration, GS1 parsing, budget controls, supplier payment handoff,
-   per-lot controlled count, stricter approver separation, or permission
-   change approval workflow.
-14. If pharmacy UAT is not the blocker, switch to accounting or payer export
+   per-lot controlled count, reconciliation witness/re-auth, approval routing
+   หลายชั้น, or permission change approval workflow.
+15. If pharmacy UAT is not the blocker, switch to accounting or payer export
    integration from the billing track.

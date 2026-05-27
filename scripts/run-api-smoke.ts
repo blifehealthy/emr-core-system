@@ -73,6 +73,7 @@ const migrations = [
   '0041_add_phase_3u_role_permission_overrides.up.sql',
   '0042_add_phase_3v_controlled_substance_reconciliations.up.sql',
   '0043_add_phase_3w_controlled_reconciliation_approval.up.sql',
+  '0044_add_phase_3x_controlled_approval_separation.up.sql',
 ].map((filename) => join(MIGRATIONS_DIR, filename));
 
 async function main() {
@@ -429,6 +430,24 @@ async function main() {
     assert.equal(createdUser.data.username, 'nurse.smoke');
     assert.equal(createdUser.data.role, 'nurse');
     assert.equal(createdUser.data.oidc_subject, 'oidc:nurse.smoke');
+
+    const approvalAdmin = await requestJson<{
+      id: string;
+      username: string;
+      role: string;
+    }>(
+      '/api/users',
+      adminHeaders,
+      'POST',
+      201,
+      {
+        clinicId: '10000000-0000-0000-0000-000000000101',
+        username: 'approval.admin.smoke',
+        displayName: 'Approval Admin Smoke',
+        role: 'admin',
+      }
+    );
+    assert.equal(approvalAdmin.data.role, 'admin');
 
     const duplicateUser = await requestJson<{ error: string; detail?: string }>(
       '/api/users',
@@ -1551,16 +1570,32 @@ async function main() {
     assert.equal(pendingControlledSubstanceReconciliation.data.status, 'pending_approval');
     assert.equal(pendingControlledSubstanceReconciliation.data.variance_reason, 'Smoke variance requires approval');
 
+    const selfApproval = await requestJson<{ error: string }>(
+      `/api/controlled-substance-reconciliations/${varianceControlledSubstanceReconciliation.data.id}/approve`,
+      adminHeaders,
+      'PATCH',
+      409,
+      { approvalNote: 'Smoke self approval should fail' }
+    );
+    assert.equal(
+      (selfApproval as unknown as { error: string }).error,
+      'Controlled substance reconciliation approver must be different from closer'
+    );
+
+    const approvalLeadHeaders = {
+      Authorization: `Bearer ${API_TOKEN}`,
+      'x-user-id': approvalAdmin.data.id,
+    };
     const approvedControlledSubstanceReconciliation = await requestJson<{
       id: string;
       status: string;
       approval_note: string | null;
     }>(
       `/api/controlled-substance-reconciliations/${varianceControlledSubstanceReconciliation.data.id}/approve`,
-      adminHeaders,
+      approvalLeadHeaders,
       'PATCH',
       200,
-      { approvalNote: 'Smoke variance approved' }
+      { approvedByUserId: '10000000-0000-0000-0000-000000000202', approvalNote: 'Smoke variance approved' }
     );
     assert.equal(approvedControlledSubstanceReconciliation.data.status, 'closed');
     assert.equal(approvedControlledSubstanceReconciliation.data.approval_note, 'Smoke variance approved');

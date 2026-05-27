@@ -8,6 +8,8 @@ type Queryable = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
 };
 
+export class ControlledSubstanceReconciliationApprovalError extends Error {}
+
 export function listControlledSubstanceReconciliations(db: Queryable) {
   return async function run(input: {
     clinicId: string;
@@ -150,6 +152,28 @@ export function closeControlledSubstanceReconciliation(db: Queryable) {
 
 export function approveControlledSubstanceReconciliation(db: Queryable) {
   return async function run(input: ApproveControlledSubstanceReconciliationInput) {
+    const pending = await db.query<{
+      id: string;
+      closed_by_user_id: string | null;
+    }>(
+      `
+        SELECT id, closed_by_user_id
+        FROM controlled_substance_reconciliations
+        WHERE id = $1
+          AND status = 'pending_approval'
+          AND deleted_at IS NULL
+      `,
+      [input.reconciliationId]
+    );
+    const row = pending.rows[0];
+    if (!row) return null;
+
+    if (input.approvedByUserId && row.closed_by_user_id === input.approvedByUserId) {
+      throw new ControlledSubstanceReconciliationApprovalError(
+        'Controlled substance reconciliation approver must be different from closer'
+      );
+    }
+
     const result = await db.query(
       `
         UPDATE controlled_substance_reconciliations

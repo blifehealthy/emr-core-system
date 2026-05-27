@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createEmrApi } from './emrApi.ts';
+import { ControlledSubstanceReconciliationApprovalError } from '../services/controlledSubstanceReconciliations.ts';
 import { createSessionToken } from '../services/sessionToken.ts';
 import { createOidcTestToken } from '../services/oidcToken.ts';
 import type { Dependencies } from './types.ts';
@@ -1358,15 +1359,18 @@ test('controlled substance reconciliation APIs list, open, close, and enforce ro
         };
       },
       async approveControlledSubstanceReconciliation(input) {
-        assert.deepEqual(input, {
-          reconciliationId: 'controlled-reconciliation-1',
-          approvedByUserId: 'admin-1',
-          approvalNote: 'Variance reviewed',
-        });
+        assert.equal(input.reconciliationId, 'controlled-reconciliation-1');
+        assert.equal(input.approvalNote, 'Variance reviewed');
+        if (input.approvedByUserId === 'admin-1') {
+          throw new ControlledSubstanceReconciliationApprovalError(
+            'Controlled substance reconciliation approver must be different from closer'
+          );
+        }
+        assert.equal(input.approvedByUserId, 'admin-2');
         return {
           id: 'controlled-reconciliation-1',
           status: 'closed',
-          approved_by_user_id: 'admin-1',
+          approved_by_user_id: 'admin-2',
           approval_note: 'Variance reviewed',
         };
       },
@@ -1419,11 +1423,19 @@ test('controlled substance reconciliation APIs list, open, close, and enforce ro
   });
   assert.equal(deniedApproval.status, 403);
 
-  const approved = await api({
+  const selfApproval = await api({
     method: 'PATCH',
     path: '/api/controlled-substance-reconciliations/controlled-reconciliation-1/approve',
     headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-1' },
     body: { approvalNote: 'Variance reviewed' },
+  });
+  assert.equal(selfApproval.status, 409);
+
+  const approved = await api({
+    method: 'PATCH',
+    path: '/api/controlled-substance-reconciliations/controlled-reconciliation-1/approve',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'admin-2' },
+    body: { approvedByUserId: 'ignored-spoof', approvalNote: 'Variance reviewed' },
   });
   assert.equal(approved.status, 200);
   assert.equal((approved.body as { data: { status: string } }).data.status, 'closed');

@@ -2290,7 +2290,6 @@ async function approveControlledSubstanceReconciliation(reconciliationId, approv
       method: 'PATCH',
       headers: buildHeaders(currentApiToken || readValue('apiToken')),
       body: JSON.stringify(compactPayload({
-        approvedByUserId: readValue('userId'),
         approvalNote,
       })),
     });

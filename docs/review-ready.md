@@ -36,6 +36,7 @@
 - Phase 3U role permission overrides add clinic-level DB-backed grant/deny controls for existing route permissions
 - Phase 3V controlled substance reconciliation adds controlled-drug count rounds with expected quantity snapshots, counted quantity, variance, and Operations dashboard actions
 - Phase 3W controlled reconciliation variance approval adds pending approval status, approval note/user/timestamp, and Operations dashboard approval actions
+- Phase 3X controlled reconciliation approver separation blocks the closer from approving their own variance and stores approval under the resolved actor
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -83,6 +84,7 @@
 - Review `docs/phase-3u-plan.md`, `docs/phase-3u-clinician-summary-th.md`, `docs/phase-3u-uat-checklist-th.md`, and `docs/phase-3u-closure-summary-th.md` with admins, clinic owners, and compliance leads
 - Review `docs/phase-3v-plan.md`, `docs/phase-3v-clinician-summary-th.md`, `docs/phase-3v-uat-checklist-th.md`, and `docs/phase-3v-closure-summary-th.md` with pharmacy staff, operations, and clinic owners
 - Review `docs/phase-3w-plan.md`, `docs/phase-3w-clinician-summary-th.md`, `docs/phase-3w-uat-checklist-th.md`, and `docs/phase-3w-closure-summary-th.md` with pharmacy leads and clinic owners
+- Review `docs/phase-3x-plan.md`, `docs/phase-3x-clinician-summary-th.md`, `docs/phase-3x-uat-checklist-th.md`, and `docs/phase-3x-closure-summary-th.md` with pharmacy leads and clinic owners
 
 ## Verified
 
@@ -126,4 +128,5 @@
 - Phase 3U targeted role permission override service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `155/155`, and API smoke pass
 - Phase 3V targeted controlled substance reconciliation service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `157/157`, and API smoke pass
 - Phase 3W targeted controlled reconciliation approval service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `158/158`, and API smoke pass
+- Phase 3X targeted controlled approver separation service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `159/159`, and API smoke pass
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

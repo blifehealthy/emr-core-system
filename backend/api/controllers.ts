@@ -162,6 +162,7 @@ import {
 } from './validation.ts';
 import { getActorContext, requireRole } from './auth.ts';
 import { AuthSessionConfigError } from '../services/createAuthSession.ts';
+import { ControlledSubstanceReconciliationApprovalError } from '../services/controlledSubstanceReconciliations.ts';
 import type {
   AppointmentStatus,
   CashierReconciliationStatus,
@@ -4330,10 +4331,18 @@ export async function handleApproveControlledSubstanceReconciliation(
   if (!validation.ok) return validationError(validation.error);
 
   const actor = getActorContext(request);
-  const reconciliation = await dependencies.approveControlledSubstanceReconciliation({
-    ...validation.value,
-    approvedByUserId: validation.value.approvedByUserId ?? actor.userId,
-  });
+  let reconciliation: unknown | null;
+  try {
+    reconciliation = await dependencies.approveControlledSubstanceReconciliation({
+      ...validation.value,
+      approvedByUserId: actor.userId,
+    });
+  } catch (error) {
+    if (error instanceof ControlledSubstanceReconciliationApprovalError) {
+      return { status: 409, headers: JSON_HEADERS, body: { error: error.message } };
+    }
+    return mapError(error);
+  }
   if (!reconciliation) {
     return {
       status: 404,

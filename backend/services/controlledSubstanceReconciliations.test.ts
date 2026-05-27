@@ -5,6 +5,7 @@ import {
   approveControlledSubstanceReconciliation,
   closeControlledSubstanceReconciliation,
   createControlledSubstanceReconciliation,
+  ControlledSubstanceReconciliationApprovalError,
   listControlledSubstanceReconciliations,
 } from './controlledSubstanceReconciliations.ts';
 
@@ -24,6 +25,9 @@ test('controlled substance reconciliation services list create close and approve
       }
       if (sql.includes('SELECT id, expected_quantity')) {
         return { rows: [{ id: 'csr-2', expected_quantity: '12.50' }] as T[] };
+      }
+      if (sql.includes('SELECT id, closed_by_user_id')) {
+        return { rows: [{ id: 'csr-2', closed_by_user_id: 'closer-1' }] as T[] };
       }
       if (sql.includes('UPDATE controlled_substance_reconciliations')) {
         if (sql.includes("status = 'closed'")) {
@@ -53,11 +57,19 @@ test('controlled substance reconciliation services list create close and approve
     approvedByUserId: 'admin-1',
     approvalNote: 'Reviewed variance',
   });
+  await assert.rejects(
+    approveControlledSubstanceReconciliation(db)({
+      reconciliationId: 'csr-2',
+      approvedByUserId: 'closer-1',
+      approvalNote: 'Self approval should fail',
+    }),
+    ControlledSubstanceReconciliationApprovalError
+  );
 
   assert.equal((list.rows[0] as { id: string }).id, 'csr-1');
   assert.equal((created as { id: string }).id, 'csr-2');
   assert.equal((closed as { status: string }).status, 'pending_approval');
   assert.equal((approved as { status: string }).status, 'closed');
-  assert.deepEqual(calls.at(-2)?.params, ['csr-2', 12, -0.5, 'One tablet damaged', null, null, 'pending_approval']);
-  assert.deepEqual(calls.at(-1)?.params, ['csr-2', 'admin-1', 'Reviewed variance']);
+  assert.deepEqual(calls.at(-4)?.params, ['csr-2', 12, -0.5, 'One tablet damaged', null, null, 'pending_approval']);
+  assert.deepEqual(calls.at(-2)?.params, ['csr-2', 'admin-1', 'Reviewed variance']);
 });

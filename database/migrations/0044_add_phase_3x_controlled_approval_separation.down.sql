@@ -1,0 +1,2 @@
+ALTER TABLE controlled_substance_reconciliations
+  DROP CONSTRAINT IF EXISTS controlled_substance_reconciliations_approver_not_closer;
