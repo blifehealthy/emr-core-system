@@ -1,5 +1,39 @@
 # Handoff Next
 
+## Latest Simulated UAT Readiness Review
+
+Phase 1-4G simulated UAT/readiness review is complete.
+
+Evidence document:
+
+- `docs/phase-1-to-4g-simulated-uat-readiness-review-th.md`
+
+Verification completed:
+
+- `npx tsc --noEmit` passed.
+- `npm test` passed `167/167`.
+- `npm run frontend:workflow-smoke` passed.
+- `npm run storage:check` passed with local storage default.
+- `npm run production:check` returned 0 errors and 6 warnings.
+- `npm run ops:check` returned 0 errors and 13 warnings.
+
+Not run in this simulated review:
+
+- `npm run api:smoke`, because it requires a target-like database/API setup.
+- `npm run browser:workflow-smoke`, because it requires a browser runtime.
+- `npm run browser:api-workflow-smoke`, because it requires Chrome plus
+  Docker/Postgres target-like flow.
+- `npm run db:test`, because it requires local `psql` or Docker Postgres setup.
+
+Human follow-up required:
+
+- Doctor/nurse clinical workflow sign-off.
+- Pharmacy stock, controlled-drug, scanner, label, printer recovery sign-off.
+- Cashier/accounting invoice, payment, refund, tax/receipt, CSV sign-off.
+- IT target env readiness, backup/restore drill, rollback drill, incident
+  tabletop, owner assignment, and pilot window evidence.
+- Owner go/no-go decision after real UAT.
+
 ## Latest Phase 4G Status
 
 Phase 4G printer bridge observability/reporting is complete in this checkpoint.
