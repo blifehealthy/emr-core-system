@@ -1,7 +1,10 @@
 import type {
   CreateInventoryBarcodePrintJobInput,
+  FallbackInventoryBarcodePrintJobInput,
+  InventoryBarcodePrintFallbackStatus,
   InventoryBarcodePrintDeliveryStatus,
   InventoryPrinterConnectionType,
+  RetryInventoryBarcodePrintJobInput,
   UpdateInventoryBarcodePrintJobDeliveryInput,
 } from '../api/types.ts';
 
@@ -84,6 +87,7 @@ export function listInventoryBarcodePrintJobs(db: Db) {
     printerProfileId?: string;
     connectionType?: InventoryPrinterConnectionType;
     deliveryStatus?: InventoryBarcodePrintDeliveryStatus | 'all';
+    fallbackStatus?: InventoryBarcodePrintFallbackStatus | 'all';
     limit?: number;
     offset?: number;
   }) {
@@ -105,6 +109,11 @@ export function listInventoryBarcodePrintJobs(db: Db) {
     if (input.deliveryStatus && input.deliveryStatus !== 'all') {
       params.push(input.deliveryStatus);
       conditions.push(`delivery_status = $${params.length}`);
+    }
+
+    if (input.fallbackStatus && input.fallbackStatus !== 'all') {
+      params.push(input.fallbackStatus);
+      conditions.push(`fallback_status = $${params.length}`);
     }
 
     params.push(limit + 1, offset);
@@ -130,6 +139,67 @@ export function listInventoryBarcodePrintJobs(db: Db) {
         nextOffset: result.rows.length > limit ? offset + limit : null,
       },
     };
+  };
+}
+
+export function fallbackInventoryBarcodePrintJob(db: Db) {
+  return async function run(input: FallbackInventoryBarcodePrintJobInput) {
+    const deliveryStatus = input.fallbackStatus === 'browser_export' ? 'exported' : 'cancelled';
+    const result = await db.query(
+      `
+        UPDATE inventory_barcode_print_jobs
+        SET delivery_status = $2,
+            connection_type = CASE
+              WHEN $3 = 'browser_export' THEN 'browser'::inventory_printer_connection_type
+              ELSE connection_type
+            END,
+            fallback_status = $3,
+            fallback_reason = $4,
+            fallback_requested_by_user_id = $5,
+            fallback_requested_at = now(),
+            delivery_updated_by_user_id = $5,
+            delivery_updated_at = now(),
+            last_delivery_error = NULL,
+            delivered_at = NULL
+        WHERE id = $1
+          AND deleted_at IS NULL
+        RETURNING *
+      `,
+      [
+        input.printJobId,
+        deliveryStatus,
+        input.fallbackStatus,
+        input.fallbackReason,
+        input.requestedByUserId ?? null,
+      ]
+    );
+
+    return result.rows[0] ?? null;
+  };
+}
+
+export function retryInventoryBarcodePrintJob(db: Db) {
+  return async function run(input: RetryInventoryBarcodePrintJobInput) {
+    const result = await db.query(
+      `
+        UPDATE inventory_barcode_print_jobs
+        SET delivery_status = CASE WHEN connection_type = 'browser' THEN 'exported' ELSE 'queued' END,
+            fallback_status = 'retry_queued',
+            fallback_reason = $2,
+            retry_requested_by_user_id = $3,
+            retry_requested_at = now(),
+            delivery_updated_by_user_id = $3,
+            delivery_updated_at = now(),
+            last_delivery_error = NULL,
+            delivered_at = NULL
+        WHERE id = $1
+          AND deleted_at IS NULL
+        RETURNING *
+      `,
+      [input.printJobId, input.retryReason ?? null, input.requestedByUserId ?? null]
+    );
+
+    return result.rows[0] ?? null;
   };
 }
 

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   createInventoryBarcodePrintJob,
+  fallbackInventoryBarcodePrintJob,
   listInventoryBarcodePrintJobs,
   renderBarcodePayload,
+  retryInventoryBarcodePrintJob,
   updateInventoryBarcodePrintJobDelivery,
 } from './inventoryBarcodePrintJobs.ts';
 
@@ -166,12 +168,32 @@ test('listInventoryBarcodePrintJobs filters bridge queue and paginates', async (
   assert.match(calls[0].sql, /printer_profile_id = \$2/);
   assert.match(calls[0].sql, /connection_type = \$3/);
   assert.match(calls[0].sql, /delivery_status = \$4/);
+  assert.doesNotMatch(calls[0].sql, /fallback_status =/);
   assert.deepEqual(calls[0].params?.slice(0, 4), [
     'clinic-1',
     'profile-1',
     'utility_bridge',
     'queued',
   ]);
+});
+
+test('listInventoryBarcodePrintJobs can filter fallback recovery status', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return { rows: [{ id: 'job-1', fallback_status: 'manual_print' }] as T[] };
+    },
+  };
+
+  await listInventoryBarcodePrintJobs(db)({
+    clinicId: 'clinic-1',
+    deliveryStatus: 'failed',
+    fallbackStatus: 'manual_print',
+  });
+
+  assert.match(calls[0].sql, /fallback_status = \$3/);
+  assert.deepEqual(calls[0].params?.slice(0, 3), ['clinic-1', 'failed', 'manual_print']);
 });
 
 test('updateInventoryBarcodePrintJobDelivery records acknowledgement metadata', async () => {
@@ -204,4 +226,65 @@ test('updateInventoryBarcodePrintJobDelivery records acknowledgement metadata', 
   assert.equal((job as { last_delivery_error: string }).last_delivery_error, 'printer offline');
   assert.equal((job as { delivery_updated_by_user_id: string }).delivery_updated_by_user_id, 'user-1');
   assert.match(calls[0].sql, /delivery_attempt_count = delivery_attempt_count \+ 1/);
+});
+
+test('fallbackInventoryBarcodePrintJob records browser export fallback', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return {
+        rows: [
+          {
+            id: params?.[0],
+            delivery_status: params?.[1],
+            fallback_status: params?.[2],
+            fallback_reason: params?.[3],
+            fallback_requested_by_user_id: params?.[4],
+          },
+        ] as T[],
+      };
+    },
+  };
+
+  const job = await fallbackInventoryBarcodePrintJob(db)({
+    printJobId: 'job-1',
+    fallbackStatus: 'browser_export',
+    fallbackReason: 'Bridge offline',
+    requestedByUserId: 'user-1',
+  });
+
+  assert.equal((job as { delivery_status: string }).delivery_status, 'exported');
+  assert.equal((job as { fallback_status: string }).fallback_status, 'browser_export');
+  assert.equal((job as { fallback_reason: string }).fallback_reason, 'Bridge offline');
+  assert.match(calls[0].sql, /fallback_requested_at = now\(\)/);
+});
+
+test('retryInventoryBarcodePrintJob requeues recoverable print job', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return {
+        rows: [
+          {
+            id: params?.[0],
+            fallback_reason: params?.[1],
+            retry_requested_by_user_id: params?.[2],
+            fallback_status: 'retry_queued',
+          },
+        ] as T[],
+      };
+    },
+  };
+
+  const job = await retryInventoryBarcodePrintJob(db)({
+    printJobId: 'job-1',
+    retryReason: 'Printer back online',
+    requestedByUserId: 'user-2',
+  });
+
+  assert.equal((job as { fallback_status: string }).fallback_status, 'retry_queued');
+  assert.equal((job as { retry_requested_by_user_id: string }).retry_requested_by_user_id, 'user-2');
+  assert.match(calls[0].sql, /delivery_status = CASE WHEN connection_type = 'browser'/);
 });

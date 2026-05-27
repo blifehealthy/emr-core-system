@@ -100,6 +100,8 @@ import {
   validateCreateInventoryBarcodeLabelTemplateBody,
   validateUpdateInventoryBarcodeLabelTemplateBody,
   validateCreateInventoryBarcodePrintJobBody,
+  validateFallbackInventoryBarcodePrintJobBody,
+  validateRetryInventoryBarcodePrintJobBody,
   validateUpdateInventoryBarcodePrintJobDeliveryBody,
   validateCreateInventoryPrinterProfileBody,
   validateUpdateInventoryPrinterProfileBody,
@@ -2890,6 +2892,14 @@ export async function handleListInventoryBarcodePrintJobs(
     'all',
   ]);
   if (!deliveryStatus.ok) return validationError(deliveryStatus.error);
+  const fallbackStatus = readOptionalEnumQuery(request, 'fallbackStatus', [
+    'none',
+    'browser_export',
+    'manual_print',
+    'retry_queued',
+    'all',
+  ]);
+  if (!fallbackStatus.ok) return validationError(fallbackStatus.error);
   const limit = readOptionalLimitQuery(request);
   if (!limit.ok) return validationError(limit.error);
   const offset = readOptionalOffsetQuery(request);
@@ -2900,6 +2910,7 @@ export async function handleListInventoryBarcodePrintJobs(
     printerProfileId,
     connectionType: connectionType.value,
     deliveryStatus: deliveryStatus.value,
+    fallbackStatus: fallbackStatus.value,
     limit: limit.value,
     offset: offset.value,
   });
@@ -2942,6 +2953,85 @@ export async function handleUpdateInventoryBarcodePrintJobDelivery(
       metadata: {
         deliveryStatus: validation.value.deliveryStatus,
         deliveryError: validation.value.deliveryError ?? null,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleFallbackInventoryBarcodePrintJob(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  printJobId: string
+): Promise<HttpResponse> {
+  if (!dependencies.fallbackInventoryBarcodePrintJob) {
+    return mapError(new Error('Inventory barcode print job fallback dependency is not configured'));
+  }
+
+  const validation = validateFallbackInventoryBarcodePrintJobBody(request.body, printJobId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const actor = getActorContext(request);
+    const job = await dependencies.fallbackInventoryBarcodePrintJob({
+      ...validation.value,
+      requestedByUserId: validation.value.requestedByUserId ?? actor.userId,
+    });
+    if (!job) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory barcode print job not found' } };
+    }
+
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_print_job',
+      entityId: printJobId,
+      action: 'fallback_requested',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        fallbackStatus: validation.value.fallbackStatus,
+        fallbackReason: validation.value.fallbackReason,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleRetryInventoryBarcodePrintJob(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  printJobId: string
+): Promise<HttpResponse> {
+  if (!dependencies.retryInventoryBarcodePrintJob) {
+    return mapError(new Error('Inventory barcode print job retry dependency is not configured'));
+  }
+
+  const validation = validateRetryInventoryBarcodePrintJobBody(request.body, printJobId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const actor = getActorContext(request);
+    const job = await dependencies.retryInventoryBarcodePrintJob({
+      ...validation.value,
+      requestedByUserId: validation.value.requestedByUserId ?? actor.userId,
+    });
+    if (!job) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory barcode print job not found' } };
+    }
+
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_print_job',
+      entityId: printJobId,
+      action: 'retry_requested',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        retryReason: validation.value.retryReason ?? null,
       },
     });
 

@@ -2464,6 +2464,87 @@ test('printer bridge failed acknowledgement requires delivery error', async () =
   });
 });
 
+test('printer bridge fallback and retry routes recover failed jobs', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      async fallbackInventoryBarcodePrintJob(input) {
+        assert.equal(input.printJobId, 'print-job-1');
+        assert.equal(input.fallbackStatus, 'browser_export');
+        assert.equal(input.fallbackReason, 'Bridge offline');
+        assert.equal(input.requestedByUserId, 'user-1');
+        return {
+          id: input.printJobId,
+          delivery_status: 'exported',
+          fallback_status: input.fallbackStatus,
+          fallback_reason: input.fallbackReason,
+          rendered_payload: '^XA^XZ',
+        };
+      },
+      async retryInventoryBarcodePrintJob(input) {
+        assert.equal(input.printJobId, 'print-job-1');
+        assert.equal(input.retryReason, 'Bridge back online');
+        assert.equal(input.requestedByUserId, 'user-1');
+        return {
+          id: input.printJobId,
+          delivery_status: 'queued',
+          fallback_status: 'retry_queued',
+        };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const fallback = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-print-jobs/print-job-1/fallback',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: {
+      fallbackStatus: 'browser_export',
+      fallbackReason: 'Bridge offline',
+    },
+  });
+  assert.equal(fallback.status, 200);
+  assert.equal((fallback.body as { data: { fallback_status: string } }).data.fallback_status, 'browser_export');
+
+  const retry = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-print-jobs/print-job-1/retry',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: {
+      retryReason: 'Bridge back online',
+    },
+  });
+  assert.equal(retry.status, 200);
+  assert.equal((retry.body as { data: { fallback_status: string } }).data.fallback_status, 'retry_queued');
+  assert.deepEqual(auditInputs.map((input) => input.action), ['fallback_requested', 'retry_requested']);
+});
+
+test('printer bridge fallback requires fallback reason', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async fallbackInventoryBarcodePrintJob() {
+        return { id: 'print-job-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-print-jobs/print-job-1/fallback',
+    headers: { 'x-user-role': 'admin' },
+    body: { fallbackStatus: 'manual_print' },
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.body, {
+    error: 'fallbackReason is required',
+  });
+});
+
 test('barcode label template routes list create and update templates', async () => {
   const auditInputs: AuditLogInput[] = [];
   const api = createEmrApi(

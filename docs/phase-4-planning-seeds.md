@@ -24,10 +24,11 @@ UAT/go-no-go identifies the highest operational blocker.
   trimmed scan input, and GS1 scan detail display.
 - Phase 4E completed structured barcode label template management for
   item/lot/bin/generic labels and print-job template selection.
+- Phase 4F completed degraded-mode print fallback and retry recovery for failed
+  barcode print jobs.
 - Remaining pharmacy hardware and barcode candidates:
   - vendor-specific direct printer bridge service
   - hardware printer certification
-  - offline or degraded-mode print fallback
 
 ### Accounting And Payer Integration
 

@@ -116,6 +116,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/inventory-barcode-print-jobs` | Create barcode label print/export job and return rendered payload. |
 | `GET` | `/api/inventory-barcode-print-jobs` | List barcode print jobs for browser export, network printer, or utility bridge queues. |
 | `PATCH` | `/api/inventory-barcode-print-jobs/:jobId/delivery` | Record printer bridge delivery status such as printing, delivered, failed, or cancelled. |
+| `PATCH` | `/api/inventory-barcode-print-jobs/:jobId/fallback` | Mark failed/degraded print jobs as browser export or manual print fallback. |
+| `PATCH` | `/api/inventory-barcode-print-jobs/:jobId/retry` | Requeue a recoverable barcode print job after printer or bridge recovery. |
 | `GET` | `/api/inventory-barcode-label-templates` | List clinic barcode label templates for item, lot, bin, or generic labels. |
 | `POST` | `/api/inventory-barcode-label-templates` | Create a structured barcode label template. |
 | `PATCH` | `/api/inventory-barcode-label-templates/:templateId` | Update a barcode label template or default flag. |
@@ -315,6 +317,8 @@ All routes except `GET /health` can be protected by bearer token when
   trimmed input, and parsed GS1 result display.
 - Phase 4E adds clinic-managed barcode label templates that can be selected
   during ZPL/ESC/POS export.
+- Phase 4F adds degraded-mode print fallback and retry recovery controls for
+  barcode print jobs.
 
 ## Phase 3J Additions
 

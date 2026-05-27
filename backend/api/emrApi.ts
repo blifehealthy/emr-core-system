@@ -50,6 +50,7 @@ import {
   handleDeleteSoapNote,
   handleDeleteVitalSign,
   handleFinalizeClinicalNote,
+  handleFallbackInventoryBarcodePrintJob,
   handleGetAuditLogsByEntity,
   handleGetAppointment,
   handleGetClinicSettings,
@@ -116,6 +117,7 @@ import {
   handleListUsers,
   handleListVitalSignsByEncounter,
   handleSignClinicalNote,
+  handleRetryInventoryBarcodePrintJob,
   handleUpdateAppointment,
   handleUpdateClinicVisit,
   handleUpdateClinicalNoteTemplate,
@@ -1242,6 +1244,30 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
           actorAwareRequest,
           dependencies,
           printJobDeliveryMatch[1]
+        );
+      }
+
+      const printJobFallbackMatch =
+        request.path.match(/^\/api\/inventory-barcode-print-jobs\/([^/]+)\/fallback$/);
+      if (printJobFallbackMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleFallbackInventoryBarcodePrintJob(
+          actorAwareRequest,
+          dependencies,
+          printJobFallbackMatch[1]
+        );
+      }
+
+      const printJobRetryMatch =
+        request.path.match(/^\/api\/inventory-barcode-print-jobs\/([^/]+)\/retry$/);
+      if (printJobRetryMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleRetryInventoryBarcodePrintJob(
+          actorAwareRequest,
+          dependencies,
+          printJobRetryMatch[1]
         );
       }
 

@@ -1,5 +1,43 @@
 # Handoff Next
 
+## Latest Phase 4F Status
+
+Phase 4F degraded-mode barcode print recovery is complete in this checkpoint.
+
+What changed:
+
+- Added migration `0048_add_phase_4f_print_fallback_recovery` for fallback and
+  retry metadata on `inventory_barcode_print_jobs`.
+- Added print recovery APIs:
+  - `PATCH /api/inventory-barcode-print-jobs/:jobId/fallback`
+  - `PATCH /api/inventory-barcode-print-jobs/:jobId/retry`
+- Barcode print-job listing can filter by `fallbackStatus`.
+- Pharmacy frontend now has a Print recovery panel for failed/queued/printing
+  jobs, browser fallback, manual print marking, payload opening, and retry.
+- Updated API grouping, permission matrix, Phase 4 planning seeds, README,
+  review notes, Phase 4F plan, runbook, UAT checklist, and closure summary.
+
+Verification completed:
+
+- `node --check frontend/app.js` passed.
+- `npm run frontend:workflow-smoke` passed.
+- `npx tsc --noEmit` passed.
+- Targeted Phase 4F tests passed:
+  - `backend/services/inventoryBarcodePrintJobs.test.ts`
+  - `backend/api/emrApi.test.ts`
+  - `database/migrations/0048_add_phase_4f_print_fallback_recovery.test.ts`
+  - `database/migrations/migration_order.test.ts`
+- Full `npm test` passed `166/166`.
+
+Recommended next phase:
+
+1. Run Phase 4A-4F UAT/drill with pharmacy and IT before adding more hardware
+   features.
+2. If continuing implementation, Phase 4G should focus on printer bridge
+   observability/reporting or vendor-specific bridge packaging.
+3. Keep `emr-core-system.zip` untracked unless the user explicitly asks to
+   archive or commit it.
+
 ## Latest Phase 4E Status
 
 Phase 4E barcode label template management is complete in this checkpoint.

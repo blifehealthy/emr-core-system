@@ -270,6 +270,19 @@ Current scope and review docs are tracked in:
 - `docs/phase-4e-uat-checklist-th.md`
 - `docs/phase-4e-closure-summary-th.md`
 
+## Phase 4F
+
+Phase 4F adds degraded-mode barcode print recovery. Failed bridge/network jobs
+can be marked for browser export or manual print fallback, then retried when
+the printer path is healthy again.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4f-plan.md`
+- `docs/phase-4f-print-recovery-runbook.md`
+- `docs/phase-4f-uat-checklist-th.md`
+- `docs/phase-4f-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

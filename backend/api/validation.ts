@@ -37,6 +37,7 @@ import type {
   CreatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderApprovalPolicyInput,
   InventoryBarcodeScanContext,
+  InventoryBarcodePrintFallbackStatus,
   InventoryBarcodePrintDeliveryStatus,
   InventoryBarcodeLabelTemplateType,
   InventoryBarcodePrintLanguage,
@@ -44,6 +45,8 @@ import type {
   CreateInventoryBarcodePrintJobInput,
   CreateInventoryBarcodeLabelTemplateInput,
   CreateInventoryPrinterProfileInput,
+  FallbackInventoryBarcodePrintJobInput,
+  RetryInventoryBarcodePrintJobInput,
   UpdateInventoryBarcodeLabelTemplateInput,
   UpdateInventoryPrinterProfileInput,
   UpdateInventoryBarcodePrintJobDeliveryInput,
@@ -167,6 +170,12 @@ const inventoryBarcodeLabelTemplateTypes: InventoryBarcodeLabelTemplateType[] = 
   'lot',
   'bin',
   'generic',
+];
+const inventoryBarcodePrintFallbackStatuses: Array<
+  Exclude<InventoryBarcodePrintFallbackStatus, 'none' | 'retry_queued'>
+> = [
+  'browser_export',
+  'manual_print',
 ];
 const inventoryPrinterConnectionTypes: InventoryPrinterConnectionType[] = [
   'browser',
@@ -3922,6 +3931,61 @@ export function validateUpdateInventoryBarcodePrintJobDeliveryBody(
       deliveryError: deliveryError.value,
       deliveredAt: deliveredAt.value,
       updatedByUserId: updatedByUserId.value,
+    },
+  };
+}
+
+export function validateFallbackInventoryBarcodePrintJobBody(
+  body: unknown,
+  printJobId: string
+):
+  | { ok: true; value: FallbackInventoryBarcodePrintJobInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const fallbackStatus = readRequiredEnumValue<Exclude<InventoryBarcodePrintFallbackStatus, 'none' | 'retry_queued'>>(
+    candidate.fallbackStatus,
+    'fallbackStatus',
+    inventoryBarcodePrintFallbackStatuses
+  );
+  if (!fallbackStatus.ok) return fallbackStatus;
+  const fallbackReason = readRequiredString(candidate.fallbackReason, 'fallbackReason');
+  if (!fallbackReason.ok) return fallbackReason;
+  const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
+  if (!requestedByUserId.ok) return requestedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      printJobId,
+      fallbackStatus: fallbackStatus.value,
+      fallbackReason: fallbackReason.value,
+      requestedByUserId: requestedByUserId.value,
+    },
+  };
+}
+
+export function validateRetryInventoryBarcodePrintJobBody(
+  body: unknown,
+  printJobId: string
+):
+  | { ok: true; value: RetryInventoryBarcodePrintJobInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const retryReason = readOptionalNullableStringField(candidate, 'retryReason');
+  if (!retryReason.ok) return retryReason;
+  const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
+  if (!requestedByUserId.ok) return requestedByUserId;
+
+  return {
+    ok: true,
+    value: {
+      printJobId,
+      retryReason: retryReason.value,
+      requestedByUserId: requestedByUserId.value,
     },
   };
 }

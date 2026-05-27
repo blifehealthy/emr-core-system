@@ -532,6 +532,11 @@ export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
 export type InventoryBarcodePrintLanguage = 'html' | 'zpl' | 'escpos';
 export type InventoryPrinterConnectionType = 'browser' | 'network' | 'utility_bridge';
 export type InventoryBarcodeLabelTemplateType = 'item' | 'lot' | 'bin' | 'generic';
+export type InventoryBarcodePrintFallbackStatus =
+  | 'none'
+  | 'browser_export'
+  | 'manual_print'
+  | 'retry_queued';
 export type InventoryBarcodePrintDeliveryStatus =
   | 'exported'
   | 'queued'
@@ -1044,6 +1049,19 @@ export type UpdateInventoryBarcodePrintJobDeliveryInput = {
   updatedByUserId?: string | null;
 };
 
+export type FallbackInventoryBarcodePrintJobInput = {
+  printJobId: string;
+  fallbackStatus: Exclude<InventoryBarcodePrintFallbackStatus, 'none' | 'retry_queued'>;
+  fallbackReason: string;
+  requestedByUserId?: string | null;
+};
+
+export type RetryInventoryBarcodePrintJobInput = {
+  printJobId: string;
+  retryReason?: string | null;
+  requestedByUserId?: string | null;
+};
+
 export type CreateInvoiceInput = {
   clinicId: string;
   patientId: string;
@@ -1453,11 +1471,18 @@ export type Dependencies = {
     printerProfileId?: string;
     connectionType?: InventoryPrinterConnectionType;
     deliveryStatus?: InventoryBarcodePrintDeliveryStatus | 'all';
+    fallbackStatus?: InventoryBarcodePrintFallbackStatus | 'all';
     limit?: number;
     offset?: number;
   }) => Promise<PaginatedListResult>;
   updateInventoryBarcodePrintJobDelivery?: (
     input: UpdateInventoryBarcodePrintJobDeliveryInput
+  ) => Promise<unknown | null>;
+  fallbackInventoryBarcodePrintJob?: (
+    input: FallbackInventoryBarcodePrintJobInput
+  ) => Promise<unknown | null>;
+  retryInventoryBarcodePrintJob?: (
+    input: RetryInventoryBarcodePrintJobInput
   ) => Promise<unknown | null>;
   listInventoryPrinterProfiles?: (input: {
     clinicId: string;

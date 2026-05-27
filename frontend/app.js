@@ -54,6 +54,7 @@ let currentPurchaseOrders = [];
 let currentPurchaseOrderApprovalPolicies = [];
 let currentInventoryPrinterProfiles = [];
 let currentInventoryBarcodeLabelTemplates = [];
+let currentInventoryBarcodePrintJobs = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentPharmacyOverrideReport = null;
@@ -373,6 +374,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryBarcodePrintJobs = await fetchInventoryBarcodePrintJobs(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -998,6 +1000,27 @@ async function fetchInventoryBarcodeLabelTemplates(clinicId, apiToken) {
   });
 
   const response = await fetch(`/api/inventory-barcode-label-templates?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryBarcodePrintJobs(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    deliveryStatus: 'all',
+    fallbackStatus: 'all',
+    limit: '25',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-barcode-print-jobs?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2747,6 +2770,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryBarcodePrintJobs = await fetchInventoryBarcodePrintJobs(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -4178,6 +4202,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryBarcodePrintJobs = await fetchInventoryBarcodePrintJobs(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -4390,10 +4415,15 @@ function createPharmacyInventoryPanel(patient) {
     ['Approval policies', currentPurchaseOrderApprovalPolicies.length],
     ['Printer profiles', currentInventoryPrinterProfiles.length],
     ['Label templates', currentInventoryBarcodeLabelTemplates.length],
+    ['Print recovery', currentInventoryBarcodePrintJobs.filter((job) => (
+      ['failed', 'queued', 'printing'].includes(job.delivery_status)
+        || ['browser_export', 'manual_print', 'retry_queued'].includes(job.fallback_status)
+    )).length],
     ['Barcode required', currentInventoryItems.filter((item) => item.barcode_required).length],
   ]));
 
   section.append(createBarcodeScannerPanel(patient));
+  section.append(createPrintRecoveryPanel(patient));
 
   const form = document.createElement('form');
   form.className = 'nested-inline-form';
@@ -4803,6 +4833,97 @@ function createLabelTemplateSelectField(name, labelText) {
   }
   label.append(select);
   return label;
+}
+
+function createPrintRecoveryPanel(patient) {
+  const section = document.createElement('section');
+  section.className = 'subsection';
+  section.dataset.workflow = 'print-recovery-panel';
+
+  const heading = document.createElement('h4');
+  heading.textContent = 'Print recovery';
+  section.append(heading);
+
+  const jobs = currentInventoryBarcodePrintJobs
+    .filter((job) => (
+      ['failed', 'queued', 'printing'].includes(job.delivery_status)
+        || ['browser_export', 'manual_print', 'retry_queued'].includes(job.fallback_status)
+    ))
+    .slice(0, 6);
+
+  if (jobs.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'muted-text compact-note';
+    empty.textContent = 'ไม่มีงานพิมพ์ที่ต้องกู้คืน';
+    section.append(empty);
+    return section;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'record-list';
+  for (const job of jobs) {
+    list.append(createPrintRecoveryCard(patient, job));
+  }
+  section.append(list);
+  return section;
+}
+
+function createPrintRecoveryCard(patient, job) {
+  const card = createRecordCard(job, printJobRecoverySummary, [
+    'printer_language',
+    'connection_type',
+    'delivery_status',
+    'fallback_status',
+    'last_delivery_error',
+    'fallback_reason',
+    'delivery_attempt_count',
+  ]);
+  const actions = document.createElement('div');
+  actions.className = 'inline-actions';
+
+  const exportButton = document.createElement('button');
+  exportButton.type = 'button';
+  exportButton.className = 'secondary-button compact-button';
+  exportButton.textContent = 'Open payload';
+  exportButton.addEventListener('click', () => {
+    openTextExportWindow(job.rendered_payload ?? '', 'Recovered barcode payload');
+  });
+
+  const fallbackButton = document.createElement('button');
+  fallbackButton.type = 'button';
+  fallbackButton.className = 'secondary-button compact-button';
+  fallbackButton.textContent = 'Browser fallback';
+  fallbackButton.addEventListener('click', async () => {
+    await recoverBarcodePrintJob(patient, job.id, 'fallback', {
+      fallbackStatus: 'browser_export',
+      fallbackReason: 'Bridge unavailable, exported through browser',
+    });
+  });
+
+  const manualButton = document.createElement('button');
+  manualButton.type = 'button';
+  manualButton.className = 'secondary-button compact-button';
+  manualButton.textContent = 'Manual printed';
+  manualButton.addEventListener('click', async () => {
+    await recoverBarcodePrintJob(patient, job.id, 'fallback', {
+      fallbackStatus: 'manual_print',
+      fallbackReason: 'Printed manually during degraded mode',
+    });
+  });
+
+  const retryButton = document.createElement('button');
+  retryButton.type = 'button';
+  retryButton.className = 'primary-button compact-button';
+  retryButton.textContent = 'Retry queue';
+  retryButton.addEventListener('click', async () => {
+    await recoverBarcodePrintJob(patient, job.id, 'retry', {
+      retryReason: 'Printer bridge recovered',
+    });
+  });
+
+  actions.append(exportButton, fallbackButton, manualButton, retryButton);
+  card.append(actions);
+  return card;
 }
 
 function createRoleSelectField(name, labelText) {
@@ -6408,6 +6529,7 @@ async function exportBarcodePrintJob(
     if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
     openTextExportWindow(payload.data?.rendered_payload ?? '', `${printerLanguage.toUpperCase()} barcode labels`);
     const deliveryStatus = payload.data?.delivery_status;
+    await refreshPrintJobs(patient);
     setStatus(
       deliveryStatus === 'queued'
         ? `ส่ง ${printerLanguage.toUpperCase()} เข้า printer queue แล้ว`
@@ -6416,6 +6538,40 @@ async function exportBarcodePrintJob(
     );
   } catch (error) {
     setStatus(error instanceof Error ? error.message : `export ${printerLanguage} ไม่สำเร็จ`, 'error');
+  }
+}
+
+async function recoverBarcodePrintJob(patient, printJobId, action, body) {
+  const endpoint = action === 'retry' ? 'retry' : 'fallback';
+  setStatus('กำลังอัปเดตงานพิมพ์', '');
+  try {
+    const response = await fetch(`/api/inventory-barcode-print-jobs/${printJobId}/${endpoint}`, {
+      method: 'PATCH',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        ...body,
+        requestedByUserId: readValue('userId'),
+      })),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
+    if (action === 'fallback' && body.fallbackStatus === 'browser_export') {
+      openTextExportWindow(payload.data?.rendered_payload ?? '', 'Browser fallback barcode payload');
+    }
+    await refreshPrintJobs(patient);
+    setStatus(action === 'retry' ? 'ส่งงานกลับเข้า queue แล้ว' : 'บันทึก fallback แล้ว', 'success');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'กู้งานพิมพ์ไม่สำเร็จ', 'error');
+  }
+}
+
+async function refreshPrintJobs(patient) {
+  currentInventoryBarcodePrintJobs = await fetchInventoryBarcodePrintJobs(
+    patient.clinic_id,
+    currentApiToken || readValue('apiToken')
+  ).catch(() => currentInventoryBarcodePrintJobs);
+  if (currentPatient) {
+    await refreshPatientWorkspace(currentProfileSection);
   }
 }
 
@@ -7293,6 +7449,10 @@ function printerProfileSummary(item) {
 
 function labelTemplateSummary(item) {
   return `${item.template_name ?? item.id} · ${item.template_type ?? 'generic'} · ${item.printer_language ?? 'zpl'}`;
+}
+
+function printJobRecoverySummary(item) {
+  return `${item.id ?? 'print job'} · ${item.delivery_status ?? 'exported'} · ${item.fallback_status ?? 'none'}`;
 }
 
 function invoiceSummary(item) {

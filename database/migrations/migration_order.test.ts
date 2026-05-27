@@ -201,6 +201,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0047_add_phase_4e_label_templates.up.sql'),
     'expected Phase 4E label templates migration'
   );
+  assert.ok(
+    filenames.includes('0048_add_phase_4f_print_fallback_recovery.up.sql'),
+    'expected Phase 4F print fallback recovery migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {
