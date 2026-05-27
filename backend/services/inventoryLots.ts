@@ -1,4 +1,5 @@
 import type { ReceiveInventoryLotInput } from '../api/types.ts';
+import { barcodeMatchesExpected, parseGs1Barcode } from './gs1Barcodes.ts';
 import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 type Db = {
@@ -103,8 +104,12 @@ export function receiveInventoryLot(db: Db) {
     const quantityAfter = Number((quantityBefore + quantity).toFixed(2));
     const scannedBarcode = input.scannedBarcode ?? null;
     const lotBarcode = input.lotBarcode ?? null;
+    const parsedGs1 = parseGs1Barcode(scannedBarcode);
     const expectedBarcode = item.barcode ?? lotBarcode;
-    const barcodeVerified = Boolean(scannedBarcode && expectedBarcode && scannedBarcode === expectedBarcode);
+    const barcodeVerified = barcodeMatchesExpected(scannedBarcode, [expectedBarcode, lotBarcode], {
+      lotNumber: input.lotNumber,
+      expiresOn: input.expiresOn ?? parsedGs1.expiresOn,
+    });
     if ((input.requireBarcodeVerification || item.barcode_required) && !barcodeVerified) {
       throw new Error('Barcode verification failed for inventory receiving');
     }
@@ -141,7 +146,7 @@ export function receiveInventoryLot(db: Db) {
         input.supplierId ?? null,
         input.lotNumber,
         input.binLabel ?? null,
-        lotBarcode ?? scannedBarcode,
+        lotBarcode ?? parsedGs1.gtin ?? scannedBarcode,
         scannedBarcode,
         barcodeVerified,
         barcodeVerified ? input.receivedByUserId ?? null : null,

@@ -229,6 +229,20 @@ Current scope and review docs are tracked in:
 - `docs/phase-4b-uat-checklist-th.md`
 - `docs/phase-4b-closure-summary-th.md`
 
+## Phase 4C
+
+Phase 4C adds GS1 barcode parsing for pharmacy scan workflows. Scanned GS1
+barcodes can expose GTIN, expiry, lot, and serial metadata, and barcode
+verification can match stored item GTIN or lot values without removing the
+manual barcode fallback.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4c-plan.md`
+- `docs/phase-4c-gs1-barcode-runbook.md`
+- `docs/phase-4c-uat-checklist-th.md`
+- `docs/phase-4c-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

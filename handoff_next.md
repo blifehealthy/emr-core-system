@@ -271,6 +271,17 @@
     - `docs/phase-4b-printer-bridge-runbook.md`
     - `docs/phase-4b-uat-checklist-th.md`
     - `docs/phase-4b-closure-summary-th.md`
+  - Phase 4C GS1 barcode parsing foundation:
+    - migration `0046_add_phase_4c_gs1_barcode_parsing`
+    - GS1 parser for AI `01` GTIN, `17` expiry, `10` lot, and `21` serial
+    - barcode scan audit rows store parsed GS1 metadata
+    - scan lookup can match raw barcode, GTIN, or lot number
+    - receiving, purchase-order receiving, and dispensing verification accept
+      matching GS1 GTIN/lot scans
+    - `docs/phase-4c-plan.md`
+    - `docs/phase-4c-gs1-barcode-runbook.md`
+    - `docs/phase-4c-uat-checklist-th.md`
+    - `docs/phase-4c-closure-summary-th.md`
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -278,7 +289,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `161/161` passing
+  - current result: `163/163` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -323,6 +334,10 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/inventoryBarcodePrintJobs.test.ts backend/api/emrApi.test.ts database/migrations/0045_add_phase_4b_printer_bridge_delivery.test.ts database/migrations/migration_order.test.ts`
+  - Phase 4C GS1 barcode targeted checks
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/gs1Barcodes.test.ts backend/services/inventoryBarcodes.test.ts backend/services/inventoryLots.test.ts backend/services/medicationDispenses.test.ts backend/services/purchaseOrders.test.ts database/migrations/0046_add_phase_4c_gs1_barcode_parsing.test.ts database/migrations/migration_order.test.ts`
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

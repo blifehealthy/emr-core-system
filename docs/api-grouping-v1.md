@@ -300,6 +300,8 @@ All routes except `GET /health` can be protected by bearer token when
   scanned barcode values before changing stock.
 - Barcode scan audit rows record lookup, receiving, and dispensing scans.
 - The Prescriptions tab exposes barcode fields in pharmacy inventory workflows.
+- Phase 4C barcode scans parse GS1 GTIN, expiry, lot, and serial metadata, and
+  GS1 values can match stored item GTIN or lot details in verification workflows.
 
 ## Phase 3I Additions
 

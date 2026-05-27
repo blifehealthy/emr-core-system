@@ -18,10 +18,11 @@ UAT/go-no-go identifies the highest operational blocker.
 - Phase 4B completed the printer bridge queue foundation with queued print job
   listing, delivery acknowledgement, delivery attempt metadata, and fallback
   browser/export guidance.
+- Phase 4C completed GS1 barcode parsing foundation for GTIN, expiry, lot, and
+  serial metadata on pharmacy scans and verification workflows.
 - Remaining pharmacy hardware and barcode candidates:
   - vendor-specific direct printer bridge service
   - hardware printer certification
-  - GS1 barcode parsing
   - scanner-specific UX hardening
   - label template management
   - offline or degraded-mode print fallback

@@ -8,6 +8,7 @@ import type {
   UpdatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderInput,
 } from '../api/types.ts';
+import { barcodeMatchesExpected, parseGs1Barcode } from './gs1Barcodes.ts';
 import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
 type Db = {
@@ -595,8 +596,12 @@ export function receivePurchaseOrder(db: Db) {
     const quantityAfter = Number((quantityBefore + quantity).toFixed(2));
     const scannedBarcode = input.scannedBarcode ?? null;
     const lotBarcode = input.lotBarcode ?? null;
+    const parsedGs1 = parseGs1Barcode(scannedBarcode);
     const expectedBarcode = line.inventory_item_barcode ?? lotBarcode;
-    const barcodeVerified = Boolean(scannedBarcode && expectedBarcode && scannedBarcode === expectedBarcode);
+    const barcodeVerified = barcodeMatchesExpected(scannedBarcode, [expectedBarcode, lotBarcode], {
+      lotNumber: input.lotNumber,
+      expiresOn: input.expiresOn ?? parsedGs1.expiresOn,
+    });
     if ((input.requireBarcodeVerification || line.inventory_item_barcode_required) && !barcodeVerified) {
       throw new Error('Barcode verification failed for purchase order receiving');
     }
@@ -637,7 +642,7 @@ export function receivePurchaseOrder(db: Db) {
         input.purchaseOrderLineId,
         input.lotNumber,
         input.binLabel ?? null,
-        lotBarcode ?? scannedBarcode,
+        lotBarcode ?? parsedGs1.gtin ?? scannedBarcode,
         scannedBarcode,
         barcodeVerified,
         barcodeVerified ? input.receivedByUserId ?? null : null,

@@ -40,6 +40,7 @@
 - Phase 3 implementation scope is closed for UAT/go-no-go review, with Phase 4 candidates separated from the Phase 3 scope
 - Phase 4A production readiness adds `npm run ops:check`, ops drill evidence checks, and go-live runbooks for backup/restore, rollback, monitoring owners, and incident drills
 - Phase 4B printer bridge foundation adds queued print-job listing, delivery acknowledgement, attempt/error metadata, and hardware-bridge runbooks
+- Phase 4C GS1 barcode parsing adds GTIN, expiry, lot, and serial parsing for pharmacy scan lookup and verification
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback

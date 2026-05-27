@@ -1,6 +1,7 @@
 import { createHmac, createHash } from 'node:crypto';
 
 import type { DispensePrescriptionInput } from '../api/types.ts';
+import { barcodeMatchesExpected } from './gs1Barcodes.ts';
 import { assertInventoryLotPickAllowed } from './inventoryLotPicking.ts';
 import { applyInventoryLocationStockChange } from './inventoryLocationStocks.ts';
 
@@ -162,7 +163,7 @@ export function dispensePrescription(db: {
 
     const quantity = Number(input.quantity);
     const scannedBarcode = input.scannedBarcode ?? null;
-    let barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
+    let barcodeVerified = barcodeMatchesExpected(scannedBarcode, [item.barcode]);
     let inventoryLocationId = input.inventoryLocationId ?? null;
     let binLabel: string | null = null;
     let fefoRecommendedLotId: string | null = null;
@@ -204,11 +205,7 @@ export function dispensePrescription(db: {
       if (!lot) return null;
       inventoryLocationId = inventoryLocationId ?? lot.inventory_location_id;
       binLabel = lot.bin_label;
-      barcodeVerified = Boolean(
-        scannedBarcode &&
-          ((lot.barcode && scannedBarcode === lot.barcode) ||
-            (item.barcode && scannedBarcode === item.barcode))
-      );
+      barcodeVerified = barcodeMatchesExpected(scannedBarcode, [lot.barcode, item.barcode]);
       if ((input.requireBarcodeVerification || item.barcode_required) && !barcodeVerified) {
         throw new Error('Barcode verification failed for prescription dispensing');
       }
@@ -228,7 +225,7 @@ export function dispensePrescription(db: {
         [input.inventoryLotId, lotQuantityAfter]
       );
     } else if (input.requireBarcodeVerification || item.barcode_required) {
-      const barcodeVerified = Boolean(scannedBarcode && item.barcode && scannedBarcode === item.barcode);
+      const barcodeVerified = barcodeMatchesExpected(scannedBarcode, [item.barcode]);
       if (!barcodeVerified) {
         throw new Error('Barcode verification failed for prescription dispensing');
       }
