@@ -309,10 +309,18 @@ Current pilot preparation docs are tracked in:
 - `docs/uat-execution-checklist-th.md`
 - `docs/pilot-defect-tracker-th.md`
 - `docs/pilot-go-no-go-template-th.md`
+- `docs/uat-role-quick-guides-th.md`
+- `docs/uat-test-data-plan-th.md`
+- `docs/uat-step-by-step-scripts-th.md`
+- `docs/pilot-launch-checklist-th.md`
+- `docs/pilot-known-limitations-th.md`
+- `docs/phase-5-planning-seeds.md`
 - `docs/phase-4h-printer-bridge-adapter-contract.md`
 - `docs/security-privacy-review-pack-th.md`
 - `docs/deployment-pilot-runbook-th.md`
 - `docs/clinic-user-manual-th.md`
+- `docs/uat-tester-delivery-pack-th.md`
+- `docs/pdf/`
 
 ## Current Scope
 

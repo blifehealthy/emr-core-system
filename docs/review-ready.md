@@ -70,6 +70,7 @@
 - Review `docs/pilot-uat-pack-th.md`, `docs/uat-execution-checklist-th.md`, `docs/pilot-defect-tracker-th.md`, and `docs/pilot-go-no-go-template-th.md` before human UAT starts
 - Review `docs/security-privacy-review-pack-th.md` and `docs/deployment-pilot-runbook-th.md` before pilot deployment
 - Review `docs/clinic-user-manual-th.md` with clinic users before hands-on UAT
+- Review `docs/uat-role-quick-guides-th.md`, `docs/uat-test-data-plan-th.md`, `docs/uat-step-by-step-scripts-th.md`, `docs/pilot-launch-checklist-th.md`, and `docs/pilot-known-limitations-th.md` before sending the tester PDF pack
 - Review `docs/phase-4h-printer-bridge-adapter-contract.md` with IT/vendor teams before implementing a bridge adapter
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
