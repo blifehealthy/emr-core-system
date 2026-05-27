@@ -968,6 +968,75 @@ export async function handleGetPharmacyOverrideReportCsv(
   };
 }
 
+export async function handleGetPrinterBridgeHealthReport(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.getPrinterBridgeHealthReport) {
+    return mapError(new Error('Printer bridge health report dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const startDate = request.query?.startDate?.trim() || request.query?.date?.trim();
+  if (!startDate) return validationError('startDate is required query parameter');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    return validationError('startDate must be YYYY-MM-DD');
+  }
+  const endDate = request.query?.endDate?.trim() || startDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return validationError('endDate must be YYYY-MM-DD');
+  }
+  if (endDate < startDate) {
+    return validationError('endDate must be on or after startDate');
+  }
+
+  const report = await dependencies.getPrinterBridgeHealthReport({ clinicId, startDate, endDate });
+  return { status: 200, headers: JSON_HEADERS, body: { data: report ?? { start_date: startDate, end_date: endDate } } };
+}
+
+export async function handleGetPrinterBridgeHealthReportCsv(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  const reportResponse = await handleGetPrinterBridgeHealthReport(request, dependencies);
+  if (reportResponse.status !== 200) return reportResponse;
+
+  const report = (reportResponse.body as { data?: Record<string, unknown> }).data ?? {};
+  const rows = [
+    ['metric', 'value'],
+    ['start_date', String(report.start_date ?? '')],
+    ['end_date', String(report.end_date ?? '')],
+    ['print_job_total', String(report.print_job_total ?? 0)],
+    ['label_total', String(report.label_total ?? 0)],
+    ['queued_total', String(report.queued_total ?? 0)],
+    ['printing_total', String(report.printing_total ?? 0)],
+    ['delivered_total', String(report.delivered_total ?? 0)],
+    ['failed_total', String(report.failed_total ?? 0)],
+    ['cancelled_total', String(report.cancelled_total ?? 0)],
+    ['exported_total', String(report.exported_total ?? 0)],
+    ['fallback_total', String(report.fallback_total ?? 0)],
+    ['browser_fallback_total', String(report.browser_fallback_total ?? 0)],
+    ['manual_print_total', String(report.manual_print_total ?? 0)],
+    ['retry_queued_total', String(report.retry_queued_total ?? 0)],
+    ['avg_attempt_count', String(report.avg_attempt_count ?? 0)],
+  ];
+  appendAggregateRows(rows, 'by_delivery_status', report.by_delivery_status, 'delivery_status', 'count');
+  appendAggregateRows(rows, 'by_connection_type', report.by_connection_type, 'connection_type', 'count');
+  appendAggregateRows(rows, 'by_printer_profile', report.by_printer_profile, 'profile_name', 'failed_count');
+  appendAggregateRows(rows, 'recent_problem_jobs', report.recent_problem_jobs, 'id', 'delivery_status');
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+
+  return {
+    status: 200,
+    headers: {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': 'attachment; filename="printer-bridge-health.csv"',
+    },
+    body: `${csv}\n`,
+  };
+}
+
 export async function handleGetControlledSubstanceRegister(
   request: HttpRequest,
   dependencies: Dependencies

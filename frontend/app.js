@@ -9,6 +9,7 @@ const searchButton = document.querySelector('#search-button');
 const adminLoadButton = document.querySelector('#admin-load-button');
 const queueLoadButton = document.querySelector('#queue-load-button');
 const queueExportButton = document.querySelector('#queue-export-button');
+const printerHealthExportButton = document.querySelector('#printer-health-export-button');
 const billingLoadButton = document.querySelector('#billing-load-button');
 const logoutButton = document.querySelector('#logout-button');
 const serviceStatus = document.querySelector('#service-status');
@@ -58,6 +59,7 @@ let currentInventoryBarcodePrintJobs = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentPharmacyOverrideReport = null;
+let currentPrinterBridgeHealthReport = null;
 let currentControlledSubstanceRegister = null;
 let currentControlledSubstanceReconciliations = [];
 let currentAdminFilters = {
@@ -272,6 +274,7 @@ queueForm.addEventListener('submit', async (event) => {
     currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
     currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
     currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
+    currentPrinterBridgeHealthReport = await fetchPrinterBridgeHealthReport(clinicId, apiToken).catch(() => null);
     currentControlledSubstanceRegister = await fetchControlledSubstanceRegister(clinicId, apiToken).catch(() => null);
     currentControlledSubstanceReconciliations = await fetchControlledSubstanceReconciliations(clinicId, apiToken)
       .catch(() => []);
@@ -287,6 +290,10 @@ queueForm.addEventListener('submit', async (event) => {
 
 queueExportButton.addEventListener('click', async () => {
   await exportDailyOperationsCsv();
+});
+
+printerHealthExportButton.addEventListener('click', async () => {
+  await exportPrinterBridgeHealthCsv();
 });
 
 billingForm.addEventListener('submit', async (event) => {
@@ -1081,6 +1088,24 @@ async function fetchPharmacyOverrideReport(clinicId, apiToken) {
   return result.data;
 }
 
+async function fetchPrinterBridgeHealthReport(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+  });
+  const response = await fetch(`/api/reports/printer-bridge-health?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data;
+}
+
 async function fetchControlledSubstanceRegister(clinicId, apiToken) {
   const params = new URLSearchParams({
     clinicId,
@@ -1246,6 +1271,49 @@ async function exportDailyOperationsCsv() {
   }
 }
 
+async function exportPrinterBridgeHealthCsv() {
+  const clinicId = readValue('queueClinicId');
+  if (!clinicId) {
+    setStatus('กรุณาระบุ Clinic ID ก่อน export', 'error');
+    return;
+  }
+
+  const params = new URLSearchParams({
+    clinicId,
+    startDate: readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+    endDate: readValue('queueReportEndDate') || readValue('queueReportStartDate') || new Date().toISOString().slice(0, 10),
+  });
+  printerHealthExportButton.disabled = true;
+  setStatus('กำลัง export printer report', '');
+
+  try {
+    const response = await fetch(`/api/reports/printer-bridge-health.csv?${params.toString()}`, {
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `printer-bridge-health-${params.get('startDate')}-${params.get('endDate')}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setStatus('export printer report แล้ว', 'success');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'export printer report ไม่สำเร็จ';
+    setStatus(message, 'error');
+  } finally {
+    printerHealthExportButton.disabled = false;
+  }
+}
+
 function compactPayload(payload) {
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined && value !== '')
@@ -1300,6 +1368,7 @@ function setAdminBusy(isBusy) {
 function setQueueBusy(isBusy) {
   queueLoadButton.disabled = isBusy;
   queueExportButton.disabled = isBusy;
+  printerHealthExportButton.disabled = isBusy;
   queueLoadButton.textContent = isBusy ? 'กำลังโหลด' : 'โหลดคิว';
 }
 
@@ -2273,6 +2342,7 @@ async function reloadOperationsWorkspace() {
   currentClinicSettings = await fetchClinicSettings(clinicId, apiToken).catch(() => null);
   currentDailyReport = await fetchDailyOperationsReport(clinicId, apiToken).catch(() => null);
   currentPharmacyOverrideReport = await fetchPharmacyOverrideReport(clinicId, apiToken).catch(() => null);
+  currentPrinterBridgeHealthReport = await fetchPrinterBridgeHealthReport(clinicId, apiToken).catch(() => null);
   currentControlledSubstanceRegister = await fetchControlledSubstanceRegister(clinicId, apiToken).catch(() => null);
   currentControlledSubstanceReconciliations = await fetchControlledSubstanceReconciliations(clinicId, apiToken)
     .catch(() => []);
@@ -2423,6 +2493,7 @@ function createOperationsCharts() {
       item.prescriptions ?? 0,
     ])),
     createPharmacyOverrideChart(),
+    createPrinterBridgeHealthChart(),
     createControlledSubstanceChart()
   );
 
@@ -2451,6 +2522,34 @@ function createPharmacyOverrideChart() {
         event.fefo_recommended_lot_number ||
         event.inventory_lot_number ||
         '';
+      list.append(term, description);
+    }
+    chart.append(list);
+  }
+  return chart;
+}
+
+function createPrinterBridgeHealthChart() {
+  const report = currentPrinterBridgeHealthReport ?? {};
+  const rows = [
+    ['Print jobs', report.print_job_total ?? 0],
+    ['Queued', report.queued_total ?? 0],
+    ['Failed', report.failed_total ?? 0],
+    ['Fallbacks', report.fallback_total ?? 0],
+    ['Retries', report.retry_queued_total ?? 0],
+  ];
+  const chart = createBarChart('Printer bridge health', rows);
+  const jobs = (report.recent_problem_jobs ?? []).slice(0, 3);
+  if (jobs.length > 0) {
+    const list = document.createElement('dl');
+    for (const job of jobs) {
+      const term = document.createElement('dt');
+      term.textContent = `${job.delivery_status ?? 'print'} · ${job.profile_name ?? job.connection_type ?? 'Manual export'}`;
+      const description = document.createElement('dd');
+      description.textContent =
+        job.last_delivery_error ||
+        job.fallback_reason ||
+        `${job.fallback_status ?? 'none'} · attempts ${job.delivery_attempt_count ?? 0}`;
       list.append(term, description);
     }
     chart.append(list);

@@ -98,6 +98,9 @@ function makeDeps(overrides: Partial<Dependencies> = {}): Dependencies {
     async getPharmacyOverrideReport() {
       return { start_date: '2026-05-24', end_date: '2026-05-24', override_total: 0 };
     },
+    async getPrinterBridgeHealthReport() {
+      return { start_date: '2026-05-24', end_date: '2026-05-24', print_job_total: 0 };
+    },
     async getControlledSubstanceRegister() {
       return { start_date: '2026-05-24', end_date: '2026-05-24', event_total: 0 };
     },
@@ -1198,6 +1201,20 @@ test('clinic settings and daily operations report APIs work', async () => {
           by_item: [{ inventory_item_display_name: 'Amoxicillin', count: 2 }],
         };
       },
+      async getPrinterBridgeHealthReport(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.startDate, '2026-05-24');
+        assert.equal(input.endDate, '2026-05-31');
+        return {
+          start_date: input.startDate,
+          end_date: input.endDate,
+          print_job_total: 5,
+          failed_total: 1,
+          fallback_total: 2,
+          by_delivery_status: [{ delivery_status: 'failed', count: 1 }],
+          by_printer_profile: [{ profile_name: 'Pharmacy label', failed_count: 1 }],
+        };
+      },
       async getControlledSubstanceRegister(input) {
         assert.equal(input.clinicId, 'clinic-1');
         assert.equal(input.startDate, '2026-05-24');
@@ -1285,6 +1302,36 @@ test('clinic settings and daily operations report APIs work', async () => {
   assert.match(overrideCsv.body as string, /override_total,2/);
   assert.match(overrideCsv.body as string, /by_event_type:dispense,1/);
   assert.match(overrideCsv.body as string, /by_item:Amoxicillin,2/);
+
+  const printerReport = await api({
+    method: 'GET',
+    path: '/api/reports/printer-bridge-health',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(printerReport.status, 200);
+  assert.deepEqual(printerReport.body, {
+    data: {
+      start_date: '2026-05-24',
+      end_date: '2026-05-31',
+      print_job_total: 5,
+      failed_total: 1,
+      fallback_total: 2,
+      by_delivery_status: [{ delivery_status: 'failed', count: 1 }],
+      by_printer_profile: [{ profile_name: 'Pharmacy label', failed_count: 1 }],
+    },
+  });
+
+  const printerCsv = await api({
+    method: 'GET',
+    path: '/api/reports/printer-bridge-health.csv',
+    headers: { 'x-user-role': 'admin' },
+    query: { clinicId: 'clinic-1', startDate: '2026-05-24', endDate: '2026-05-31' },
+  });
+  assert.equal(printerCsv.status, 200);
+  assert.match(printerCsv.body as string, /print_job_total,5/);
+  assert.match(printerCsv.body as string, /fallback_total,2/);
+  assert.match(printerCsv.body as string, /by_delivery_status:failed,1/);
 
   const controlledReport = await api({
     method: 'GET',

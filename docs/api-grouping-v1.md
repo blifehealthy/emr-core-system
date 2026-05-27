@@ -172,6 +172,8 @@ All routes except `GET /health` can be protected by bearer token when
 | `GET` | `/api/reports/billing-summary.csv` | CSV export for billing summary metrics. |
 | `GET` | `/api/reports/pharmacy-overrides` | Date-range expiry and FEFO override review report for dispensing and transfer events. |
 | `GET` | `/api/reports/pharmacy-overrides.csv` | CSV export for the pharmacy override review report. |
+| `GET` | `/api/reports/printer-bridge-health` | Date-range barcode printer queue health, failed jobs, fallback, retry, and profile aggregates. |
+| `GET` | `/api/reports/printer-bridge-health.csv` | CSV export for printer bridge health metrics and recent problem jobs. |
 | `GET` | `/api/reports/controlled-substances` | Date-range controlled item receiving, dispensing, and transfer register. |
 | `GET` | `/api/reports/controlled-substances.csv` | CSV export for the controlled substance register. |
 
@@ -319,6 +321,8 @@ All routes except `GET /health` can be protected by bearer token when
   during ZPL/ESC/POS export.
 - Phase 4F adds degraded-mode print fallback and retry recovery controls for
   barcode print jobs.
+- Phase 4G adds printer bridge health reporting with JSON/CSV visibility for
+  queue status, failed jobs, fallback, retry, and printer-profile hot spots.
 
 ## Phase 3J Additions
 

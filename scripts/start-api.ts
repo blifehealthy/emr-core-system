@@ -58,6 +58,7 @@ import { getConsentRecordById } from '../backend/services/getConsentRecordById.t
 import { getDailyOperationsReport } from '../backend/services/getDailyOperationsReport.ts';
 import { getBillingSummaryReport } from '../backend/services/getBillingSummaryReport.ts';
 import { getPharmacyOverrideReport } from '../backend/services/getPharmacyOverrideReport.ts';
+import { getPrinterBridgeHealthReport } from '../backend/services/getPrinterBridgeHealthReport.ts';
 import { getControlledSubstanceRegister } from '../backend/services/getControlledSubstanceRegister.ts';
 import { getDiagnosisById } from '../backend/services/getDiagnosisById.ts';
 import { getEncounterById } from '../backend/services/getEncounterById.ts';
@@ -230,6 +231,7 @@ const server = createNodeServer({
   getDailyOperationsReport: getDailyOperationsReport(db),
   getBillingSummaryReport: getBillingSummaryReport(db),
   getPharmacyOverrideReport: getPharmacyOverrideReport(db),
+  getPrinterBridgeHealthReport: getPrinterBridgeHealthReport(db),
   getControlledSubstanceRegister: getControlledSubstanceRegister(db),
   getEncounterById: getEncounterById(db),
   getSoapNoteByClinicalNoteId: getSoapNoteByClinicalNoteId(db),

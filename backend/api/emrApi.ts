@@ -61,6 +61,8 @@ import {
   handleGetBillingSummaryReportCsv,
   handleGetPharmacyOverrideReport,
   handleGetPharmacyOverrideReportCsv,
+  handleGetPrinterBridgeHealthReport,
+  handleGetPrinterBridgeHealthReportCsv,
   handleGetControlledSubstanceRegister,
   handleGetControlledSubstanceRegisterCsv,
   handleGetDiagnosis,
@@ -472,6 +474,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'audit_read');
       if (roleError) return roleError;
       return handleGetPharmacyOverrideReportCsv(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/printer-bridge-health') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetPrinterBridgeHealthReport(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/reports/printer-bridge-health.csv') {
+      const roleError = requireRole(actorAwareRequest, 'audit_read');
+      if (roleError) return roleError;
+      return handleGetPrinterBridgeHealthReportCsv(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/reports/controlled-substances') {

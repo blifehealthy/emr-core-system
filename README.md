@@ -283,6 +283,19 @@ Current scope and review docs are tracked in:
 - `docs/phase-4f-uat-checklist-th.md`
 - `docs/phase-4f-closure-summary-th.md`
 
+## Phase 4G
+
+Phase 4G adds printer bridge observability and reporting. Operators can review
+queue health, failed jobs, fallback/retry activity, and printer-profile hot
+spots from JSON/CSV reports and the operations dashboard.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4g-plan.md`
+- `docs/phase-4g-printer-observability-runbook.md`
+- `docs/phase-4g-uat-checklist-th.md`
+- `docs/phase-4g-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

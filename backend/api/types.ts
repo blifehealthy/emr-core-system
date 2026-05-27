@@ -1307,6 +1307,11 @@ export type Dependencies = {
     startDate: string;
     endDate: string;
   }) => Promise<unknown | null>;
+  getPrinterBridgeHealthReport?: (input: {
+    clinicId: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<unknown | null>;
   getControlledSubstanceRegister?: (input: {
     clinicId: string;
     startDate: string;

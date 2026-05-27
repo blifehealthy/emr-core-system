@@ -26,6 +26,8 @@ UAT/go-no-go identifies the highest operational blocker.
   item/lot/bin/generic labels and print-job template selection.
 - Phase 4F completed degraded-mode print fallback and retry recovery for failed
   barcode print jobs.
+- Phase 4G completed printer bridge observability/reporting with JSON/CSV health
+  metrics for queues, failures, fallback, retry, and printer profiles.
 - Remaining pharmacy hardware and barcode candidates:
   - vendor-specific direct printer bridge service
   - hardware printer certification

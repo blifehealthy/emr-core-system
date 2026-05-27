@@ -14,6 +14,7 @@ assertContains(html, 'id="auth-form"', 'auth session form');
 assertContains(html, 'id="authLoginCode"', 'auth login code field');
 assertContains(html, 'id="queue-form"', 'queue form');
 assertContains(html, 'id="queue-export-button"', 'daily operations CSV export button');
+assertContains(html, 'id="printer-health-export-button"', 'printer health CSV export button');
 assertContains(app, 'function renderQueueBoard()', 'queue board renderer');
 assertContains(app, 'function createAuthSession(', 'auth session API helper');
 assertContains(app, '/api/auth/sessions', 'auth session endpoint');
@@ -83,6 +84,8 @@ assertContains(app, 'safetyOverrideReason', 'prescription safety override reason
 assertContains(app, 'fetchDailyOperationsReport', 'daily operations report fetch');
 assertContains(app, 'fetchPharmacyOverrideReport', 'pharmacy override report fetch');
 assertContains(app, '/api/reports/pharmacy-overrides', 'pharmacy override report endpoint');
+assertContains(app, 'fetchPrinterBridgeHealthReport', 'printer bridge health report fetch');
+assertContains(app, '/api/reports/printer-bridge-health', 'printer bridge health report endpoint');
 assertContains(app, 'function createPharmacyOverrideChart(', 'pharmacy override chart');
 assertContains(app, 'fetchControlledSubstanceRegister', 'controlled substance register fetch');
 assertContains(app, '/api/reports/controlled-substances', 'controlled substance register endpoint');
@@ -97,6 +100,7 @@ assertContains(app, 'Witness user ID for controlled dispense', 'controlled dispe
 assertContains(app, 'witnessLoginCode', 'controlled dispense witness re-auth payload');
 assertContains(app, 'Witness login code for re-authentication', 'controlled dispense witness re-auth prompt');
 assertContains(app, 'exportDailyOperationsCsv', 'daily operations CSV export flow');
+assertContains(app, 'exportPrinterBridgeHealthCsv', 'printer bridge health CSV export flow');
 assertContains(app, 'createClinicLogoAsset', 'clinic logo asset workflow');
 assertContains(styles, '.operations-charts', 'operations chart layout');
 assertContains(styles, '.bar-chart', 'bar chart card style');

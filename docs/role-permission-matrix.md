@@ -97,6 +97,8 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `GET` | `/api/reports/daily-operations.csv` | `audit_read` |
 | `GET` | `/api/reports/pharmacy-overrides` | `audit_read` |
 | `GET` | `/api/reports/pharmacy-overrides.csv` | `audit_read` |
+| `GET` | `/api/reports/printer-bridge-health` | `audit_read` |
+| `GET` | `/api/reports/printer-bridge-health.csv` | `audit_read` |
 | `GET` | `/api/reports/controlled-substances` | `audit_read` |
 | `GET` | `/api/reports/controlled-substances.csv` | `audit_read` |
 | `GET` | `/api/controlled-substance-reconciliations` | `audit_read` |

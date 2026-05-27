@@ -1,5 +1,43 @@
 # Handoff Next
 
+## Latest Phase 4G Status
+
+Phase 4G printer bridge observability/reporting is complete in this checkpoint.
+
+What changed:
+
+- Added `getPrinterBridgeHealthReport`.
+- Added report APIs:
+  - `GET /api/reports/printer-bridge-health`
+  - `GET /api/reports/printer-bridge-health.csv`
+- Report covers print job totals, label totals, queued/printing/delivered/
+  failed/cancelled/exported counts, fallback counts, retry counts, delivery
+  status aggregation, connection type aggregation, printer profile hot spots,
+  and recent problem jobs.
+- Operations dashboard now loads and renders Printer bridge health.
+- Added Printer CSV export in the operations dashboard.
+- Updated API grouping, permission matrix, Phase 4 planning seeds, README,
+  review notes, Phase 4G plan, runbook, UAT checklist, and closure summary.
+
+Verification completed:
+
+- `node --check frontend/app.js` passed.
+- `npm run frontend:workflow-smoke` passed.
+- `npx tsc --noEmit` passed.
+- Targeted Phase 4G tests passed:
+  - `backend/services/getPrinterBridgeHealthReport.test.ts`
+  - `backend/api/emrApi.test.ts`
+- Full `npm test` passed `167/167`.
+
+Recommended next phase:
+
+1. Run Phase 4A-4G UAT/drill with pharmacy and IT.
+2. If continuing implementation, Phase 4H should be vendor-specific bridge
+   packaging only after UAT confirms the bridge contract and observability are
+   enough.
+3. Keep `emr-core-system.zip` untracked unless the user explicitly asks to
+   archive or commit it.
+
 ## Latest Phase 4F Status
 
 Phase 4F degraded-mode barcode print recovery is complete in this checkpoint.
