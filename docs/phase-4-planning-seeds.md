@@ -38,11 +38,14 @@ UAT/go-no-go identifies the highest operational blocker.
 
 ### Production Operations
 
-- environment-specific monitoring alerts
-- scheduled backup restore drill
-- security incident drill
-- provider-specific key rotation automation
-- deployment rollback rehearsal
+- Phase 4A completed the production readiness and ops drill foundation with
+  `npm run ops:check`, named owner evidence, backup/restore drill guidance,
+  rollback drill guidance, and security incident tabletop guidance.
+- Remaining production operations candidates:
+  - environment-specific monitoring alert integration
+  - provider-specific key rotation automation
+  - automated backup job status ingestion
+  - deployment platform-specific rollback automation
 
 ## Recommended Rule
 

@@ -38,6 +38,7 @@
 - Phase 3W controlled reconciliation variance approval adds pending approval status, approval note/user/timestamp, and Operations dashboard approval actions
 - Phase 3X controlled reconciliation approver separation blocks the closer from approving their own variance and stores approval under the resolved actor
 - Phase 3 implementation scope is closed for UAT/go-no-go review, with Phase 4 candidates separated from the Phase 3 scope
+- Phase 4A production readiness adds `npm run ops:check`, ops drill evidence checks, and go-live runbooks for backup/restore, rollback, monitoring owners, and incident drills
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -53,6 +54,7 @@
 - Run `npm run browser:api-workflow-smoke` when Chrome and Docker Postgres are available to click queue, print, prescription safety warning, appointment check-in, SOAP editing, operations CSV export, clinic branding/logo upload, admin user/practitioner CRUD, and audit lookup workflows against the real API/frontend proxy
 - Run `npm run storage:check` before deployment to verify file storage driver configuration
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot/production deployment
+- Run `OPS_DRILL_STRICT=true npm run ops:check` after recording Phase 4A drill evidence and owners
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
 - Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators
@@ -88,6 +90,7 @@
 - Review `docs/phase-3x-plan.md`, `docs/phase-3x-clinician-summary-th.md`, `docs/phase-3x-uat-checklist-th.md`, and `docs/phase-3x-closure-summary-th.md` with pharmacy leads and clinic owners
 - Review `docs/phase-3-closure-summary-th.md`, `docs/phase-3-uat-master-checklist-th.md`, and `docs/phase-3-pilot-go-no-go-th.md` before starting any Phase 4 work
 - Use `docs/phase-4-planning-seeds.md` for work that remains after Phase 3 UAT
+- Review `docs/phase-4a-plan.md`, `docs/phase-4a-ops-drill-runbook.md`, `docs/phase-4a-uat-checklist-th.md`, and `docs/phase-4a-closure-summary-th.md` with operators and clinic owners
 
 ## Verified
 
@@ -133,4 +136,5 @@
 - Phase 3W targeted controlled reconciliation approval service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `158/158`, and API smoke pass
 - Phase 3X targeted controlled approver separation service/API/migration tests, TypeScript compile, frontend syntax, frontend workflow smoke, full suite `159/159`, and API smoke pass
 - Phase 3 closure docs added for master UAT, pilot go/no-go, and Phase 4 planning seeds
+- Phase 4A ops drill readiness tests pass and docs updated for production go-live evidence
 - `POSTGRES_CONTAINER=poolproject-postgres POSTGRES_DB=<temporary_db> POSTGRES_USER=postgres npm run db:test`

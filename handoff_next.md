@@ -253,6 +253,14 @@
     - `docs/phase-3-pilot-go-no-go-th.md`
     - `docs/phase-4-planning-seeds.md`
     - Phase 3 is closed through Phase 3X; new feature work moves to Phase 4
+  - Phase 4A production readiness and ops drill:
+    - `npm run ops:check`
+    - `scripts/check-ops-drill-readiness.ts`
+    - `docs/phase-4a-plan.md`
+    - `docs/phase-4a-ops-drill-runbook.md`
+    - `docs/phase-4a-uat-checklist-th.md`
+    - `docs/phase-4a-closure-summary-th.md`
+    - monitoring/backup and production readiness docs include the ops drill gate
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -297,6 +305,10 @@
     Phase 3V controlled substance reconciliation open/list/close flow, and
     Phase 3W controlled reconciliation pending approval/approve flow, and
     Phase 3X self-approval rejection/separate approver flow
+  - Phase 4A ops drill readiness checks
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test scripts/check-ops-drill-readiness.test.ts scripts/check-production-readiness.test.ts`
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests
@@ -855,12 +867,12 @@ Start by reading:
 - `docs/phase-3-uat-master-checklist-th.md`
 - `docs/phase-3-pilot-go-no-go-th.md`
 - `docs/phase-4-planning-seeds.md`
+- `docs/phase-4a-ops-drill-runbook.md`
 
 Then produce:
 
 1. Run Phase 3 master UAT using `docs/phase-3-uat-master-checklist-th.md`.
-2. Record Phase 3 pilot go/no-go in `docs/phase-3-pilot-go-no-go-th.md`.
-3. Fix only pilot-blocking defects found by UAT.
-4. Move new feature requests to Phase 4 using `docs/phase-4-planning-seeds.md`.
-5. If no UAT blocker exists, prioritize production readiness, backup/restore,
-   monitoring, and operator drill work before new features.
+2. Run Phase 4A ops drill using `docs/phase-4a-ops-drill-runbook.md`.
+3. Record Phase 3 pilot go/no-go in `docs/phase-3-pilot-go-no-go-th.md`.
+4. Fix only pilot-blocking defects found by UAT or ops drill.
+5. Move new feature requests to Phase 4 using `docs/phase-4-planning-seeds.md`.

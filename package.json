@@ -8,6 +8,7 @@
     "start:api": "node --loader ts-node/esm scripts/start-api.ts",
     "start:frontend": "node --loader ts-node/esm scripts/start-frontend.ts",
     "production:check": "node --loader ts-node/esm scripts/check-production-readiness.ts",
+    "ops:check": "node --loader ts-node/esm scripts/check-ops-drill-readiness.ts",
     "storage:check": "node --loader ts-node/esm scripts/check-file-storage-config.ts",
     "frontend:workflow-smoke": "node --loader ts-node/esm scripts/run-frontend-workflow-smoke.ts",
     "browser:workflow-smoke": "node --loader ts-node/esm scripts/run-browser-workflow-smoke.ts",

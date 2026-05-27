@@ -201,6 +201,20 @@ Closure and review docs are tracked in:
 - `docs/phase-3-pilot-go-no-go-th.md`
 - `docs/phase-4-planning-seeds.md`
 
+## Phase 4A
+
+Phase 4A closes the first production readiness and ops drill package. It adds
+`npm run ops:check`, an evidence-based operations gate for readiness checks,
+storage checks, smoke checks, backup/restore drill, rollback drill, incident
+tabletop, and named operational owners.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4a-plan.md`
+- `docs/phase-4a-ops-drill-runbook.md`
+- `docs/phase-4a-uat-checklist-th.md`
+- `docs/phase-4a-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:
@@ -315,6 +329,12 @@ Run the production readiness gate before a pilot or production deployment:
 
 ```bash
 PRODUCTION_READINESS_STRICT=true npm run production:check
+```
+
+After command checks and manual drills are recorded, run the Phase 4A ops gate:
+
+```bash
+OPS_DRILL_STRICT=true npm run ops:check
 ```
 
 The checklist for deployment operators lives in

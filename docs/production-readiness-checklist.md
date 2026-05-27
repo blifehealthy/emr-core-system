@@ -60,6 +60,8 @@ For S3 or MinIO storage, also confirm:
 - `npm run storage:check` shows the intended storage driver and redacted
   credentials.
 - `npm run production:check` has zero errors in strict mode.
+- `npm run ops:check` has zero errors in strict mode after manual drills are
+  recorded.
 
 ## Data Protection
 
@@ -90,5 +92,7 @@ Before clinic pilot:
   report export workflows with clinic staff.
 - Confirm backup owner, restore owner, and incident contact.
 - Confirm identity provider contact and security incident owner.
+- Confirm monitoring owner and deployment/rollback owner.
+- Confirm `docs/phase-4a-ops-drill-runbook.md` evidence is complete.
 - Keep a manual downtime process available for registration, encounter notes,
   prescriptions, and payment handoff.

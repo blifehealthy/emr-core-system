@@ -22,6 +22,7 @@ Before deploying:
 npm test
 npm run storage:check
 PRODUCTION_READINESS_STRICT=true npm run production:check
+npm run ops:check
 ```
 
 When Docker Postgres and Chrome are available:
@@ -35,6 +36,7 @@ A deploy should not proceed if:
 
 - migrations fail
 - readiness check has errors
+- ops drill strict check has errors
 - smoke test fails
 - file storage config is not the intended driver
 - backup status is unknown
@@ -106,6 +108,30 @@ changes.
 - API smoke passed after latest deploy
 - No unresolved critical prescription safety reports
 - Manual downtime forms available
+
+## Phase 4A Ops Drill Gate
+
+Before pilot go-live, run the strict ops drill gate after all command checks and
+manual drills are complete:
+
+```bash
+OPS_DRILL_STRICT=true \
+OPS_READINESS_CHECK_PASSED=true \
+OPS_STORAGE_CHECK_PASSED=true \
+OPS_API_SMOKE_PASSED=true \
+OPS_FRONTEND_SMOKE_PASSED=true \
+OPS_BACKUP_RESTORE_DRILL_PASSED=true \
+OPS_ROLLBACK_DRILL_PASSED=true \
+OPS_SECURITY_INCIDENT_DRILL_PASSED=true \
+OPS_MONITORING_OWNER="TBD" \
+OPS_BACKUP_OWNER="TBD" \
+OPS_INCIDENT_OWNER="TBD" \
+OPS_DEPLOYMENT_OWNER="TBD" \
+OPS_DRILL_COMPLETED_AT="YYYY-MM-DD" \
+npm run ops:check
+```
+
+Use `docs/phase-4a-ops-drill-runbook.md` for the complete evidence checklist.
 
 ## Ownership
 
