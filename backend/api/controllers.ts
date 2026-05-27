@@ -26,6 +26,7 @@ import {
   toInventoryTransferDtos,
   toInventoryBarcodeScanDto,
   toInventoryBarcodePrintJobDto,
+  toInventoryBarcodePrintJobDtos,
   toInventoryPrinterProfileDto,
   toInventoryPrinterProfileDtos,
   toInventoryLotDto,
@@ -95,6 +96,7 @@ import {
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
   validateCreateInventoryBarcodePrintJobBody,
+  validateUpdateInventoryBarcodePrintJobDeliveryBody,
   validateCreateInventoryPrinterProfileBody,
   validateUpdateInventoryPrinterProfileBody,
   validateCreateSupplierBody,
@@ -2852,6 +2854,94 @@ export async function handleCreateInventoryBarcodePrintJob(
     });
 
     return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListInventoryBarcodePrintJobs(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryBarcodePrintJobs) {
+    return mapError(new Error('Inventory barcode print job list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const printerProfileId = request.query?.printerProfileId?.trim() || undefined;
+  const connectionType = readOptionalEnumQuery(request, 'connectionType', [
+    'browser',
+    'network',
+    'utility_bridge',
+  ]);
+  if (!connectionType.ok) return validationError(connectionType.error);
+  const deliveryStatus = readOptionalEnumQuery(request, 'deliveryStatus', [
+    'exported',
+    'queued',
+    'printing',
+    'delivered',
+    'failed',
+    'cancelled',
+    'all',
+  ]);
+  if (!deliveryStatus.ok) return validationError(deliveryStatus.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const jobs = await dependencies.listInventoryBarcodePrintJobs({
+    clinicId,
+    printerProfileId,
+    connectionType: connectionType.value,
+    deliveryStatus: deliveryStatus.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryBarcodePrintJobDtos(jobs.rows), meta: jobs.meta },
+  };
+}
+
+export async function handleUpdateInventoryBarcodePrintJobDelivery(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  printJobId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInventoryBarcodePrintJobDelivery) {
+    return mapError(new Error('Inventory barcode print job delivery dependency is not configured'));
+  }
+
+  const validation = validateUpdateInventoryBarcodePrintJobDeliveryBody(request.body, printJobId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const actor = getActorContext(request);
+    const job = await dependencies.updateInventoryBarcodePrintJobDelivery({
+      ...validation.value,
+      updatedByUserId: validation.value.updatedByUserId ?? actor.userId,
+    });
+    if (!job) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Inventory barcode print job not found' } };
+    }
+
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_print_job',
+      entityId: printJobId,
+      action: 'delivery_updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        deliveryStatus: validation.value.deliveryStatus,
+        deliveryError: validation.value.deliveryError ?? null,
+      },
+    });
+
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
   } catch (error) {
     return mapError(error);
   }

@@ -37,11 +37,13 @@ import type {
   CreatePurchaseOrderApprovalPolicyInput,
   UpdatePurchaseOrderApprovalPolicyInput,
   InventoryBarcodeScanContext,
+  InventoryBarcodePrintDeliveryStatus,
   InventoryBarcodePrintLanguage,
   InventoryPrinterConnectionType,
   CreateInventoryBarcodePrintJobInput,
   CreateInventoryPrinterProfileInput,
   UpdateInventoryPrinterProfileInput,
+  UpdateInventoryBarcodePrintJobDeliveryInput,
   ScanInventoryBarcodeInput,
   UpdateInventoryItemInput,
   AdjustInventoryStockInput,
@@ -162,6 +164,9 @@ const inventoryPrinterConnectionTypes: InventoryPrinterConnectionType[] = [
   'network',
   'utility_bridge',
 ];
+const inventoryBarcodePrintDeliveryStatuses: Array<
+  Exclude<InventoryBarcodePrintDeliveryStatus, 'exported' | 'queued'>
+> = ['printing', 'delivered', 'failed', 'cancelled'];
 const userRoles: UserRole[] = ['doctor', 'nurse', 'admin'];
 const supplierStatuses: SupplierStatus[] = ['active', 'inactive'];
 const purchaseOrderStatuses: PurchaseOrderStatus[] = [
@@ -3746,6 +3751,48 @@ export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
       requestedByUserId: requestedByUserId.value,
       notes: notes.value,
       labels,
+    },
+  };
+}
+
+export function validateUpdateInventoryBarcodePrintJobDeliveryBody(
+  body: unknown,
+  printJobId: string
+):
+  | { ok: true; value: UpdateInventoryBarcodePrintJobDeliveryInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) {
+    return { ok: false, error: 'Request body must be a JSON object' };
+  }
+
+  const deliveryStatus = readEnumValue<UpdateInventoryBarcodePrintJobDeliveryInput['deliveryStatus']>(
+    candidate.deliveryStatus,
+    'deliveryStatus',
+    inventoryBarcodePrintDeliveryStatuses
+  );
+  if (!deliveryStatus.ok) return deliveryStatus;
+  if (!deliveryStatus.value) return { ok: false, error: 'deliveryStatus is required' };
+
+  const deliveryError = readOptionalNullableStringField(candidate, 'deliveryError');
+  if (!deliveryError.ok) return deliveryError;
+  const deliveredAt = readOptionalNullableStringField(candidate, 'deliveredAt');
+  if (!deliveredAt.ok) return deliveredAt;
+  const updatedByUserId = readOptionalNullableStringField(candidate, 'updatedByUserId');
+  if (!updatedByUserId.ok) return updatedByUserId;
+
+  if (deliveryStatus.value === 'failed' && !deliveryError.value) {
+    return { ok: false, error: 'deliveryError is required when deliveryStatus is failed' };
+  }
+
+  return {
+    ok: true,
+    value: {
+      printJobId,
+      deliveryStatus: deliveryStatus.value,
+      deliveryError: deliveryError.value,
+      deliveredAt: deliveredAt.value,
+      updatedByUserId: updatedByUserId.value,
     },
   };
 }

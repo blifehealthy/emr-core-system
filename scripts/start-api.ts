@@ -103,7 +103,11 @@ import {
   receiveInventoryLot,
 } from '../backend/services/inventoryLots.ts';
 import { scanInventoryBarcode } from '../backend/services/inventoryBarcodes.ts';
-import { createInventoryBarcodePrintJob } from '../backend/services/inventoryBarcodePrintJobs.ts';
+import {
+  createInventoryBarcodePrintJob,
+  listInventoryBarcodePrintJobs,
+  updateInventoryBarcodePrintJobDelivery,
+} from '../backend/services/inventoryBarcodePrintJobs.ts';
 import {
   createInventoryPrinterProfile,
   listInventoryPrinterProfiles,
@@ -291,6 +295,8 @@ const server = createNodeServer({
   receiveInventoryLot: receiveInventoryLot(db),
   scanInventoryBarcode: scanInventoryBarcode(db),
   createInventoryBarcodePrintJob: createInventoryBarcodePrintJob(db),
+  listInventoryBarcodePrintJobs: listInventoryBarcodePrintJobs(db),
+  updateInventoryBarcodePrintJobDelivery: updateInventoryBarcodePrintJobDelivery(db),
   listInventoryPrinterProfiles: listInventoryPrinterProfiles(db),
   createInventoryPrinterProfile: createInventoryPrinterProfile(db),
   updateInventoryPrinterProfile: updateInventoryPrinterProfile(db),

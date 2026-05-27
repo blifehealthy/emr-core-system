@@ -215,6 +215,20 @@ Current scope and review docs are tracked in:
 - `docs/phase-4a-uat-checklist-th.md`
 - `docs/phase-4a-closure-summary-th.md`
 
+## Phase 4B
+
+Phase 4B adds the printer bridge queue foundation for barcode label print jobs.
+It lets an external utility bridge or network-printer adapter list queued jobs
+and acknowledge printing, delivered, failed, or cancelled outcomes while keeping
+browser/export fallback available.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4b-plan.md`
+- `docs/phase-4b-printer-bridge-runbook.md`
+- `docs/phase-4b-uat-checklist-th.md`
+- `docs/phase-4b-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

@@ -531,6 +531,13 @@ export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' 
 export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
 export type InventoryBarcodePrintLanguage = 'html' | 'zpl' | 'escpos';
 export type InventoryPrinterConnectionType = 'browser' | 'network' | 'utility_bridge';
+export type InventoryBarcodePrintDeliveryStatus =
+  | 'exported'
+  | 'queued'
+  | 'printing'
+  | 'delivered'
+  | 'failed'
+  | 'cancelled';
 export type SupplierStatus = 'active' | 'inactive';
 export type PurchaseOrderStatus =
   | 'draft'
@@ -997,6 +1004,14 @@ export type CreateInventoryBarcodePrintJobInput = {
   }>;
 };
 
+export type UpdateInventoryBarcodePrintJobDeliveryInput = {
+  printJobId: string;
+  deliveryStatus: Exclude<InventoryBarcodePrintDeliveryStatus, 'exported' | 'queued'>;
+  deliveryError?: string | null;
+  deliveredAt?: string | null;
+  updatedByUserId?: string | null;
+};
+
 export type CreateInvoiceInput = {
   clinicId: string;
   patientId: string;
@@ -1387,6 +1402,17 @@ export type Dependencies = {
   scanInventoryBarcode?: (input: ScanInventoryBarcodeInput) => Promise<unknown | null>;
   createInventoryBarcodePrintJob?: (
     input: CreateInventoryBarcodePrintJobInput
+  ) => Promise<unknown | null>;
+  listInventoryBarcodePrintJobs?: (input: {
+    clinicId: string;
+    printerProfileId?: string;
+    connectionType?: InventoryPrinterConnectionType;
+    deliveryStatus?: InventoryBarcodePrintDeliveryStatus | 'all';
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  updateInventoryBarcodePrintJobDelivery?: (
+    input: UpdateInventoryBarcodePrintJobDeliveryInput
   ) => Promise<unknown | null>;
   listInventoryPrinterProfiles?: (input: {
     clinicId: string;

@@ -1,4 +1,9 @@
-import type { CreateInventoryBarcodePrintJobInput } from '../api/types.ts';
+import type {
+  CreateInventoryBarcodePrintJobInput,
+  InventoryBarcodePrintDeliveryStatus,
+  InventoryPrinterConnectionType,
+  UpdateInventoryBarcodePrintJobDeliveryInput,
+} from '../api/types.ts';
 
 type Db = {
   query: <T = unknown>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>;
@@ -51,6 +56,93 @@ export function createInventoryBarcodePrintJob(db: Db) {
         renderedPayload,
         input.requestedByUserId ?? null,
         input.notes ?? null,
+      ]
+    );
+
+    return result.rows[0] ?? null;
+  };
+}
+
+export function listInventoryBarcodePrintJobs(db: Db) {
+  return async function run(input: {
+    clinicId: string;
+    printerProfileId?: string;
+    connectionType?: InventoryPrinterConnectionType;
+    deliveryStatus?: InventoryBarcodePrintDeliveryStatus | 'all';
+    limit?: number;
+    offset?: number;
+  }) {
+    const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
+    const offset = Math.max(input.offset ?? 0, 0);
+    const params: unknown[] = [input.clinicId];
+    const conditions = ['clinic_id = $1', 'deleted_at IS NULL'];
+
+    if (input.printerProfileId) {
+      params.push(input.printerProfileId);
+      conditions.push(`printer_profile_id = $${params.length}`);
+    }
+
+    if (input.connectionType) {
+      params.push(input.connectionType);
+      conditions.push(`connection_type = $${params.length}`);
+    }
+
+    if (input.deliveryStatus && input.deliveryStatus !== 'all') {
+      params.push(input.deliveryStatus);
+      conditions.push(`delivery_status = $${params.length}`);
+    }
+
+    params.push(limit + 1, offset);
+    const result = await db.query(
+      `
+        SELECT *
+        FROM inventory_barcode_print_jobs
+        WHERE ${conditions.join('\n          AND ')}
+        ORDER BY requested_at ASC, created_at ASC
+        LIMIT $${params.length - 1}
+        OFFSET $${params.length}
+      `,
+      params
+    );
+    const rows = result.rows.slice(0, limit);
+
+    return {
+      rows,
+      meta: {
+        limit,
+        offset,
+        hasMore: result.rows.length > limit,
+        nextOffset: result.rows.length > limit ? offset + limit : null,
+      },
+    };
+  };
+}
+
+export function updateInventoryBarcodePrintJobDelivery(db: Db) {
+  return async function run(input: UpdateInventoryBarcodePrintJobDeliveryInput) {
+    const deliveredAt =
+      input.deliveryStatus === 'delivered'
+        ? input.deliveredAt ?? new Date().toISOString()
+        : input.deliveredAt ?? null;
+    const result = await db.query(
+      `
+        UPDATE inventory_barcode_print_jobs
+        SET delivery_status = $2,
+            delivery_attempt_count = delivery_attempt_count + 1,
+            last_delivery_error = $3,
+            delivery_updated_by_user_id = $4,
+            delivery_updated_at = now(),
+            delivered_at = $5
+        WHERE id = $1
+          AND deleted_at IS NULL
+        RETURNING *
+      `,
+      [
+        input.printJobId,
+        input.deliveryStatus,
+        input.deliveryError ?? null,
+        input.updatedByUserId ?? null,
+        deliveredAt,
       ]
     );
 

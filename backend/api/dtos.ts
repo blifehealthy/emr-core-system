@@ -613,6 +613,11 @@ const INVENTORY_BARCODE_PRINT_JOB_KEYS = [
   'connection_type',
   'delivery_status',
   'target_endpoint',
+  'delivery_attempt_count',
+  'last_delivery_error',
+  'delivery_updated_by_user_id',
+  'delivery_updated_at',
+  'delivered_at',
   'label_count',
   'rendered_payload',
   'requested_by_user_id',
@@ -1046,6 +1051,10 @@ export function toInventoryBarcodeScanDto(row: unknown): Record<string, unknown>
 
 export function toInventoryBarcodePrintJobDto(row: unknown): Record<string, unknown> {
   return pickKeys(row, [...INVENTORY_BARCODE_PRINT_JOB_KEYS]);
+}
+
+export function toInventoryBarcodePrintJobDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryBarcodePrintJobDto(row));
 }
 
 export function toInventoryPrinterProfileDto(row: unknown): Record<string, unknown> {

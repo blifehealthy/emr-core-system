@@ -261,6 +261,16 @@
     - `docs/phase-4a-uat-checklist-th.md`
     - `docs/phase-4a-closure-summary-th.md`
     - monitoring/backup and production readiness docs include the ops drill gate
+  - Phase 4B printer bridge queue foundation:
+    - migration `0045_add_phase_4b_printer_bridge_delivery`
+    - `GET /api/inventory-barcode-print-jobs`
+    - `PATCH /api/inventory-barcode-print-jobs/:jobId/delivery`
+    - barcode print jobs track delivery attempt count, last delivery error,
+      delivery update actor/time, and delivered timestamp
+    - `docs/phase-4b-plan.md`
+    - `docs/phase-4b-printer-bridge-runbook.md`
+    - `docs/phase-4b-uat-checklist-th.md`
+    - `docs/phase-4b-closure-summary-th.md`
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -268,7 +278,7 @@
   - API and service tests
 - Latest verification:
   - `npm test`
-  - current result: `159/159` passing
+  - current result: `161/161` passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm test`
   - TypeScript compile check
@@ -309,6 +319,10 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test scripts/check-ops-drill-readiness.test.ts scripts/check-production-readiness.test.ts`
+  - Phase 4B printer bridge targeted checks
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/inventoryBarcodePrintJobs.test.ts backend/api/emrApi.test.ts database/migrations/0045_add_phase_4b_printer_bridge_delivery.test.ts database/migrations/migration_order.test.ts`
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

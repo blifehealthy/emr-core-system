@@ -2379,6 +2379,91 @@ test('inventory transfer actions use separated approve receive and cancel permis
   assert.equal(adminCancel.status, 200);
 });
 
+test('printer bridge queue can list jobs and acknowledge delivery', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      async listInventoryBarcodePrintJobs(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.deliveryStatus, 'queued');
+        assert.equal(input.connectionType, 'utility_bridge');
+        return {
+          rows: [
+            {
+              id: 'print-job-1',
+              clinic_id: input.clinicId,
+              delivery_status: 'queued',
+              connection_type: 'utility_bridge',
+              rendered_payload: '^XA^XZ',
+              delivery_attempt_count: 0,
+            },
+          ],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
+      async updateInventoryBarcodePrintJobDelivery(input) {
+        assert.equal(input.printJobId, 'print-job-1');
+        assert.equal(input.deliveryStatus, 'delivered');
+        assert.equal(input.updatedByUserId, 'user-1');
+        return {
+          id: input.printJobId,
+          delivery_status: input.deliveryStatus,
+          delivery_updated_by_user_id: input.updatedByUserId,
+          delivered_at: input.deliveredAt ?? '2026-05-27T00:00:00.000Z',
+        };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const queue = await api({
+    method: 'GET',
+    path: '/api/inventory-barcode-print-jobs',
+    query: {
+      clinicId: 'clinic-1',
+      deliveryStatus: 'queued',
+      connectionType: 'utility_bridge',
+    },
+    headers: { 'x-user-role': 'admin' },
+  });
+  assert.equal(queue.status, 200);
+  assert.equal((queue.body as { data: unknown[] }).data.length, 1);
+
+  const delivered = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-print-jobs/print-job-1/delivery',
+    headers: { 'x-user-role': 'admin', 'x-user-id': 'user-1' },
+    body: { deliveryStatus: 'delivered' },
+  });
+  assert.equal(delivered.status, 200);
+  assert.equal(auditInputs[0]?.action, 'delivery_updated');
+});
+
+test('printer bridge failed acknowledgement requires delivery error', async () => {
+  const api = createEmrApi(
+    makeDeps({
+      async updateInventoryBarcodePrintJobDelivery() {
+        return { id: 'print-job-1' };
+      },
+    })
+  );
+
+  const response = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-print-jobs/print-job-1/delivery',
+    headers: { 'x-user-role': 'admin' },
+    body: { deliveryStatus: 'failed' },
+  });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.body, {
+    error: 'deliveryError is required when deliveryStatus is failed',
+  });
+});
+
 test('POST diagnosis and vital sign routes validate bad payloads', async () => {
   const api = createEmrApi(makeDeps());
 

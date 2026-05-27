@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   createInventoryBarcodePrintJob,
+  listInventoryBarcodePrintJobs,
   renderBarcodePayload,
+  updateInventoryBarcodePrintJobDelivery,
 } from './inventoryBarcodePrintJobs.ts';
 
 test('renderBarcodePayload creates ZPL and ESC/POS payloads', () => {
@@ -91,4 +93,71 @@ test('createInventoryBarcodePrintJob uses active printer profile routing', async
   assert.equal((job as { connection_type: string }).connection_type, 'utility_bridge');
   assert.equal((job as { delivery_status: string }).delivery_status, 'queued');
   assert.equal((job as { target_endpoint: string }).target_endpoint, 'bridge://pharmacy-label');
+});
+
+test('listInventoryBarcodePrintJobs filters bridge queue and paginates', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return {
+        rows: [
+          { id: 'job-1', delivery_status: 'queued' },
+          { id: 'job-2', delivery_status: 'queued' },
+        ] as T[],
+      };
+    },
+  };
+
+  const result = await listInventoryBarcodePrintJobs(db)({
+    clinicId: 'clinic-1',
+    printerProfileId: 'profile-1',
+    connectionType: 'utility_bridge',
+    deliveryStatus: 'queued',
+    limit: 1,
+  });
+
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.meta.hasMore, true);
+  assert.match(calls[0].sql, /printer_profile_id = \$2/);
+  assert.match(calls[0].sql, /connection_type = \$3/);
+  assert.match(calls[0].sql, /delivery_status = \$4/);
+  assert.deepEqual(calls[0].params?.slice(0, 4), [
+    'clinic-1',
+    'profile-1',
+    'utility_bridge',
+    'queued',
+  ]);
+});
+
+test('updateInventoryBarcodePrintJobDelivery records acknowledgement metadata', async () => {
+  const calls: Array<{ sql: string; params?: unknown[] }> = [];
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      calls.push({ sql, params });
+      return {
+        rows: [
+          {
+            id: params?.[0],
+            delivery_status: params?.[1],
+            last_delivery_error: params?.[2],
+            delivery_updated_by_user_id: params?.[3],
+            delivered_at: params?.[4],
+          },
+        ] as T[],
+      };
+    },
+  };
+
+  const job = await updateInventoryBarcodePrintJobDelivery(db)({
+    printJobId: 'job-1',
+    deliveryStatus: 'failed',
+    deliveryError: 'printer offline',
+    updatedByUserId: 'user-1',
+  });
+
+  assert.equal((job as { delivery_status: string }).delivery_status, 'failed');
+  assert.equal((job as { last_delivery_error: string }).last_delivery_error, 'printer offline');
+  assert.equal((job as { delivery_updated_by_user_id: string }).delivery_updated_by_user_id, 'user-1');
+  assert.match(calls[0].sql, /delivery_attempt_count = delivery_attempt_count \+ 1/);
 });
