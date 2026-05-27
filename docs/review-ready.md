@@ -67,7 +67,7 @@
 - Review `docs/phase-4e-label-template-runbook.md` before changing pharmacy barcode label layouts
 - Review `docs/phase-4f-print-recovery-runbook.md` before fallback or retry drills for printer bridge failures
 - Review `docs/phase-4g-printer-observability-runbook.md` during printer bridge health drills or incident review
-- Review `docs/pilot-uat-pack-th.md`, `docs/pilot-defect-tracker-th.md`, and `docs/pilot-go-no-go-template-th.md` before human UAT starts
+- Review `docs/pilot-uat-pack-th.md`, `docs/uat-execution-checklist-th.md`, `docs/pilot-defect-tracker-th.md`, and `docs/pilot-go-no-go-template-th.md` before human UAT starts
 - Review `docs/security-privacy-review-pack-th.md` and `docs/deployment-pilot-runbook-th.md` before pilot deployment
 - Review `docs/clinic-user-manual-th.md` with clinic users before hands-on UAT
 - Review `docs/phase-4h-printer-bridge-adapter-contract.md` with IT/vendor teams before implementing a bridge adapter

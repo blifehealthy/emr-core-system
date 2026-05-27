@@ -306,6 +306,7 @@ Current pilot preparation docs are tracked in:
 
 - `docs/phase-1-to-4g-simulated-uat-readiness-review-th.md`
 - `docs/pilot-uat-pack-th.md`
+- `docs/uat-execution-checklist-th.md`
 - `docs/pilot-defect-tracker-th.md`
 - `docs/pilot-go-no-go-template-th.md`
 - `docs/phase-4h-printer-bridge-adapter-contract.md`

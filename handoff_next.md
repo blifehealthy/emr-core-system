@@ -7,6 +7,7 @@ UAT/pilot readiness pack is complete in this checkpoint.
 Docs added:
 
 - `docs/pilot-uat-pack-th.md`
+- `docs/uat-execution-checklist-th.md`
 - `docs/pilot-defect-tracker-th.md`
 - `docs/pilot-go-no-go-template-th.md`
 - `docs/phase-4h-printer-bridge-adapter-contract.md`
