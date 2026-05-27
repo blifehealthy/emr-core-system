@@ -282,6 +282,15 @@
     - `docs/phase-4c-gs1-barcode-runbook.md`
     - `docs/phase-4c-uat-checklist-th.md`
     - `docs/phase-4c-closure-summary-th.md`
+  - Phase 4D scanner UX hardening:
+    - scanner panel keeps focus and can clear after successful scans
+    - scanner input is trimmed before calling `POST /api/inventory-barcode-scans`
+    - scanner result detail displays item, lot, GTIN, expiry, and serial
+    - frontend workflow smoke covers scanner UX hooks and GS1 detail display
+    - `docs/phase-4d-plan.md`
+    - `docs/phase-4d-scanner-ux-runbook.md`
+    - `docs/phase-4d-uat-checklist-th.md`
+    - `docs/phase-4d-closure-summary-th.md`
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -301,9 +310,8 @@
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
   - frontend workflow smoke coverage
-  - current result: passing, including Phase 3J scanner panel, barcode label
-    print builder, label printer export checks, Phase 3K printer profile checks,
-    and Phase 3L inventory location checks
+  - current result: passing, including Phase 4D scanner keep-focus,
+    clear-after-scan, scanner result hooks, and GS1 detail display checks
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - `npm run db:test`
@@ -338,6 +346,12 @@
   - current result: passing
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --loader ts-node/esm --test backend/services/gs1Barcodes.test.ts backend/services/inventoryBarcodes.test.ts backend/services/inventoryLots.test.ts backend/services/medicationDispenses.test.ts backend/services/purchaseOrders.test.ts database/migrations/0046_add_phase_4c_gs1_barcode_parsing.test.ts database/migrations/migration_order.test.ts`
+  - Phase 4D scanner UX targeted checks
+  - current result: passing
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" node --check frontend/app.js`
+  - command used on this machine:
+    `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" npm run frontend:workflow-smoke`
   - command used on this machine:
     `PATH="$PWD/.tools/node-v22.22.3-linux-x64/bin:$PATH" POSTGRES_CONTAINER=emr-core-postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres npm run api:smoke`
   - targeted patient registration tests

@@ -308,6 +308,8 @@ All routes except `GET /health` can be protected by bearer token when
 - The Prescriptions tab exposes a scanner panel backed by the barcode scan API.
 - Inventory item and lot cards can open printable barcode labels.
 - The Pharmacy inventory panel can print a bulk sheet of loaded barcode labels.
+- Phase 4D hardens the scanner panel with focus retention, clear-after-scan,
+  trimmed input, and parsed GS1 result display.
 
 ## Phase 3J Additions
 

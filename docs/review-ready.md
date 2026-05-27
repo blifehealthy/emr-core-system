@@ -41,6 +41,7 @@
 - Phase 4A production readiness adds `npm run ops:check`, ops drill evidence checks, and go-live runbooks for backup/restore, rollback, monitoring owners, and incident drills
 - Phase 4B printer bridge foundation adds queued print-job listing, delivery acknowledgement, attempt/error metadata, and hardware-bridge runbooks
 - Phase 4C GS1 barcode parsing adds GTIN, expiry, lot, and serial parsing for pharmacy scan lookup and verification
+- Phase 4D scanner UX hardening adds keep-focus, clear-after-scan, trimmed scan input, and GS1 scan detail display
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -58,6 +59,7 @@
 - Run `PRODUCTION_READINESS_STRICT=true npm run production:check` before pilot/production deployment
 - Run `OPS_DRILL_STRICT=true npm run ops:check` after recording Phase 4A drill evidence and owners
 - Review `docs/phase-4b-printer-bridge-runbook.md` before connecting any printer utility bridge or network printer adapter
+- Review `docs/phase-4d-scanner-ux-runbook.md` before testing keyboard-wedge scanners at the pharmacy desk
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
 - Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators

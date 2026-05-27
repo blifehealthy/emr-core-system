@@ -55,6 +55,12 @@ assertContains(app, "'receive'", 'inventory transfer receive action');
 assertContains(app, "'cancel'", 'inventory transfer cancel action');
 assertContains(app, 'inventoryLocationId', 'location-aware stock payload');
 assertContains(app, 'function createBarcodeScannerPanel(', 'barcode scanner panel');
+assertContains(app, "dataset.workflow = 'barcode-scanner-panel'", 'barcode scanner workflow hook');
+assertContains(app, 'function buildBarcodeScanResultText(', 'barcode scan result formatter');
+assertContains(app, 'function renderBarcodeScanDetail(', 'barcode scan detail renderer');
+assertContains(app, 'Keep focus', 'barcode scanner keep focus toggle');
+assertContains(app, 'Clear after scan', 'barcode scanner clear toggle');
+assertContains(app, 'gs1_gtin', 'GS1 scan detail display');
 assertContains(app, 'function buildBarcodeLabelPrintHtml(', 'barcode label print HTML builder');
 assertContains(app, 'พิมพ์ labels ทั้งหมด', 'barcode label print action');
 assertContains(app, '/api/inventory-barcode-print-jobs', 'barcode print job endpoint');
@@ -89,6 +95,7 @@ assertContains(styles, '.operations-charts', 'operations chart layout');
 assertContains(styles, '.bar-chart', 'bar chart card style');
 assertContains(styles, '.bar-track', 'bar chart track style');
 assertContains(styles, '.safety-warning-panel', 'prescription safety warning panel style');
+assertContains(styles, '.scan-result-grid', 'barcode scanner result grid style');
 
 assertMatch(
   app,

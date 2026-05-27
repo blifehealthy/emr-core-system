@@ -20,10 +20,11 @@ UAT/go-no-go identifies the highest operational blocker.
   browser/export guidance.
 - Phase 4C completed GS1 barcode parsing foundation for GTIN, expiry, lot, and
   serial metadata on pharmacy scans and verification workflows.
+- Phase 4D completed scanner UX hardening with keep-focus, clear-after-scan,
+  trimmed scan input, and GS1 scan detail display.
 - Remaining pharmacy hardware and barcode candidates:
   - vendor-specific direct printer bridge service
   - hardware printer certification
-  - scanner-specific UX hardening
   - label template management
   - offline or degraded-mode print fallback
 

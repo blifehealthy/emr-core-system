@@ -243,6 +243,20 @@ Current scope and review docs are tracked in:
 - `docs/phase-4c-uat-checklist-th.md`
 - `docs/phase-4c-closure-summary-th.md`
 
+## Phase 4D
+
+Phase 4D hardens the pharmacy scanner panel for keyboard-wedge scanners. It
+keeps focus on the scan field, can clear scans after successful submission,
+trims input before calling the API, and shows GS1 scan details returned from
+Phase 4C.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4d-plan.md`
+- `docs/phase-4d-scanner-ux-runbook.md`
+- `docs/phase-4d-uat-checklist-th.md`
+- `docs/phase-4d-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

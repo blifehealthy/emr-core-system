@@ -728,6 +728,34 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.scan-result-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+.scan-result-grid:empty {
+  display: none;
+}
+
+.scan-result-grid dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.scan-result-grid dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .record-actions {
   display: flex;
   flex-wrap: wrap;

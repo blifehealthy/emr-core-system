@@ -4718,14 +4718,23 @@ function createRoleSelectField(name, labelText) {
 function createBarcodeScannerPanel(patient) {
   const panel = document.createElement('form');
   panel.className = 'nested-inline-form';
+  panel.dataset.workflow = 'barcode-scanner-panel';
+  const barcodeField = createFormField('barcode', 'Scan barcode', 'input', true);
+  const barcodeInput = barcodeField.querySelector('input');
+  barcodeInput.autocomplete = 'off';
+  barcodeInput.spellcheck = false;
+  barcodeInput.inputMode = 'none';
+  barcodeInput.dataset.workflow = 'barcode-scanner-input';
   const contextLabel = document.createElement('label');
   contextLabel.textContent = 'Scan context';
   const contextSelect = createSelect('scanContext', ['lookup', 'receiving', 'dispensing']);
   contextLabel.append(contextSelect);
   panel.append(
-    createFormField('barcode', 'Scan barcode', 'input', true),
+    barcodeField,
     contextLabel,
-    createPrinterProfileSelectField('printerProfileId', 'Printer profile')
+    createPrinterProfileSelectField('printerProfileId', 'Printer profile'),
+    createScannerCheckboxField('keepFocus', 'Keep focus', true),
+    createScannerCheckboxField('clearAfterScan', 'Clear after scan', true)
   );
 
   const scanButton = document.createElement('button');
@@ -4772,21 +4781,32 @@ function createBarcodeScannerPanel(patient) {
 
   const result = document.createElement('p');
   result.className = 'muted-text compact-note';
-  panel.append(result);
+  result.dataset.workflow = 'barcode-scanner-result';
+  const detail = document.createElement('dl');
+  detail.className = 'scan-result-grid';
+  detail.dataset.workflow = 'barcode-scanner-gs1-detail';
+  panel.append(result, detail);
 
   panel.addEventListener('submit', async (event) => {
     event.preventDefault();
     const values = Object.fromEntries(new FormData(panel).entries());
+    const scannedBarcode = String(values.barcode ?? '').trim();
+    if (!scannedBarcode) {
+      result.textContent = 'กรุณา scan barcode';
+      focusScannerInput(panel);
+      return;
+    }
     scanButton.disabled = true;
     scanButton.textContent = 'Scanning';
     result.textContent = '';
+    detail.replaceChildren();
     try {
       const response = await fetch('/api/inventory-barcode-scans', {
         method: 'POST',
         headers: buildHeaders(currentApiToken || readValue('apiToken')),
         body: JSON.stringify(compactPayload({
           clinicId: patient.clinic_id,
-          barcode: values.barcode,
+          barcode: scannedBarcode,
           scanContext: values.scanContext,
           scannedByUserId: readValue('userId'),
         })),
@@ -4794,23 +4814,78 @@ function createBarcodeScannerPanel(patient) {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.detail || payload.error || `HTTP ${response.status}`);
       const scan = payload.data ?? {};
-      const label =
-        scan.inventory_lot_number ??
-        scan.inventory_item_display_name ??
-        scan.inventory_item_code ??
-        'ไม่พบ item/lot';
-      result.textContent = `${scan.matched ? 'Matched' : 'Not matched'} · ${label}`;
+      result.textContent = buildBarcodeScanResultText(scan);
+      renderBarcodeScanDetail(detail, scan);
       setStatus(scan.matched ? 'scan barcode สำเร็จ' : 'scan แล้วไม่พบ item/lot', scan.matched ? 'success' : 'error');
+      if (values.clearAfterScan === 'true') barcodeInput.value = '';
     } catch (error) {
       result.textContent = error instanceof Error ? error.message : 'scan barcode ไม่สำเร็จ';
       setStatus(result.textContent, 'error');
     } finally {
       scanButton.disabled = false;
       scanButton.textContent = 'Scan';
+      if (values.keepFocus === 'true') focusScannerInput(panel);
     }
   });
 
+  window.requestAnimationFrame(() => focusScannerInput(panel));
+
   return panel;
+}
+
+function createScannerCheckboxField(name, labelText, checked = false) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = name;
+  input.value = 'true';
+  input.checked = checked;
+  label.append(input);
+  return label;
+}
+
+function focusScannerInput(panel) {
+  const input = panel.elements.barcode;
+  if (input && typeof input.focus === 'function') input.focus();
+}
+
+function buildBarcodeScanResultText(scan) {
+  const label =
+    scan.inventory_lot_number ??
+    scan.inventory_item_display_name ??
+    scan.inventory_item_code ??
+    'ไม่พบ item/lot';
+  const gs1 = getGs1ScanSummary(scan);
+  return `${scan.matched ? 'Matched' : 'Not matched'} · ${label}${gs1 ? ` · ${gs1}` : ''}`;
+}
+
+function getGs1ScanSummary(scan) {
+  const parts = [
+    scan.gs1_gtin ? `GTIN ${scan.gs1_gtin}` : '',
+    scan.gs1_lot_number ? `Lot ${scan.gs1_lot_number}` : '',
+    scan.gs1_expires_on ? `Exp ${scan.gs1_expires_on}` : '',
+    scan.gs1_serial_number ? `Serial ${scan.gs1_serial_number}` : '',
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
+function renderBarcodeScanDetail(container, scan) {
+  const rows = [
+    ['Result', scan.matched ? 'Matched' : 'Not matched'],
+    ['Item', scan.inventory_item_display_name ?? scan.inventory_item_code ?? ''],
+    ['Lot', scan.inventory_lot_number ?? ''],
+    ['GTIN', scan.gs1_gtin ?? ''],
+    ['Expiry', scan.gs1_expires_on ?? ''],
+    ['Serial', scan.gs1_serial_number ?? ''],
+  ].filter(([, value]) => value);
+  container.replaceChildren(...rows.flatMap(([label, value]) => {
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const description = document.createElement('dd');
+    description.textContent = value;
+    return [term, description];
+  }));
 }
 
 function getLoadedBarcodeLabels() {
