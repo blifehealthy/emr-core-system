@@ -116,6 +116,9 @@ All routes except `GET /health` can be protected by bearer token when
 | `POST` | `/api/inventory-barcode-print-jobs` | Create barcode label print/export job and return rendered payload. |
 | `GET` | `/api/inventory-barcode-print-jobs` | List barcode print jobs for browser export, network printer, or utility bridge queues. |
 | `PATCH` | `/api/inventory-barcode-print-jobs/:jobId/delivery` | Record printer bridge delivery status such as printing, delivered, failed, or cancelled. |
+| `GET` | `/api/inventory-barcode-label-templates` | List clinic barcode label templates for item, lot, bin, or generic labels. |
+| `POST` | `/api/inventory-barcode-label-templates` | Create a structured barcode label template. |
+| `PATCH` | `/api/inventory-barcode-label-templates/:templateId` | Update a barcode label template or default flag. |
 | `GET` | `/api/inventory-printer-profiles` | List active or inactive barcode printer profiles for a clinic. |
 | `POST` | `/api/inventory-printer-profiles` | Create barcode printer profile with language, connection type, endpoint, and default flag. |
 | `PATCH` | `/api/inventory-printer-profiles/:profileId` | Update barcode printer profile metadata, default flag, or active state. |
@@ -310,6 +313,8 @@ All routes except `GET /health` can be protected by bearer token when
 - The Pharmacy inventory panel can print a bulk sheet of loaded barcode labels.
 - Phase 4D hardens the scanner panel with focus retention, clear-after-scan,
   trimmed input, and parsed GS1 result display.
+- Phase 4E adds clinic-managed barcode label templates that can be selected
+  during ZPL/ESC/POS export.
 
 ## Phase 3J Additions
 

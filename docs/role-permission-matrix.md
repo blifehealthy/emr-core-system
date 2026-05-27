@@ -143,6 +143,9 @@ configured. `GET /health` is intentionally outside bearer and role checks.
 | `POST` | `/api/inventory-barcode-print-jobs` | `drug_catalog_write` |
 | `GET` | `/api/inventory-barcode-print-jobs` | `drug_catalog_read` |
 | `PATCH` | `/api/inventory-barcode-print-jobs/:jobId/delivery` | `drug_catalog_write` |
+| `GET` | `/api/inventory-barcode-label-templates` | `drug_catalog_read` |
+| `POST` | `/api/inventory-barcode-label-templates` | `drug_catalog_write` |
+| `PATCH` | `/api/inventory-barcode-label-templates/:templateId` | `drug_catalog_write` |
 | `GET` | `/api/inventory-printer-profiles` | `drug_catalog_read` |
 | `POST` | `/api/inventory-printer-profiles` | `drug_catalog_write` |
 | `PATCH` | `/api/inventory-printer-profiles/:profileId` | `drug_catalog_write` |

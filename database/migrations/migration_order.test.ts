@@ -197,6 +197,10 @@ test('migration set keeps a single patient clinic foreign key step', () => {
     filenames.includes('0046_add_phase_4c_gs1_barcode_parsing.up.sql'),
     'expected Phase 4C GS1 barcode parsing migration'
   );
+  assert.ok(
+    filenames.includes('0047_add_phase_4e_label_templates.up.sql'),
+    'expected Phase 4E label templates migration'
+  );
 });
 
 test('organization/clinic migrations line up with the patient clinic relationship', () => {

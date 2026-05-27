@@ -613,6 +613,7 @@ const INVENTORY_BARCODE_PRINT_JOB_KEYS = [
   'id',
   'clinic_id',
   'printer_profile_id',
+  'label_template_id',
   'printer_language',
   'connection_type',
   'delivery_status',
@@ -628,6 +629,25 @@ const INVENTORY_BARCODE_PRINT_JOB_KEYS = [
   'requested_at',
   'notes',
   'created_at',
+  'deleted_at',
+] as const;
+
+const INVENTORY_BARCODE_LABEL_TEMPLATE_KEYS = [
+  'id',
+  'clinic_id',
+  'template_name',
+  'template_type',
+  'printer_language',
+  'width_mm',
+  'height_mm',
+  'enabled_fields',
+  'header_text',
+  'footer_text',
+  'is_default',
+  'is_active',
+  'notes',
+  'created_at',
+  'updated_at',
   'deleted_at',
 ] as const;
 
@@ -1059,6 +1079,14 @@ export function toInventoryBarcodePrintJobDto(row: unknown): Record<string, unkn
 
 export function toInventoryBarcodePrintJobDtos(rows: unknown[]): Record<string, unknown>[] {
   return rows.map((row) => toInventoryBarcodePrintJobDto(row));
+}
+
+export function toInventoryBarcodeLabelTemplateDto(row: unknown): Record<string, unknown> {
+  return pickKeys(row, [...INVENTORY_BARCODE_LABEL_TEMPLATE_KEYS]);
+}
+
+export function toInventoryBarcodeLabelTemplateDtos(rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => toInventoryBarcodeLabelTemplateDto(row));
 }
 
 export function toInventoryPrinterProfileDto(row: unknown): Record<string, unknown> {

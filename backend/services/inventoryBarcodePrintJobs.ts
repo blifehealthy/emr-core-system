@@ -16,6 +16,13 @@ type PrinterProfile = {
   connection_type: 'browser' | 'network' | 'utility_bridge';
   endpoint_url: string | null;
 };
+type LabelTemplate = {
+  id: string;
+  printer_language: CreateInventoryBarcodePrintJobInput['printerLanguage'];
+  enabled_fields: string[] | string;
+  header_text: string | null;
+  footer_text: string | null;
+};
 
 export function createInventoryBarcodePrintJob(db: Db) {
   return async function run(input: CreateInventoryBarcodePrintJobInput) {
@@ -23,16 +30,23 @@ export function createInventoryBarcodePrintJob(db: Db) {
       ? await findPrinterProfile(db, input.clinicId, input.printerProfileId)
       : null;
     if (input.printerProfileId && !printerProfile) return null;
+    const labelTemplate = input.labelTemplateId
+      ? await findLabelTemplate(db, input.clinicId, input.labelTemplateId)
+      : null;
+    if (input.labelTemplateId && !labelTemplate) return null;
 
-    const printerLanguage = input.printerLanguage ?? printerProfile?.printer_language ?? 'html';
+    const printerLanguage =
+      input.printerLanguage ?? printerProfile?.printer_language ?? labelTemplate?.printer_language ?? 'html';
     const connectionType = printerProfile?.connection_type ?? 'browser';
     const deliveryStatus = connectionType === 'browser' ? 'exported' : 'queued';
-    const renderedPayload = renderBarcodePayload(input.labels, printerLanguage);
+    const labels = applyLabelTemplate(input.labels, labelTemplate);
+    const renderedPayload = renderBarcodePayload(labels, printerLanguage);
     const result = await db.query(
       `
         INSERT INTO inventory_barcode_print_jobs (
           clinic_id,
           printer_profile_id,
+          label_template_id,
           printer_language,
           connection_type,
           delivery_status,
@@ -42,12 +56,13 @@ export function createInventoryBarcodePrintJob(db: Db) {
           requested_by_user_id,
           notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *
       `,
       [
         input.clinicId,
         printerProfile?.id ?? null,
+        labelTemplate?.id ?? null,
         printerLanguage,
         connectionType,
         deliveryStatus,
@@ -163,6 +178,44 @@ async function findPrinterProfile(db: Db, clinicId: string, printerProfileId: st
     [printerProfileId, clinicId]
   );
   return result.rows[0] ?? null;
+}
+
+async function findLabelTemplate(db: Db, clinicId: string, labelTemplateId: string) {
+  const result = await db.query<LabelTemplate>(
+    `
+      SELECT id, printer_language, enabled_fields, header_text, footer_text
+      FROM inventory_barcode_label_templates
+      WHERE id = $1
+        AND clinic_id = $2
+        AND is_active IS TRUE
+        AND deleted_at IS NULL
+    `,
+    [labelTemplateId, clinicId]
+  );
+  return result.rows[0] ?? null;
+}
+
+function applyLabelTemplate(labels: BarcodeLabel[], template: LabelTemplate | null) {
+  if (!template) return labels;
+  const fields = new Set(
+    (Array.isArray(template.enabled_fields)
+      ? template.enabled_fields
+      : JSON.parse(template.enabled_fields || '[]')) as string[]
+  );
+  return labels.map((label) => ({
+    type: label.type,
+    title:
+      (fields.has('title')
+        ? [template.header_text, label.title].filter(Boolean).join(' - ')
+        : template.header_text) || label.barcode,
+    subtitle: fields.has('subtitle') ? label.subtitle : null,
+    barcode: label.barcode,
+    detail: [
+      fields.has('detail') ? label.detail : '',
+      fields.has('type') ? label.type : '',
+      template.footer_text,
+    ].filter(Boolean).join(' | ') || null,
+  }));
 }
 
 export function renderBarcodePayload(

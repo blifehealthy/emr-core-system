@@ -257,6 +257,19 @@ Current scope and review docs are tracked in:
 - `docs/phase-4d-uat-checklist-th.md`
 - `docs/phase-4d-closure-summary-th.md`
 
+## Phase 4E
+
+Phase 4E adds structured barcode label template management. Clinics can create
+item, lot, bin, or generic templates, choose visible fields and header/footer
+text, then select a template when exporting barcode labels.
+
+Current scope and review docs are tracked in:
+
+- `docs/phase-4e-plan.md`
+- `docs/phase-4e-label-template-runbook.md`
+- `docs/phase-4e-uat-checklist-th.md`
+- `docs/phase-4e-closure-summary-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:

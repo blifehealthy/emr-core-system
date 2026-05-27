@@ -2464,6 +2464,66 @@ test('printer bridge failed acknowledgement requires delivery error', async () =
   });
 });
 
+test('barcode label template routes list create and update templates', async () => {
+  const auditInputs: AuditLogInput[] = [];
+  const api = createEmrApi(
+    makeDeps({
+      async listInventoryBarcodeLabelTemplates(input) {
+        assert.equal(input.clinicId, 'clinic-1');
+        assert.equal(input.templateType, 'item');
+        return {
+          rows: [{ id: 'template-1', template_name: 'Item label', template_type: 'item' }],
+          meta: { limit: 50, offset: 0, hasMore: false, nextOffset: null },
+        };
+      },
+      async createInventoryBarcodeLabelTemplate(input) {
+        assert.equal(input.templateName, 'Item label');
+        assert.deepEqual(input.enabledFields, ['title', 'barcode']);
+        return { id: 'template-2', template_name: input.templateName, template_type: input.templateType };
+      },
+      async updateInventoryBarcodeLabelTemplate(input) {
+        assert.equal(input.templateId, 'template-2');
+        assert.equal(input.isDefault, true);
+        return { id: input.templateId, is_default: true };
+      },
+      async createAuditLog(input) {
+        auditInputs.push(input);
+        return { id: 'audit-1' };
+      },
+    })
+  );
+
+  const list = await api({
+    method: 'GET',
+    path: '/api/inventory-barcode-label-templates',
+    query: { clinicId: 'clinic-1', templateType: 'item' },
+    headers: { 'x-user-role': 'admin' },
+  });
+  assert.equal(list.status, 200);
+
+  const created = await api({
+    method: 'POST',
+    path: '/api/inventory-barcode-label-templates',
+    headers: { 'x-user-role': 'admin' },
+    body: {
+      clinicId: 'clinic-1',
+      templateName: 'Item label',
+      templateType: 'item',
+      enabledFields: ['title', 'barcode'],
+    },
+  });
+  assert.equal(created.status, 201);
+
+  const updated = await api({
+    method: 'PATCH',
+    path: '/api/inventory-barcode-label-templates/template-2',
+    headers: { 'x-user-role': 'admin' },
+    body: { isDefault: true },
+  });
+  assert.equal(updated.status, 200);
+  assert.deepEqual(auditInputs.map((input) => input.action), ['created', 'updated']);
+});
+
 test('POST diagnosis and vital sign routes validate bad payloads', async () => {
   const api = createEmrApi(makeDeps());
 

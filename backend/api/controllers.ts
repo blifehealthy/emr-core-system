@@ -25,6 +25,8 @@ import {
   toInventoryTransferDto,
   toInventoryTransferDtos,
   toInventoryBarcodeScanDto,
+  toInventoryBarcodeLabelTemplateDto,
+  toInventoryBarcodeLabelTemplateDtos,
   toInventoryBarcodePrintJobDto,
   toInventoryBarcodePrintJobDtos,
   toInventoryPrinterProfileDto,
@@ -95,6 +97,8 @@ import {
   validateUpdateInventoryLocationBody,
   validateReceiveInventoryLotBody,
   validateScanInventoryBarcodeBody,
+  validateCreateInventoryBarcodeLabelTemplateBody,
+  validateUpdateInventoryBarcodeLabelTemplateBody,
   validateCreateInventoryBarcodePrintJobBody,
   validateUpdateInventoryBarcodePrintJobDeliveryBody,
   validateCreateInventoryPrinterProfileBody,
@@ -2942,6 +2946,103 @@ export async function handleUpdateInventoryBarcodePrintJobDelivery(
     });
 
     return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryBarcodePrintJobDto(job) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleListInventoryBarcodeLabelTemplates(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.listInventoryBarcodeLabelTemplates) {
+    return mapError(new Error('Inventory barcode label template list dependency is not configured'));
+  }
+
+  const clinicId = request.query?.clinicId?.trim();
+  if (!clinicId) return validationError('clinicId is required query parameter');
+  const active = readOptionalEnumQuery(request, 'active', ['active', 'inactive', 'all']);
+  if (!active.ok) return validationError(active.error);
+  const templateType = readOptionalEnumQuery(request, 'templateType', ['item', 'lot', 'bin', 'generic']);
+  if (!templateType.ok) return validationError(templateType.error);
+  const limit = readOptionalLimitQuery(request);
+  if (!limit.ok) return validationError(limit.error);
+  const offset = readOptionalOffsetQuery(request);
+  if (!offset.ok) return validationError(offset.error);
+
+  const templates = await dependencies.listInventoryBarcodeLabelTemplates({
+    clinicId,
+    active: active.value,
+    templateType: templateType.value,
+    limit: limit.value,
+    offset: offset.value,
+  });
+
+  return {
+    status: 200,
+    headers: JSON_HEADERS,
+    body: { data: toInventoryBarcodeLabelTemplateDtos(templates.rows), meta: templates.meta },
+  };
+}
+
+export async function handleCreateInventoryBarcodeLabelTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies
+): Promise<HttpResponse> {
+  if (!dependencies.createInventoryBarcodeLabelTemplate) {
+    return mapError(new Error('Inventory barcode label template create dependency is not configured'));
+  }
+
+  const validation = validateCreateInventoryBarcodeLabelTemplateBody(request.body);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const template = await dependencies.createInventoryBarcodeLabelTemplate(validation.value);
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_label_template',
+      entityId: (template as { id: string }).id,
+      action: 'created',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: {
+        templateName: validation.value.templateName,
+        templateType: validation.value.templateType ?? 'generic',
+      },
+    });
+    return { status: 201, headers: JSON_HEADERS, body: { data: toInventoryBarcodeLabelTemplateDto(template) } };
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function handleUpdateInventoryBarcodeLabelTemplate(
+  request: HttpRequest,
+  dependencies: Dependencies,
+  templateId: string
+): Promise<HttpResponse> {
+  if (!dependencies.updateInventoryBarcodeLabelTemplate) {
+    return mapError(new Error('Inventory barcode label template update dependency is not configured'));
+  }
+
+  const validation = validateUpdateInventoryBarcodeLabelTemplateBody(request.body, templateId);
+  if (!validation.ok) return validationError(validation.error);
+
+  try {
+    const template = await dependencies.updateInventoryBarcodeLabelTemplate(validation.value);
+    if (!template) {
+      return { status: 404, headers: JSON_HEADERS, body: { error: 'Label template not found' } };
+    }
+    const actor = getActorContext(request);
+    await dependencies.createAuditLog({
+      entityType: 'inventory_barcode_label_template',
+      entityId: templateId,
+      action: 'updated',
+      actorUserId: actor.userId,
+      actorPractitionerId: actor.practitionerId,
+      metadata: validation.value,
+    });
+    return { status: 200, headers: JSON_HEADERS, body: { data: toInventoryBarcodeLabelTemplateDto(template) } };
   } catch (error) {
     return mapError(error);
   }

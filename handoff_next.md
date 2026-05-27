@@ -1,5 +1,48 @@
 # Handoff Next
 
+## Latest Phase 4E Status
+
+Phase 4E barcode label template management is complete in this checkpoint.
+
+What changed:
+
+- Added migration `0047_add_phase_4e_label_templates` for
+  `inventory_barcode_label_templates` and `label_template_id` on barcode print
+  jobs.
+- Added label template services and APIs:
+  - `GET /api/inventory-barcode-label-templates`
+  - `POST /api/inventory-barcode-label-templates`
+  - `PATCH /api/inventory-barcode-label-templates/:templateId`
+- Barcode print jobs can now accept `labelTemplateId` and render label payloads
+  using enabled fields, header text, footer text, dimensions, and printer
+  language defaults.
+- Pharmacy frontend can create label templates, list active templates, and pick
+  a template while exporting ZPL/ESC/POS labels.
+- Updated API grouping, permission matrix, Phase 4 planning seeds, review notes,
+  README, Phase 4E plan, runbook, UAT checklist, and closure summary.
+
+Verification completed:
+
+- `node --check frontend/app.js` passed.
+- `npm run frontend:workflow-smoke` passed.
+- `npx tsc --noEmit` passed.
+- Targeted Phase 4E tests passed:
+  - `backend/services/inventoryBarcodeLabelTemplates.test.ts`
+  - `backend/services/inventoryBarcodePrintJobs.test.ts`
+  - `backend/api/emrApi.test.ts`
+  - `database/migrations/0047_add_phase_4e_label_templates.test.ts`
+  - `database/migrations/migration_order.test.ts`
+- `npm test` passed `165/165`.
+
+Recommended next phase:
+
+1. Start Phase 4F with offline/degraded printer fallback and operator recovery
+   flow for label printing.
+2. Add a UAT pass for Phase 4A-4E printer/scanner workflows before expanding
+   more pharmacy inventory features.
+3. Keep `emr-core-system.zip` untracked unless the user explicitly asks to
+   archive or commit it.
+
 ## Current State
 
 - Current branch: `main`

@@ -53,6 +53,7 @@ let currentSuppliers = [];
 let currentPurchaseOrders = [];
 let currentPurchaseOrderApprovalPolicies = [];
 let currentInventoryPrinterProfiles = [];
+let currentInventoryBarcodeLabelTemplates = [];
 const logoAssetDataUrls = new Map();
 let currentDailyReport = null;
 let currentPharmacyOverrideReport = null;
@@ -371,6 +372,7 @@ searchForm.addEventListener('submit', async (event) => {
     currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
     currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
     currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
+    currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(patient.clinic_id, apiToken).catch(() => []);
     currentClinicSettings = await fetchClinicSettings(patient.clinic_id, apiToken).catch(() => null);
     showPatientDetail(patient, profile);
     currentApiToken = apiToken;
@@ -976,6 +978,26 @@ async function fetchInventoryPrinterProfiles(clinicId, apiToken) {
   });
 
   const response = await fetch(`/api/inventory-printer-profiles?${params.toString()}`, {
+    headers: buildHeaders(apiToken),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+  }
+
+  return result.data ?? [];
+}
+
+async function fetchInventoryBarcodeLabelTemplates(clinicId, apiToken) {
+  const params = new URLSearchParams({
+    clinicId,
+    active: 'active',
+    limit: '200',
+    offset: '0',
+  });
+
+  const response = await fetch(`/api/inventory-barcode-label-templates?${params.toString()}`, {
     headers: buildHeaders(apiToken),
   });
   const result = await response.json();
@@ -2724,6 +2746,7 @@ async function openVisitPatientRecord(visit, sectionLabel = 'Encounters') {
   currentPurchaseOrders = await fetchPurchaseOrders(patient.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(patient.clinic_id, apiToken).catch(() => []);
   currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(patient.clinic_id, apiToken).catch(() => []);
+  currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(patient.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(patient, profile);
 }
@@ -4154,6 +4177,7 @@ async function refreshPatientWorkspace(sectionLabel = currentProfileSection) {
   currentPurchaseOrders = await fetchPurchaseOrders(refreshed.clinic_id, apiToken).catch(() => []);
   currentPurchaseOrderApprovalPolicies = await fetchPurchaseOrderApprovalPolicies(refreshed.clinic_id, apiToken).catch(() => []);
   currentInventoryPrinterProfiles = await fetchInventoryPrinterProfiles(refreshed.clinic_id, apiToken).catch(() => []);
+  currentInventoryBarcodeLabelTemplates = await fetchInventoryBarcodeLabelTemplates(refreshed.clinic_id, apiToken).catch(() => []);
   currentProfileSection = sectionLabel;
   showPatientDetail(refreshed, profile);
 }
@@ -4365,6 +4389,7 @@ function createPharmacyInventoryPanel(patient) {
     ['PO open', currentPurchaseOrders.filter((order) => !['received', 'cancelled'].includes(order.status)).length],
     ['Approval policies', currentPurchaseOrderApprovalPolicies.length],
     ['Printer profiles', currentInventoryPrinterProfiles.length],
+    ['Label templates', currentInventoryBarcodeLabelTemplates.length],
     ['Barcode required', currentInventoryItems.filter((item) => item.barcode_required).length],
   ]));
 
@@ -4568,6 +4593,36 @@ function createPharmacyInventoryPanel(patient) {
   });
   section.append(printerProfileForm);
 
+  const labelTemplateForm = document.createElement('form');
+  labelTemplateForm.className = 'nested-inline-form';
+  labelTemplateForm.append(
+    createFormField('templateName', 'Label template', 'input', true),
+    createLabelTemplateTypeSelectField('templateType', 'Type'),
+    createPrinterLanguageSelectField('printerLanguage', 'Language'),
+    createFormField('widthMm', 'Width mm', 'input'),
+    createFormField('heightMm', 'Height mm', 'input'),
+    createFormField('enabledFields', 'Fields', 'input'),
+    createFormField('headerText', 'Header', 'input'),
+    createFormField('footerText', 'Footer', 'input')
+  );
+  const templateDefaultLabel = document.createElement('label');
+  templateDefaultLabel.textContent = 'Default';
+  const templateDefaultCheckbox = document.createElement('input');
+  templateDefaultCheckbox.type = 'checkbox';
+  templateDefaultCheckbox.name = 'isDefault';
+  templateDefaultCheckbox.value = 'true';
+  templateDefaultLabel.append(templateDefaultCheckbox);
+  const labelTemplateSubmit = document.createElement('button');
+  labelTemplateSubmit.type = 'submit';
+  labelTemplateSubmit.className = 'secondary-button compact-button';
+  labelTemplateSubmit.textContent = 'เพิ่ม label template';
+  labelTemplateForm.append(templateDefaultLabel, labelTemplateSubmit);
+  labelTemplateForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await createInventoryBarcodeLabelTemplateFromForm(patient, labelTemplateForm, labelTemplateSubmit);
+  });
+  section.append(labelTemplateForm);
+
   const list = document.createElement('div');
   list.className = 'record-list';
   for (const item of currentInventoryItems.slice(0, 6)) {
@@ -4668,6 +4723,21 @@ function createPharmacyInventoryPanel(patient) {
     section.append(printerProfileList);
   }
 
+  const labelTemplateList = document.createElement('div');
+  labelTemplateList.className = 'record-list';
+  for (const template of currentInventoryBarcodeLabelTemplates.slice(0, 4)) {
+    labelTemplateList.append(createRecordCard(template, labelTemplateSummary, [
+      'template_type',
+      'printer_language',
+      'enabled_fields',
+      'is_default',
+      'is_active',
+    ]));
+  }
+  if (currentInventoryBarcodeLabelTemplates.length > 0) {
+    section.append(labelTemplateList);
+  }
+
   return section;
 }
 
@@ -4687,6 +4757,14 @@ function createPrinterConnectionSelectField(name, labelText) {
   return label;
 }
 
+function createLabelTemplateTypeSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = createSelect(name, ['item', 'lot', 'bin', 'generic']);
+  label.append(select);
+  return label;
+}
+
 function createPrinterProfileSelectField(name, labelText) {
   const label = document.createElement('label');
   label.textContent = labelText;
@@ -4701,6 +4779,26 @@ function createPrinterProfileSelectField(name, labelText) {
     option.value = profile.id;
     option.textContent = `${profile.profile_name} (${profile.printer_language})`;
     if (profile.is_default) option.selected = true;
+    select.append(option);
+  }
+  label.append(select);
+  return label;
+}
+
+function createLabelTemplateSelectField(name, labelText) {
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  const select = document.createElement('select');
+  select.name = name;
+  const emptyOption = document.createElement('option');
+  emptyOption.value = '';
+  emptyOption.textContent = 'Default format';
+  select.append(emptyOption);
+  for (const template of currentInventoryBarcodeLabelTemplates) {
+    const option = document.createElement('option');
+    option.value = template.id;
+    option.textContent = `${template.template_name} (${template.template_type})`;
+    if (template.is_default) option.selected = true;
     select.append(option);
   }
   label.append(select);
@@ -4733,6 +4831,7 @@ function createBarcodeScannerPanel(patient) {
     barcodeField,
     contextLabel,
     createPrinterProfileSelectField('printerProfileId', 'Printer profile'),
+    createLabelTemplateSelectField('labelTemplateId', 'Label template'),
     createScannerCheckboxField('keepFocus', 'Keep focus', true),
     createScannerCheckboxField('clearAfterScan', 'Clear after scan', true)
   );
@@ -4762,7 +4861,8 @@ function createBarcodeScannerPanel(patient) {
       patient,
       getLoadedBarcodeLabels(),
       'zpl',
-      panel.elements.printerProfileId?.value || ''
+      panel.elements.printerProfileId?.value || '',
+      panel.elements.labelTemplateId?.value || ''
     );
   });
   const escposButton = document.createElement('button');
@@ -4774,7 +4874,8 @@ function createBarcodeScannerPanel(patient) {
       patient,
       getLoadedBarcodeLabels(),
       'escpos',
-      panel.elements.printerProfileId?.value || ''
+      panel.elements.printerProfileId?.value || '',
+      panel.elements.labelTemplateId?.value || ''
     );
   });
   panel.append(scanButton, printAllButton, zplButton, escposButton);
@@ -5379,6 +5480,45 @@ async function createInventoryPrinterProfileFromForm(patient, form, submit) {
   } finally {
     submit.disabled = false;
     submit.textContent = 'เพิ่ม printer profile';
+  }
+}
+
+async function createInventoryBarcodeLabelTemplateFromForm(patient, form, submit) {
+  const values = Object.fromEntries(new FormData(form).entries());
+  const enabledFields = String(values.enabledFields || 'title,subtitle,barcode,detail')
+    .split(',')
+    .map((field) => field.trim())
+    .filter(Boolean);
+  submit.disabled = true;
+  submit.textContent = 'กำลังเพิ่ม';
+  try {
+    const response = await fetch('/api/inventory-barcode-label-templates', {
+      method: 'POST',
+      headers: buildHeaders(currentApiToken || readValue('apiToken')),
+      body: JSON.stringify(compactPayload({
+        clinicId: patient.clinic_id,
+        templateName: values.templateName,
+        templateType: values.templateType || 'generic',
+        printerLanguage: values.printerLanguage || 'zpl',
+        widthMm: values.widthMm,
+        heightMm: values.heightMm,
+        enabledFields,
+        headerText: values.headerText,
+        footerText: values.footerText,
+        isDefault: values.isDefault === 'true',
+      })),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || result.error || `HTTP ${response.status}`);
+    form.reset();
+    await refreshPatientWorkspace('Prescriptions');
+    setStatus('เพิ่ม label template แล้ว', 'success');
+  } catch (error) {
+    renderInlineFormError(form, error instanceof Error ? error.message : 'เพิ่ม label template ไม่สำเร็จ');
+    setStatus('เพิ่ม label template ไม่สำเร็จ', 'error');
+  } finally {
+    submit.disabled = false;
+    submit.textContent = 'เพิ่ม label template';
   }
 }
 
@@ -6237,7 +6377,13 @@ function openBarcodeLabelPrint(labels, title = 'Barcode labels') {
   printWindow.print();
 }
 
-async function exportBarcodePrintJob(patient, labels, printerLanguage, printerProfileId = '') {
+async function exportBarcodePrintJob(
+  patient,
+  labels,
+  printerLanguage,
+  printerProfileId = '',
+  labelTemplateId = ''
+) {
   if (labels.length === 0) {
     setStatus('ยังไม่มี barcode สำหรับ export', 'error');
     return;
@@ -6252,6 +6398,7 @@ async function exportBarcodePrintJob(patient, labels, printerLanguage, printerPr
         clinicId: patient.clinic_id,
         printerLanguage,
         printerProfileId,
+        labelTemplateId,
         requestedByUserId: readValue('userId'),
         labels,
         notes: 'Barcode label export from pharmacy inventory',
@@ -7142,6 +7289,10 @@ function approvalPolicySummary(item) {
 
 function printerProfileSummary(item) {
   return `${item.profile_name ?? item.id} · ${item.connection_type ?? 'browser'}`;
+}
+
+function labelTemplateSummary(item) {
+  return `${item.template_name ?? item.id} · ${item.template_type ?? 'generic'} · ${item.printer_language ?? 'zpl'}`;
 }
 
 function invoiceSummary(item) {

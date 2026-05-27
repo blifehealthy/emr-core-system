@@ -18,6 +18,7 @@ import {
   handleCreateDiagnosis,
   handleCreateDrugCatalogItem,
   handleCreateDrugInteractionRule,
+  handleCreateInventoryBarcodeLabelTemplate,
   handleCreateInventoryItem,
   handleCreateInventoryBarcodePrintJob,
   handleCreateInventoryLocation,
@@ -91,6 +92,7 @@ import {
   handleListInventoryLocations,
   handleListInventoryLots,
   handleListInventoryTransfers,
+  handleListInventoryBarcodeLabelTemplates,
   handleListInventoryBarcodePrintJobs,
   handleListInventoryPrinterProfiles,
   handleListPurchaseOrders,
@@ -122,6 +124,7 @@ import {
   handleUpdateDrugInteractionRule,
   handleUpdateInventoryItem,
   handleUpdateInventoryLocation,
+  handleUpdateInventoryBarcodeLabelTemplate,
   handleUpdateInventoryBarcodePrintJobDelivery,
   handleUpdateInventoryPrinterProfile,
   handleUpdatePurchaseOrder,
@@ -359,6 +362,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
       if (roleError) return roleError;
       return handleListInventoryBarcodePrintJobs(actorAwareRequest, dependencies);
+    }
+
+    if (request.method === 'GET' && request.path === '/api/inventory-barcode-label-templates') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_read');
+      if (roleError) return roleError;
+      return handleListInventoryBarcodeLabelTemplates(actorAwareRequest, dependencies);
     }
 
     if (request.method === 'GET' && request.path === '/api/suppliers') {
@@ -841,6 +850,12 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
       return handleCreateInventoryBarcodePrintJob(actorAwareRequest, dependencies);
     }
 
+    if (request.method === 'POST' && request.path === '/api/inventory-barcode-label-templates') {
+      const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+      if (roleError) return roleError;
+      return handleCreateInventoryBarcodeLabelTemplate(actorAwareRequest, dependencies);
+    }
+
     if (request.method === 'POST' && request.path === '/api/inventory-printer-profiles') {
       const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
       if (roleError) return roleError;
@@ -1227,6 +1242,18 @@ async function handleEmrRequest(request: HttpRequest, dependencies: Dependencies
           actorAwareRequest,
           dependencies,
           printJobDeliveryMatch[1]
+        );
+      }
+
+      const labelTemplateMatch =
+        request.path.match(/^\/api\/inventory-barcode-label-templates\/([^/]+)$/);
+      if (labelTemplateMatch) {
+        const roleError = requireRole(actorAwareRequest, 'drug_catalog_write');
+        if (roleError) return roleError;
+        return handleUpdateInventoryBarcodeLabelTemplate(
+          actorAwareRequest,
+          dependencies,
+          labelTemplateMatch[1]
         );
       }
 

@@ -531,6 +531,7 @@ export type StockMovementType = 'adjustment_in' | 'adjustment_out' | 'dispense' 
 export type InventoryBarcodeScanContext = 'lookup' | 'receiving' | 'dispensing';
 export type InventoryBarcodePrintLanguage = 'html' | 'zpl' | 'escpos';
 export type InventoryPrinterConnectionType = 'browser' | 'network' | 'utility_bridge';
+export type InventoryBarcodeLabelTemplateType = 'item' | 'lot' | 'bin' | 'generic';
 export type InventoryBarcodePrintDeliveryStatus =
   | 'exported'
   | 'queued'
@@ -993,6 +994,7 @@ export type CreateInventoryBarcodePrintJobInput = {
   clinicId: string;
   printerLanguage?: InventoryBarcodePrintLanguage;
   printerProfileId?: string | null;
+  labelTemplateId?: string | null;
   requestedByUserId?: string | null;
   notes?: string | null;
   labels: Array<{
@@ -1002,6 +1004,36 @@ export type CreateInventoryBarcodePrintJobInput = {
     barcode: string;
     detail?: string | null;
   }>;
+};
+
+export type CreateInventoryBarcodeLabelTemplateInput = {
+  clinicId: string;
+  templateName: string;
+  templateType?: InventoryBarcodeLabelTemplateType;
+  printerLanguage?: InventoryBarcodePrintLanguage;
+  widthMm?: number | string | null;
+  heightMm?: number | string | null;
+  enabledFields?: string[];
+  headerText?: string | null;
+  footerText?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
+};
+
+export type UpdateInventoryBarcodeLabelTemplateInput = {
+  templateId: string;
+  templateName?: string;
+  templateType?: InventoryBarcodeLabelTemplateType;
+  printerLanguage?: InventoryBarcodePrintLanguage;
+  widthMm?: number | string | null;
+  heightMm?: number | string | null;
+  enabledFields?: string[];
+  headerText?: string | null;
+  footerText?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+  notes?: string | null;
 };
 
 export type UpdateInventoryBarcodePrintJobDeliveryInput = {
@@ -1402,6 +1434,19 @@ export type Dependencies = {
   scanInventoryBarcode?: (input: ScanInventoryBarcodeInput) => Promise<unknown | null>;
   createInventoryBarcodePrintJob?: (
     input: CreateInventoryBarcodePrintJobInput
+  ) => Promise<unknown | null>;
+  listInventoryBarcodeLabelTemplates?: (input: {
+    clinicId: string;
+    active?: DrugCatalogActiveFilter;
+    templateType?: InventoryBarcodeLabelTemplateType;
+    limit?: number;
+    offset?: number;
+  }) => Promise<PaginatedListResult>;
+  createInventoryBarcodeLabelTemplate?: (
+    input: CreateInventoryBarcodeLabelTemplateInput
+  ) => Promise<unknown>;
+  updateInventoryBarcodeLabelTemplate?: (
+    input: UpdateInventoryBarcodeLabelTemplateInput
   ) => Promise<unknown | null>;
   listInventoryBarcodePrintJobs?: (input: {
     clinicId: string;

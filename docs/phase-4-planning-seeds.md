@@ -22,10 +22,11 @@ UAT/go-no-go identifies the highest operational blocker.
   serial metadata on pharmacy scans and verification workflows.
 - Phase 4D completed scanner UX hardening with keep-focus, clear-after-scan,
   trimmed scan input, and GS1 scan detail display.
+- Phase 4E completed structured barcode label template management for
+  item/lot/bin/generic labels and print-job template selection.
 - Remaining pharmacy hardware and barcode candidates:
   - vendor-specific direct printer bridge service
   - hardware printer certification
-  - label template management
   - offline or degraded-mode print fallback
 
 ### Accounting And Payer Integration

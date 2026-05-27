@@ -38,10 +38,13 @@ import type {
   UpdatePurchaseOrderApprovalPolicyInput,
   InventoryBarcodeScanContext,
   InventoryBarcodePrintDeliveryStatus,
+  InventoryBarcodeLabelTemplateType,
   InventoryBarcodePrintLanguage,
   InventoryPrinterConnectionType,
   CreateInventoryBarcodePrintJobInput,
+  CreateInventoryBarcodeLabelTemplateInput,
   CreateInventoryPrinterProfileInput,
+  UpdateInventoryBarcodeLabelTemplateInput,
   UpdateInventoryPrinterProfileInput,
   UpdateInventoryBarcodePrintJobDeliveryInput,
   ScanInventoryBarcodeInput,
@@ -159,6 +162,12 @@ const manualStockMovementTypes: Array<Exclude<StockMovementType, 'dispense'>> = 
 ];
 const inventoryBarcodeScanContexts: InventoryBarcodeScanContext[] = ['lookup', 'receiving', 'dispensing'];
 const inventoryBarcodePrintLanguages: InventoryBarcodePrintLanguage[] = ['html', 'zpl', 'escpos'];
+const inventoryBarcodeLabelTemplateTypes: InventoryBarcodeLabelTemplateType[] = [
+  'item',
+  'lot',
+  'bin',
+  'generic',
+];
 const inventoryPrinterConnectionTypes: InventoryPrinterConnectionType[] = [
   'browser',
   'network',
@@ -3711,6 +3720,8 @@ export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
   if (!printerLanguage.ok) return printerLanguage;
   const printerProfileId = readOptionalNullableStringField(candidate, 'printerProfileId');
   if (!printerProfileId.ok) return printerProfileId;
+  const labelTemplateId = readOptionalNullableStringField(candidate, 'labelTemplateId');
+  if (!labelTemplateId.ok) return labelTemplateId;
   const requestedByUserId = readOptionalNullableStringField(candidate, 'requestedByUserId');
   if (!requestedByUserId.ok) return requestedByUserId;
   const notes = readOptionalNullableStringField(candidate, 'notes');
@@ -3748,9 +3759,127 @@ export function validateCreateInventoryBarcodePrintJobBody(body: unknown):
       clinicId: clinicId.value,
       printerLanguage: printerLanguage.value,
       printerProfileId: printerProfileId.value,
+      labelTemplateId: labelTemplateId.value,
       requestedByUserId: requestedByUserId.value,
       notes: notes.value,
       labels,
+    },
+  };
+}
+
+export function validateCreateInventoryBarcodeLabelTemplateBody(body: unknown):
+  | { ok: true; value: CreateInventoryBarcodeLabelTemplateInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const clinicId = readRequiredString(candidate.clinicId, 'clinicId');
+  if (!clinicId.ok) return clinicId;
+  const templateName = readRequiredString(candidate.templateName, 'templateName');
+  if (!templateName.ok) return templateName;
+  const templateType = readEnumValue<InventoryBarcodeLabelTemplateType>(
+    candidate.templateType,
+    'templateType',
+    inventoryBarcodeLabelTemplateTypes
+  );
+  if (!templateType.ok) return templateType;
+  const printerLanguage = readEnumValue<InventoryBarcodePrintLanguage>(
+    candidate.printerLanguage,
+    'printerLanguage',
+    inventoryBarcodePrintLanguages
+  );
+  if (!printerLanguage.ok) return printerLanguage;
+  const enabledFields = readOptionalStringArrayField(candidate, 'enabledFields');
+  if (!enabledFields.ok) return enabledFields;
+  const headerText = readOptionalNullableStringField(candidate, 'headerText');
+  if (!headerText.ok) return headerText;
+  const footerText = readOptionalNullableStringField(candidate, 'footerText');
+  if (!footerText.ok) return footerText;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const widthMm = readOptionalNumberishField(candidate, 'widthMm');
+  if (!widthMm.ok) return widthMm;
+  const heightMm = readOptionalNumberishField(candidate, 'heightMm');
+  if (!heightMm.ok) return heightMm;
+
+  return {
+    ok: true,
+    value: {
+      clinicId: clinicId.value,
+      templateName: templateName.value,
+      templateType: templateType.value,
+      printerLanguage: printerLanguage.value,
+      widthMm: widthMm.value,
+      heightMm: heightMm.value,
+      enabledFields: enabledFields.value,
+      headerText: headerText.value,
+      footerText: footerText.value,
+      isDefault: isDefault.value,
+      isActive: isActive.value,
+      notes: notes.value,
+    },
+  };
+}
+
+export function validateUpdateInventoryBarcodeLabelTemplateBody(
+  body: unknown,
+  templateId: string
+):
+  | { ok: true; value: UpdateInventoryBarcodeLabelTemplateInput }
+  | { ok: false; error: string } {
+  const candidate = asObject(body);
+  if (!candidate) return { ok: false, error: 'Request body must be a JSON object' };
+
+  const templateName = readOptionalStringField(candidate, 'templateName');
+  if (!templateName.ok) return templateName;
+  const templateType = readEnumValue<InventoryBarcodeLabelTemplateType>(
+    candidate.templateType,
+    'templateType',
+    inventoryBarcodeLabelTemplateTypes
+  );
+  if (!templateType.ok) return templateType;
+  const printerLanguage = readEnumValue<InventoryBarcodePrintLanguage>(
+    candidate.printerLanguage,
+    'printerLanguage',
+    inventoryBarcodePrintLanguages
+  );
+  if (!printerLanguage.ok) return printerLanguage;
+  const enabledFields = readOptionalStringArrayField(candidate, 'enabledFields');
+  if (!enabledFields.ok) return enabledFields;
+  const headerText = readOptionalNullableStringField(candidate, 'headerText');
+  if (!headerText.ok) return headerText;
+  const footerText = readOptionalNullableStringField(candidate, 'footerText');
+  if (!footerText.ok) return footerText;
+  const notes = readOptionalNullableStringField(candidate, 'notes');
+  if (!notes.ok) return notes;
+  const isDefault = readOptionalBooleanField(candidate, 'isDefault');
+  if (!isDefault.ok) return isDefault;
+  const isActive = readOptionalBooleanField(candidate, 'isActive');
+  if (!isActive.ok) return isActive;
+  const widthMm = readOptionalNumberishField(candidate, 'widthMm');
+  if (!widthMm.ok) return widthMm;
+  const heightMm = readOptionalNumberishField(candidate, 'heightMm');
+  if (!heightMm.ok) return heightMm;
+
+  return {
+    ok: true,
+    value: {
+      templateId,
+      ...(Object.hasOwn(candidate, 'templateName') ? { templateName: templateName.value } : {}),
+      ...(Object.hasOwn(candidate, 'templateType') ? { templateType: templateType.value } : {}),
+      ...(Object.hasOwn(candidate, 'printerLanguage') ? { printerLanguage: printerLanguage.value } : {}),
+      ...(Object.hasOwn(candidate, 'widthMm') ? { widthMm: widthMm.value } : {}),
+      ...(Object.hasOwn(candidate, 'heightMm') ? { heightMm: heightMm.value } : {}),
+      ...(Object.hasOwn(candidate, 'enabledFields') ? { enabledFields: enabledFields.value } : {}),
+      ...(Object.hasOwn(candidate, 'headerText') ? { headerText: headerText.value } : {}),
+      ...(Object.hasOwn(candidate, 'footerText') ? { footerText: footerText.value } : {}),
+      ...(Object.hasOwn(candidate, 'isDefault') ? { isDefault: isDefault.value } : {}),
+      ...(Object.hasOwn(candidate, 'isActive') ? { isActive: isActive.value } : {}),
+      ...(Object.hasOwn(candidate, 'notes') ? { notes: notes.value } : {}),
     },
   };
 }
@@ -4773,6 +4902,29 @@ function readOptionalNullableStringField(
   }
 
   return { ok: true, value: value.trim() };
+}
+
+function readOptionalStringField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+): { ok: true; value: string | undefined } | { ok: false; error: string } {
+  const value = candidate[fieldName];
+  if (value === undefined) return { ok: true, value: undefined };
+  if (!hasTextContent(value)) return { ok: false, error: `${fieldName} must be a non-empty string` };
+  return { ok: true, value: (value as string).trim() };
+}
+
+function readOptionalNumberishField(
+  candidate: Record<string, unknown>,
+  fieldName: string
+):
+  | { ok: true; value: number | string | null | undefined }
+  | { ok: false; error: string } {
+  const value = candidate[fieldName];
+  if (value === undefined) return { ok: true, value: undefined };
+  if (value === null || value === '') return { ok: true, value: null };
+  if (typeof value === 'number' || typeof value === 'string') return { ok: true, value };
+  return { ok: false, error: `${fieldName} must be a number, string, or null` };
 }
 
 function readOptionalTrimmedStringField(

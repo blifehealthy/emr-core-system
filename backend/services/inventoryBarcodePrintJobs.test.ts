@@ -29,7 +29,7 @@ test('createInventoryBarcodePrintJob stores rendered payload', async () => {
     async query<T = unknown>(sql: string, params?: unknown[]) {
       calls.push({ sql, params });
       if (sql.includes('INSERT INTO inventory_barcode_print_jobs')) {
-        return { rows: [{ id: 'job-1', rendered_payload: params?.[7] }] as T[] };
+        return { rows: [{ id: 'job-1', rendered_payload: params?.[8] }] as T[] };
       }
       return { rows: [] as T[] };
     },
@@ -43,7 +43,7 @@ test('createInventoryBarcodePrintJob stores rendered payload', async () => {
   });
 
   assert.equal((job as { id: string }).id, 'job-1');
-  assert.ok(calls.some((call) => call.params?.[2] === 'zpl' && call.params?.[6] === 1));
+  assert.ok(calls.some((call) => call.params?.[3] === 'zpl' && call.params?.[7] === 1));
   assert.match(String((job as { rendered_payload: string }).rendered_payload), /\^XA/);
 });
 
@@ -70,10 +70,11 @@ test('createInventoryBarcodePrintJob uses active printer profile routing', async
             {
               id: 'job-2',
               printer_profile_id: params?.[1],
-              printer_language: params?.[2],
-              connection_type: params?.[3],
-              delivery_status: params?.[4],
-              target_endpoint: params?.[5],
+              label_template_id: params?.[2],
+              printer_language: params?.[3],
+              connection_type: params?.[4],
+              delivery_status: params?.[5],
+              target_endpoint: params?.[6],
             },
           ] as T[],
         };
@@ -93,6 +94,49 @@ test('createInventoryBarcodePrintJob uses active printer profile routing', async
   assert.equal((job as { connection_type: string }).connection_type, 'utility_bridge');
   assert.equal((job as { delivery_status: string }).delivery_status, 'queued');
   assert.equal((job as { target_endpoint: string }).target_endpoint, 'bridge://pharmacy-label');
+});
+
+test('createInventoryBarcodePrintJob applies active label template fields', async () => {
+  const db = {
+    async query<T = unknown>(sql: string, params?: unknown[]) {
+      if (sql.includes('FROM inventory_barcode_label_templates')) {
+        return {
+          rows: [
+            {
+              id: 'template-1',
+              printer_language: 'zpl',
+              enabled_fields: ['title', 'barcode', 'type'],
+              header_text: 'BLife',
+              footer_text: 'Store cold',
+            },
+          ] as T[],
+        };
+      }
+      if (sql.includes('INSERT INTO inventory_barcode_print_jobs')) {
+        return {
+          rows: [
+            {
+              id: 'job-3',
+              label_template_id: params?.[2],
+              rendered_payload: params?.[8],
+            },
+          ] as T[],
+        };
+      }
+      return { rows: [] as T[] };
+    },
+  };
+
+  const job = await createInventoryBarcodePrintJob(db)({
+    clinicId: 'clinic-1',
+    labelTemplateId: 'template-1',
+    labels: [{ type: 'ITEM', title: 'Item', subtitle: 'Hidden', barcode: 'BC-1', detail: 'Hidden' }],
+  });
+
+  assert.equal((job as { label_template_id: string }).label_template_id, 'template-1');
+  assert.match(String((job as { rendered_payload: string }).rendered_payload), /BLife - Item/);
+  assert.doesNotMatch(String((job as { rendered_payload: string }).rendered_payload), /Hidden/);
+  assert.match(String((job as { rendered_payload: string }).rendered_payload), /ITEM \| Store cold/);
 });
 
 test('listInventoryBarcodePrintJobs filters bridge queue and paginates', async () => {
