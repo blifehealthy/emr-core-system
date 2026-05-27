@@ -184,6 +184,23 @@ scope and review docs are tracked in:
 - `docs/phase-3d-uat-checklist-th.md`
 - `docs/phase-3d-closure-summary-th.md`
 
+## Phase 3 Closure
+
+Phase 3 implementation scope is closed through Phase 3X. The phase now covers
+billing/payment, cashier reconciliation, pharmacy inventory, lot/expiry,
+procurement, approval routing, barcode/printer foundations, location/bin stock,
+transfer workflow, FEFO/expiry guard, pharmacy override reports, role
+separation, controlled substance register, controlled dispense witness and
+re-authentication, clinic-level permission overrides, controlled reconciliation,
+variance approval, and approver separation.
+
+Closure and review docs are tracked in:
+
+- `docs/phase-3-closure-summary-th.md`
+- `docs/phase-3-uat-master-checklist-th.md`
+- `docs/phase-3-pilot-go-no-go-th.md`
+- `docs/phase-4-planning-seeds.md`
+
 ## Current Scope
 
 Included in this initialization phase:
@@ -503,7 +520,7 @@ curl \
 
 ## Next Steps
 
-1. Confirm the bounded contexts and domain vocabulary.
-2. Define the backend service shape and module boundaries.
-3. Design the initial relational schema for EMR core entities.
-4. Add migration, API, and security foundations in the next implementation phase.
+1. Run Phase 3 master UAT with clinic, billing, pharmacy, owner, and IT users.
+2. Record Phase 3 pilot go/no-go.
+3. Fix only UAT blockers needed for pilot safety.
+4. Move new feature requests to Phase 4 planning.

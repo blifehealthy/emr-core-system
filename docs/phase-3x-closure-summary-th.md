@@ -24,5 +24,6 @@ Phase 3X ปิดงาน controlled reconciliation approver separation แล
 
 ## งานถัดไปที่แนะนำ
 
-Phase 3Y ควรเลือกจาก UAT: controlled reconciliation witness/re-auth,
-per-lot controlled count, approval routing หลายชั้น, หรือ printer bridge/GS1 parsing
+Phase 3 ปิด scope แล้ว งานต่อจากนี้ควรเริ่ม Phase 4 จากผล UAT เช่น
+controlled reconciliation witness/re-auth, per-lot controlled count,
+approval routing หลายชั้น, หรือ printer bridge/GS1 parsing

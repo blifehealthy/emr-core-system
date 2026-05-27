@@ -3,6 +3,12 @@
 Phase 2 closes the pilot-readiness foundation. Phase 3 should be planned from
 real UAT findings, but the likely product directions are below.
 
+Status update: Phase 3 implementation scope is now closed through Phase 3X.
+Use `docs/phase-3-closure-summary-th.md`,
+`docs/phase-3-uat-master-checklist-th.md`, and
+`docs/phase-3-pilot-go-no-go-th.md` for review. New feature candidates should
+move to `docs/phase-4-planning-seeds.md`.
+
 ## Candidate Tracks
 
 ### Billing And Payment
@@ -88,7 +94,12 @@ real UAT findings, but the likely product directions are below.
 - security incident drills
 - provider-specific key rotation automation
 
-## Recommended Planning Rule
+## Closure Rule
+
+Do not extend Phase 3 with more feature subphases unless Phase 3 UAT finds a
+pilot-blocking defect. Move new work to Phase 4 planning.
+
+## Original Planning Rule
 
 Start Phase 3 with the smallest track that directly removes the biggest blocker
 from Phase 2 UAT or pilot operations.

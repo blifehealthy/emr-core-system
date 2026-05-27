@@ -247,6 +247,12 @@
     - self-approval returns `409`
     - API smoke covers self-approval rejection and separate-user approval
     - Phase 3X plan, clinician summary, UAT checklist, and closure summary docs
+  - Phase 3 closure package:
+    - `docs/phase-3-closure-summary-th.md`
+    - `docs/phase-3-uat-master-checklist-th.md`
+    - `docs/phase-3-pilot-go-no-go-th.md`
+    - `docs/phase-4-planning-seeds.md`
+    - Phase 3 is closed through Phase 3X; new feature work moves to Phase 4
 - Previous verified patient registration API:
   - `POST /api/patients`
   - service: `backend/services/createPatient.ts`
@@ -845,35 +851,16 @@ Start by reading:
 - `docs/role-permission-matrix.md`
 - `docs/workflow-state-definition.md`
 - `docs/api-grouping-v1.md`
+- `docs/phase-3-closure-summary-th.md`
+- `docs/phase-3-uat-master-checklist-th.md`
+- `docs/phase-3-pilot-go-no-go-th.md`
+- `docs/phase-4-planning-seeds.md`
 
 Then produce:
 
-1. Run Phase 3A/3B/3C/3D cashier, accounting, pharmacy, and clinical UAT.
-2. Run Phase 3E pharmacy procurement UAT for supplier master, purchase order
-   creation, and PO receiving into lots.
-3. Run Phase 3F pharmacy manager UAT for PO submit/approve/reject and approved
-   receiving controls.
-4. Run Phase 3G pharmacy owner/manager UAT for threshold policy and multi-step
-   approval routing.
-5. Run Phase 3H pharmacy UAT for barcode scan lookup, verified receiving, and
-   verified dispensing.
-6. Run Phase 3I pharmacy UAT for scanner panel ergonomics and barcode label
-   printing.
-7. Run Phase 3J pharmacy/IT UAT for ZPL/ESC/POS export and print-job audit.
-8. Run Phase 3N pharmacy/operations UAT for lot-specific transfer request,
-   approval, in-transit receiving, and cancellation behavior.
-9. Run Phase 3O pharmacy UAT for expiry blocking, FEFO recommendation, and
-   override reason review.
-10. Run Phase 3P pharmacy/owner UAT for override review report and CSV export.
-11. Run Phase 3V pharmacy/owner UAT for controlled-drug reconciliation open,
-   count, variance reason, and audit review.
-12. Run Phase 3W pharmacy lead/owner UAT for controlled-drug variance pending
-   approval and approval note behavior.
-13. Run Phase 3X pharmacy lead/owner UAT for approver separation and
-   self-approval rejection.
-14. Start the next Phase 3 pharmacy follow-up from UAT findings: direct printer
-   integration, GS1 parsing, budget controls, supplier payment handoff,
-   per-lot controlled count, reconciliation witness/re-auth, approval routing
-   หลายชั้น, or permission change approval workflow.
-15. If pharmacy UAT is not the blocker, switch to accounting or payer export
-   integration from the billing track.
+1. Run Phase 3 master UAT using `docs/phase-3-uat-master-checklist-th.md`.
+2. Record Phase 3 pilot go/no-go in `docs/phase-3-pilot-go-no-go-th.md`.
+3. Fix only pilot-blocking defects found by UAT.
+4. Move new feature requests to Phase 4 using `docs/phase-4-planning-seeds.md`.
+5. If no UAT blocker exists, prioritize production readiness, backup/restore,
+   monitoring, and operator drill work before new features.
