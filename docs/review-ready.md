@@ -45,6 +45,7 @@
 - Phase 4E label template management adds clinic templates for barcode label fields and print-job rendering
 - Phase 4F print recovery adds degraded-mode browser/manual fallback and retry controls for failed barcode print jobs
 - Phase 4G printer bridge observability adds JSON/CSV queue health, failed job, fallback, retry, and printer profile reporting
+- UAT/pilot readiness pack adds role-based UAT execution, defect tracking, go/no-go template, bridge adapter contract, security/privacy review, deployment runbook, and clinic user manual
 - request validation is stricter for user, practitioner, prescription, diagnosis, and vital sign writes
 - clinic admin now includes API-backed user/practitioner filtering, audit lookup, and clearer duplicate/conflict feedback
 - DB integration tests can run through local `psql` or a Docker Postgres container fallback
@@ -66,6 +67,10 @@
 - Review `docs/phase-4e-label-template-runbook.md` before changing pharmacy barcode label layouts
 - Review `docs/phase-4f-print-recovery-runbook.md` before fallback or retry drills for printer bridge failures
 - Review `docs/phase-4g-printer-observability-runbook.md` during printer bridge health drills or incident review
+- Review `docs/pilot-uat-pack-th.md`, `docs/pilot-defect-tracker-th.md`, and `docs/pilot-go-no-go-template-th.md` before human UAT starts
+- Review `docs/security-privacy-review-pack-th.md` and `docs/deployment-pilot-runbook-th.md` before pilot deployment
+- Review `docs/clinic-user-manual-th.md` with clinic users before hands-on UAT
+- Review `docs/phase-4h-printer-bridge-adapter-contract.md` with IT/vendor teams before implementing a bridge adapter
 - Review `docs/phase-2b-clinician-summary-th.md` and `docs/phase-2b-uat-checklist-th.md` with the pilot clinic
 - Review `docs/phase-2c-plan.md` before expanding frontend login and production identity provider work
 - Review `docs/phase-2c-clinician-summary-th.md` and `docs/phase-2c-uat-checklist-th.md` with clinic operators

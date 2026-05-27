@@ -1,5 +1,35 @@
 # Handoff Next
 
+## Latest UAT/Pilot Readiness Pack
+
+UAT/pilot readiness pack is complete in this checkpoint.
+
+Docs added:
+
+- `docs/pilot-uat-pack-th.md`
+- `docs/pilot-defect-tracker-th.md`
+- `docs/pilot-go-no-go-template-th.md`
+- `docs/phase-4h-printer-bridge-adapter-contract.md`
+- `docs/security-privacy-review-pack-th.md`
+- `docs/deployment-pilot-runbook-th.md`
+- `docs/clinic-user-manual-th.md`
+
+Related docs updated:
+
+- `README.md`
+- `docs/review-ready.md`
+
+Recommended next step:
+
+1. Give `docs/pilot-uat-pack-th.md` to clinical, pharmacy, billing, admin, and
+   IT owners.
+2. Track every issue in `docs/pilot-defect-tracker-th.md` or the clinic's
+   chosen issue tracker.
+3. Use `docs/pilot-go-no-go-template-th.md` after real UAT/drill evidence is
+   collected.
+4. Use `docs/deployment-pilot-runbook-th.md` and
+   `docs/security-privacy-review-pack-th.md` before pilot deployment.
+
 ## Latest Simulated UAT Readiness Review
 
 Phase 1-4G simulated UAT/readiness review is complete.

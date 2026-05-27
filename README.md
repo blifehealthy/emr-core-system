@@ -296,6 +296,23 @@ Current scope and review docs are tracked in:
 - `docs/phase-4g-uat-checklist-th.md`
 - `docs/phase-4g-closure-summary-th.md`
 
+## UAT/Pilot Readiness Pack
+
+The pilot readiness pack consolidates Phase 1-4G UAT execution, defect triage,
+go/no-go decisioning, bridge adapter contract, security/privacy review,
+deployment runbook, and clinic user guidance.
+
+Current pilot preparation docs are tracked in:
+
+- `docs/phase-1-to-4g-simulated-uat-readiness-review-th.md`
+- `docs/pilot-uat-pack-th.md`
+- `docs/pilot-defect-tracker-th.md`
+- `docs/pilot-go-no-go-template-th.md`
+- `docs/phase-4h-printer-bridge-adapter-contract.md`
+- `docs/security-privacy-review-pack-th.md`
+- `docs/deployment-pilot-runbook-th.md`
+- `docs/clinic-user-manual-th.md`
+
 ## Current Scope
 
 Included in this initialization phase:
